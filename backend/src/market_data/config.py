@@ -1,0 +1,90 @@
+"""Configuration and logging setup (tasks 1.3, 1.4)."""
+
+from __future__ import annotations
+
+import logging
+from functools import lru_cache
+from pathlib import Path
+from typing import Annotated
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Runtime configuration, read from environment variables / .env.
+
+    All fields are optional with sensible defaults so public market data
+    can be pulled without any credentials.
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="MD_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # Default ingestion targets used by the scheduled job.
+    category: str = "USDT-FUTURES"
+    symbols: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    )
+    timeframes: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["5m", "1d"])
+
+    # Storage / export root.
+    data_dir: Path = Path("./data")
+
+    # Scheduler.
+    schedule_interval_seconds: int = 300
+
+    # Bitget public WebSocket (real-time klines, no auth required).
+    ws_public_url: str = "wss://ws.bitget.com/v2/ws/public"
+    ws_heartbeat_seconds: int = 30
+    ws_reconnect_seconds: float = 5.0
+
+    # MCP server launch command.
+    mcp_command: str = "npx"
+    mcp_args: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["-y", "@bitget-ai/bitget-agent-mcp"]
+    )
+
+    # Per-request candle page size. Bitget history-candles caps this at 100.
+    candle_page_limit: int = 100
+
+    log_level: str = "INFO"
+
+    @field_validator("symbols", "timeframes", "mcp_args", mode="before")
+    @classmethod
+    def _split_csv(cls, value: object) -> object:
+        """Allow comma-separated strings from env (e.g. MD_SYMBOLS=BTCUSDT,ETHUSDT)."""
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    @property
+    def parquet_dir(self) -> Path:
+        return self.data_dir / "parquet"
+
+    @property
+    def excel_dir(self) -> Path:
+        return self.data_dir / "excel"
+
+    @property
+    def chart_config_path(self) -> Path:
+        return self.data_dir / "config" / "chart.json"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+def setup_logging(level: str | None = None) -> None:
+    """Initialise a single, consistent logging configuration."""
+    resolved = level or get_settings().log_level
+    logging.basicConfig(
+        level=getattr(logging, resolved.upper(), logging.INFO),
+        format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )

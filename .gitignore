@@ -1,0 +1,15 @@
+.codemap/
+.codemaker/codemap/
+.codemaker/codeindex/
+.codemaker/rules/codemap.mdc
+.codemaker/mcps.json
+.codemaker/hooks.json
+.claude/skills/codemap-*/
+.claude/skills/code-index-*/
+.claude/settings.local.json
+opencode.json
+.mcp.json
+.codex/
+.agents/skills/codemap-*/
+.agents/skills/code-index-*/
+.cursor/

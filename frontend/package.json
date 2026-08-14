@@ -1,0 +1,33 @@
+{
+  "name": "trade-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "klinecharts": "^9.8.10",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.6",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^24.1.0",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3",
+    "vitest": "^2.1.8",
+    "vue-tsc": "^2.2.0"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
+  }
+}
