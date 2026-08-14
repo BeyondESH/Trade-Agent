@@ -20,7 +20,12 @@ TBD - created by syncing change exchange-terminal.
 
 ### Requirement: 顶部导航与行情条
 
-系统 SHALL 在顶部提供导航区与横向滚动行情条：导航含产品 Tab（现货/合约）与连接状态；行情条逐项展示 symbol、最新价、24h 涨跌幅，价格与涨跌用红绿 tokens 着色。
+系统 SHALL 在顶部提供导航区与横向滚动行情条：导航含产品 Tab（现货/合约）与连接状态；导航左端 SHALL 显示品牌名 `RaiBro Trading`；行情条逐项展示 symbol、最新价、24h 涨跌幅，价格与涨跌用红绿 tokens 着色。
+
+#### Scenario: 品牌名显示
+
+- **WHEN** 前端加载终端页面
+- **THEN** 顶部导航左端 SHALL 显示 `RaiBro Trading`
 
 #### Scenario: 行情条实时更新
 

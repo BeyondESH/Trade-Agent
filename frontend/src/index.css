@@ -16,25 +16,69 @@ body {
   margin: 0;
   background: #0b0e11;
   color: #eaecef;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 13px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  font-size: 14px;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* tabular numbers everywhere for price/data alignment */
+/* tabular numbers for price/data alignment (sans-serif, keeps columns aligned) */
 .tnum {
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-feature-settings: "tnum";
+  font-family: inherit;
 }
 
-/* slim dark scrollbars */
+/* slim rounded dark scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #232a33;
-  border-radius: 4px;
+  background: #2a3240;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4454;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* subtle focus rings */
+*:focus-visible {
+  outline: 2px solid rgba(240, 185, 11, 0.55);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* smooth color transitions on interactive elements */
+button,
+a,
+label,
+input[type="checkbox"] {
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* gridstack panel content fills cell */
+.grid-stack-item-content {
+  overflow: hidden;
+  border-radius: 12px;
+  background: #12161c;
+  border: 1px solid #232a33;
+}
+
+/* hide gridstack's built-in corner arrow logos on resize handles */
+.grid-stack-item > .ui-resizable-ne,
+.grid-stack-item > .ui-resizable-nw,
+.grid-stack-item > .ui-resizable-se,
+.grid-stack-item > .ui-resizable-sw {
+  background-image: none !important;
 }

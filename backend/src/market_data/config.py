@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     symbols: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
     )
-    timeframes: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["5m", "1d"])
+    timeframes: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["1m", "5m", "15m", "30m", "1h", "4h", "12h", "1d"]
+    )
 
     # Storage / export root.
     data_dir: Path = Path("./data")

@@ -1,0 +1,56 @@
+# draggable-layout Specification
+
+## Purpose
+TBD - created by syncing change terminal-fixes.
+
+## Requirements
+### Requirement: 面板拖拽移动
+
+系统 SHALL 允许用户通过拖拽面板头部移动交易终端任一面板（市场列表/图表/右侧面板/底部 AI 区）到新位置，其他面板自动重排以填充空间。
+
+#### Scenario: 拖拽移动面板
+
+- **WHEN** 用户按住面板头部拖拽到新的栅格位置
+- **THEN** 面板 SHALL 移动至新位置且其他面板自动让位重排
+
+#### Scenario: 拖拽被限制在布局内
+
+- **WHEN** 拖拽面板跨越布局边界
+- **THEN** SHALL 仅允许面板停留在布局有效区域内
+
+### Requirement: 面板拖拽调整大小
+
+系统 SHALL 允许用户拖拽面板右下角缩放手柄调整面板宽度与高度，且不小于约定最小尺寸。
+
+#### Scenario: 调整面板大小
+
+- **WHEN** 用户拖拽面板 resize 手柄
+- **THEN** 面板 SHALL 按拖拽方向调整尺寸并保持最小尺寸约束
+
+#### Scenario: 图表区尺寸联动
+
+- **WHEN** 图表面板被拖拽调整大小
+- **THEN** 图表 SHALL 重新计算画布尺寸并正常重绘，不出现空白或变形
+
+### Requirement: 布局持久化
+
+系统 SHALL 将面板布局（位置与尺寸）持久化到本地存储，重新加载页面后恢复上次布局。
+
+#### Scenario: 刷新后恢复布局
+
+- **WHEN** 用户调整布局后刷新页面
+- **THEN** SHALL 按持久化布局恢复面板位置与尺寸
+
+#### Scenario: 布局版本不兼容时回退
+
+- **WHEN** 本地布局数据版本与当前不兼容或缺失
+- **THEN** SHALL 回退到默认三栏布局（市场列表/图表/右侧面板 + 底部 AI 区）
+
+### Requirement: 默认布局
+
+系统 SHALL 在首次加载时提供默认三栏布局：左市场列表、中图表、右订单簿/成交/资金费率面板，底部 AI 分析占位区。
+
+#### Scenario: 首次加载默认布局
+
+- **WHEN** 无任何持久化布局数据
+- **THEN** SHALL 渲染默认三栏加底部结构，且各面板可见

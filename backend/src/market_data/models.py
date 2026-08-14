@@ -40,16 +40,21 @@ _TIMEFRAME_GRANULARITY: dict[str, str] = {
 }
 
 
+def _normalize_timeframe(timeframe: str) -> str:
+    """Normalize case so `1H/4H/12H/1D` and `1h/4h/12h/1d` both resolve."""
+    return timeframe.lower()
+
+
 def timeframe_step_ms(timeframe: str) -> int:
     try:
-        return _TIMEFRAME_STEP_MS[timeframe]
+        return _TIMEFRAME_STEP_MS[_normalize_timeframe(timeframe)]
     except KeyError as exc:
         raise ValueError(f"Unsupported timeframe: {timeframe!r}") from exc
 
 
 def timeframe_to_granularity(timeframe: str) -> str:
     try:
-        return _TIMEFRAME_GRANULARITY[timeframe]
+        return _TIMEFRAME_GRANULARITY[_normalize_timeframe(timeframe)]
     except KeyError as exc:
         raise ValueError(f"Unsupported timeframe: {timeframe!r}") from exc
 

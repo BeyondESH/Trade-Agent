@@ -22,8 +22,8 @@ export const TradesTape = memo(function TradesTape({
 }) {
   return (
     <div className="flex flex-col h-full min-h-0 text-xs">
-      <div className="px-2 py-1 border-b border-border text-[10px] text-muted uppercase tracking-wide">最新成交</div>
-      <div className="grid grid-cols-[1fr_1fr_auto] px-2 pb-1 text-[10px] text-muted">
+      <div className="px-2 py-1.5 border-b border-border text-xs font-semibold text-text uppercase tracking-wide">最新成交</div>
+      <div className="grid grid-cols-[1fr_1fr_auto] px-2 pb-1 text-xs font-medium text-muted">
         <span>价格</span>
         <span className="text-right">数量</span>
         <span className="text-right pl-2">时间</span>
@@ -33,7 +33,7 @@ export const TradesTape = memo(function TradesTape({
         {trades.map((t, i) => {
           const color = t.side === "buy" ? "text-up" : "text-down";
           return (
-            <div key={`${t.ts}-${i}`} className="grid grid-cols-[1fr_1fr_auto] px-2 py-0.5 text-[11px] tnum">
+            <div key={`${t.ts}-${i}`} className="grid grid-cols-[1fr_1fr_auto] px-2 py-0.5 text-xs tnum">
               <span className={color}>{fmtPrice(t.price, precision)}</span>
               <span className="text-right text-muted">{t.size}</span>
               <span className="text-right pl-2 text-muted">{fmtTime(t.ts)}</span>

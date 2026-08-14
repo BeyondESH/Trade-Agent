@@ -40,7 +40,7 @@ export const MarketRow = memo(function MarketRow({
   return (
     <button
       onClick={() => onSelect(t.instId)}
-      className={`grid w-full grid-cols-[1fr_90px_80px_90px_90px] items-center px-2 py-1.5 text-xs ${
+      className={`grid w-full grid-cols-[1fr_90px_80px_90px_90px] items-center px-2 py-1.5 text-[13px] ${
         active ? "bg-panel2 text-text" : "text-text hover:bg-panel2/50"
       }`}
       data-testid={`market-row-${t.instId}`}
@@ -88,12 +88,12 @@ export function MarketList({
       <div className="p-2">
         <Input placeholder="搜索合约…" value={search} onChange={(e) => onSearch(e.target.value)} />
       </div>
-      <div className="grid grid-cols-[1fr_90px_80px_90px_90px] px-2 pb-1 text-[10px] text-muted border-b border-border">
+      <div className="grid grid-cols-[1fr_90px_80px_90px_90px] px-2 pb-1 text-xs text-muted border-b border-border">
         {COLUMNS.map((c) => (
           <button
             key={c.key}
             onClick={() => onSort(c.key)}
-            className={`text-left ${c.align === "right" ? "text-right" : ""} hover:text-text`}
+            className={`text-left font-medium ${c.align === "right" ? "text-right" : ""} hover:text-text`}
             data-testid={`sort-${c.key}`}
           >
             {c.label}

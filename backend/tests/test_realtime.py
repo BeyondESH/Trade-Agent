@@ -56,7 +56,13 @@ def test_channels_cover_symbols_and_timeframes() -> None:
     channels = s._channels()
     assert len(channels) == 4
     assert {"instType": CAT, "channel": "candle5m", "instId": SYM} in channels
-    assert {"instType": CAT, "channel": "candle1d", "instId": "ETHUSDT"} in channels
+    assert {"instType": CAT, "channel": "candle1D", "instId": "ETHUSDT"} in channels
+
+
+def test_channels_use_bitget_interval_tokens() -> None:
+    s = _stream(timeframes=["1m", "1h", "4h", "12h", "1d"])
+    channels = {ch["channel"] for ch in s._channels()}
+    assert channels == {"candle1m", "candle1H", "candle4H", "candle12H", "candle1D"}
 
 
 def test_latest_empty_before_frames() -> None:

@@ -14,7 +14,7 @@ export const FundingRate = memo(function FundingRate({ funding }: { funding: Der
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
       <span className="text-muted">资金费率</span>
-      <span className={`tnum ${up ? "text-up" : "text-down"}`}>{rate}</span>
+      <span className={`tnum font-medium ${up ? "text-up" : "text-down"}`}>{rate}</span>
     </div>
   );
 });
@@ -23,7 +23,7 @@ export const MarkPrice = memo(function MarkPrice({ markPrice }: { markPrice: Der
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
       <span className="text-muted">标记价格</span>
-      <span className="tnum">{markPrice?.markPrice ?? "--"}</span>
+      <span className="tnum font-medium">{markPrice?.markPrice ?? "--"}</span>
     </div>
   );
 });

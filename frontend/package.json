@@ -13,6 +13,7 @@
   "dependencies": {
     "@klinecharts/pro": "file:vendor/klinecharts-pro",
     "@tanstack/react-virtual": "^3.14.9",
+    "gridstack": "^13.0.2",
     "klinecharts": "^9.8.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

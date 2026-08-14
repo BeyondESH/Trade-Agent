@@ -22,6 +22,7 @@ from typing import Any
 from websockets.asyncio.client import ClientConnection, connect
 
 from market_data.ingestion import KlineIngestor
+from market_data.models import timeframe_to_granularity
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class BitgetWsStream:
     # -- channels ----------------------------------------------------------
     def _channels(self) -> list[dict[str, str]]:
         return [
-            {"instType": self._category, "channel": f"candle{tf}", "instId": symbol}
+            {"instType": self._category, "channel": f"candle{timeframe_to_granularity(tf)}", "instId": symbol}
             for symbol in self._symbols
             for tf in self._timeframes
         ]
@@ -174,7 +175,7 @@ class BitgetWsStream:
         inst_type = arg.get("instType")
         inst_id = arg.get("instId")
         channel = arg.get("channel") or ""
-        timeframe = channel[6:] if channel.startswith("candle") else ""
+        timeframe = channel[6:].lower() if channel.startswith("candle") else ""
         if not (inst_type and inst_id and timeframe):
             return
         rows = msg.get("data") or []

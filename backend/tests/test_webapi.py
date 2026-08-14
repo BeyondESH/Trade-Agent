@@ -32,7 +32,14 @@ def _seed(tmp) -> Settings:  # noqa: ANN001
         "open": closes, "high": closes + 0.5, "low": closes - 0.5,
         "close": closes, "volume": [1.0] * len(closes),
     })
-    ParquetStore(settings.parquet_dir).save(Series("USDT-FUTURES", "BTCUSDT", "5m"), df)
+    store = ParquetStore(settings.parquet_dir)
+    store.save(Series("USDT-FUTURES", "BTCUSDT", "5m"), df)
+    hour_df = pd.DataFrame({
+        "open_time": [BASE + i * STEP * 12 for i in range(60)],
+        "open": closes[:60], "high": closes[:60] + 0.5, "low": closes[:60] - 0.5,
+        "close": closes[:60], "volume": [1.0] * 60,
+    })
+    store.save(Series("USDT-FUTURES", "BTCUSDT", "1h"), hour_df)
     return settings
 
 
@@ -140,6 +147,18 @@ def test_candles_and_analyze_and_structure() -> None:
         assert "price" in a and isinstance(a["levels"], list)
         s = c.get("/structure", params=p).json()
         assert "swings" in s and "box" in s
+
+
+def test_timeframe_case_insensitive() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        for tf in ("1H", "1h"):
+            r = c.get("/candles", params={"symbol": "BTCUSDT", "timeframe": tf})
+            assert r.status_code == 200, f"timeframe={tf} failed: {r.json()}"
+            assert r.json()["count"] > 0, f"timeframe={tf} returned empty"
+        for tf in ("1H", "1h"):
+            r = c.get("/candles/recent", params={"symbol": "BTCUSDT", "timeframe": tf})
+            assert r.status_code == 200
 
 
 # -- 8.3 config ------------------------------------------------------------

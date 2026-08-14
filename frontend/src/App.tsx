@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Period, SymbolInfo } from "@klinecharts/pro";
 import { BitgetDatafeed, FIXED_SYMBOLS, periodToTimeframe } from "./api/datafeed";
 import { api } from "./api/client";
@@ -15,6 +15,7 @@ import { useOrderBook } from "./hooks/useOrderBook";
 import { useTickerList } from "./hooks/useTickerList";
 import { useTrades } from "./hooks/useTrades";
 import { AutoLayerController } from "./lib/chartController";
+import { GridStackLayout } from "./lib/gridStackLayout";
 import {
   boxToRect,
   candlesToKLineData,
@@ -36,6 +37,8 @@ const PERIODS: Period[] = [
   { multiplier: 1, timespan: "day", text: "1D" },
 ];
 
+const PANEL_IDS = ["market-list", "chart", "right-panel", "ai-panel"] as const;
+
 const controller = new AutoLayerController();
 
 function toSymbolInfo(ticker: string): SymbolInfo {
@@ -43,6 +46,18 @@ function toSymbolInfo(ticker: string): SymbolInfo {
   return known
     ? { ...known }
     : { ticker, shortName: ticker, market: "USDT-FUTURES", pricePrecision: 2, volumePrecision: 4 };
+}
+
+function PanelFrame({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
+      <div className="panel-header flex h-8 shrink-0 cursor-move select-none items-center gap-2 border-b border-border bg-panel2 px-2.5 text-sm font-semibold text-text">
+        <span className="text-accent">≡</span>
+        <span className="tracking-wide">{title}</span>
+      </div>
+      <div className="min-h-0 flex-1">{children}</div>
+    </div>
+  );
 }
 
 export default function App() {
@@ -123,6 +138,14 @@ export default function App() {
     applyAutoLayers();
   }, [applyAutoLayers]);
 
+  const handlePanelResize = useCallback((id: string) => {
+    if (id === "chart") chartRef.current?.getChart()?.resize();
+  }, []);
+
+  const handlePanelMove = useCallback(() => {
+    chartRef.current?.getChart()?.resize();
+  }, []);
+
   const price = candles.length ? candles[candles.length - 1].close : undefined;
   const change = candles.length >= 2
     ? ((candles[candles.length - 1].close - candles[0].open) / candles[0].open) * 100
@@ -134,10 +157,98 @@ export default function App() {
     chartRef.current?.setSymbol(toSymbolInfo(ticker));
   }, []);
 
+  const renderPanel = useCallback(
+    (id: string): ReactNode => {
+      switch (id) {
+        case "market-list":
+          return (
+            <PanelFrame title="市场">
+              <MarketList
+                tickers={tickerList.tickers}
+                search={tickerList.search}
+                sortKey={tickerList.sortKey}
+                sortDir={tickerList.sortDir}
+                active={symbol.ticker}
+                onSearch={tickerList.setSearch}
+                onSort={tickerList.setSort}
+                onSelect={handleSelect}
+              />
+            </PanelFrame>
+          );
+        case "chart":
+          return (
+            <PanelFrame title={`图表 · ${symbol.ticker} ${period.text}`}>
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="min-h-0 flex-1">
+                  <KLineChartProView
+                    ref={chartRef}
+                    symbol={symbol}
+                    period={period}
+                    periods={PERIODS}
+                    datafeed={datafeed}
+                    theme="dark"
+                    onSymbolChange={(s) => setSymbol({ ...s })}
+                    onPeriodChange={(p) => setPeriod({ ...p })}
+                    onReady={handleChartReady}
+                  />
+                </div>
+                <div className="flex items-center gap-3 border-t border-border px-2 py-1 text-xs text-muted">
+                  {(
+                    [
+                      ["sr", "S/R"],
+                      ["structure", "structure"],
+                      ["smc", "SMC"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-1 font-medium">
+                      <input
+                        type="checkbox"
+                        className="accent-accent"
+                        checked={layers[key]}
+                        onChange={() => setLayers((prev) => ({ ...prev, [key]: !prev[key] }))}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </PanelFrame>
+          );
+        case "right-panel":
+          return (
+            <PanelFrame title="订单簿 / 成交">
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="min-h-0 flex-1">
+                  <OrderBook asks={orderBook.asks} bids={orderBook.bids} spread={orderBook.spread} precision={2} />
+                </div>
+                <div className="min-h-0 flex-1 border-t border-border">
+                  <TradesTape trades={trades} precision={2} />
+                </div>
+                <div className="flex items-center justify-between border-t border-border px-2 py-1">
+                  <FundingRate funding={derivative.funding} />
+                  <MarkPrice markPrice={derivative.markPrice} />
+                </div>
+              </div>
+            </PanelFrame>
+          );
+        case "ai-panel":
+          return (
+            <PanelFrame title="AI 分析">
+              <AiAnalysisPlaceholder />
+            </PanelFrame>
+          );
+        default:
+          return null;
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tickerList, symbol, period, candles, orderBook, trades, derivative, layers, handleSelect, handleChartReady],
+  );
+
   return (
-    <div className="h-screen flex flex-col bg-base text-text">
-      <header className="h-12 shrink-0 border-b border-border bg-panel flex items-center gap-4 px-4">
-        <span className="font-bold text-accent">◆ AI-Trade</span>
+    <div className="flex h-screen flex-col bg-base text-text">
+      <header className="flex h-12 shrink-0 items-center gap-4 border-b border-border bg-panel px-4">
+        <span className="text-base font-bold text-accent">RaiBro Trading</span>
         <span className="font-semibold">{symbol.ticker}</span>
         <span className="tnum text-base" style={{ color: up ? "#16c784" : "#ea3943" }}>
           {price != null ? price.toFixed(2) : "--"}
@@ -148,76 +259,19 @@ export default function App() {
             {change.toFixed(2)}%
           </span>
         )}
-        <span className="text-[10px] text-muted ml-auto">USDT-FUTURES</span>
+        <span className="ml-auto text-xs text-muted">USDT-FUTURES</span>
       </header>
 
       <TickerBar tickers={tickerList.tickers.slice(0, 40)} active={symbol.ticker} onSelect={handleSelect} />
 
-      <div className="flex-1 grid grid-cols-[240px_1fr_300px] min-h-0">
-        <div className="min-h-0 border-r border-border">
-          <MarketList
-            tickers={tickerList.tickers}
-            search={tickerList.search}
-            sortKey={tickerList.sortKey}
-            sortDir={tickerList.sortDir}
-            active={symbol.ticker}
-            onSearch={tickerList.setSearch}
-            onSort={tickerList.setSort}
-            onSelect={handleSelect}
-          />
-        </div>
-
-        <div className="min-h-0 flex flex-col overflow-hidden">
-          <div className="flex-1 min-h-0">
-            <KLineChartProView
-              ref={chartRef}
-              symbol={symbol}
-              period={period}
-              periods={PERIODS}
-              datafeed={datafeed}
-              theme="dark"
-              onSymbolChange={(s) => setSymbol({ ...s })}
-              onPeriodChange={(p) => setPeriod({ ...p })}
-              onReady={handleChartReady}
-            />
-          </div>
-          <div className="flex items-center gap-3 px-2 py-1 border-t border-border text-[10px] text-muted">
-            {(
-              [
-                ["sr", "S/R"],
-                ["structure", "structure"],
-                ["smc", "SMC"],
-              ] as const
-            ).map(([key, label]) => (
-              <label key={key} className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  className="accent-accent"
-                  checked={layers[key]}
-                  onChange={() => setLayers((prev) => ({ ...prev, [key]: !prev[key] }))}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="min-h-0 flex flex-col border-l border-border">
-          <div className="flex-1 min-h-0">
-            <OrderBook asks={orderBook.asks} bids={orderBook.bids} spread={orderBook.spread} precision={2} />
-          </div>
-          <div className="flex-1 min-h-0 border-t border-border">
-            <TradesTape trades={trades} precision={2} />
-          </div>
-          <div className="flex items-center justify-between px-2 py-1 border-t border-border">
-            <FundingRate funding={derivative.funding} />
-            <MarkPrice markPrice={derivative.markPrice} />
-          </div>
-        </div>
-      </div>
-
-      <div className="h-28 shrink-0">
-        <AiAnalysisPlaceholder />
+      <div className="min-h-0 flex-1">
+        <GridStackLayout
+          panelIds={[...PANEL_IDS]}
+          onPanelResize={handlePanelResize}
+          onPanelMove={handlePanelMove}
+        >
+          {renderPanel}
+        </GridStackLayout>
       </div>
     </div>
   );

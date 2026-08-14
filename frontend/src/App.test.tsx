@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { forwardRef } from "react";
+import { forwardRef, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const m = vi.hoisted(() => ({
@@ -28,6 +28,13 @@ vi.mock("./api/client", () => ({
 // The chart needs a real canvas + Solid runtime; stub it for the layout test.
 vi.mock("./components/chart/KLineChartProView", () => ({
   KLineChartProView: forwardRef(() => <div data-testid="chart" />),
+}));
+
+// gridstack needs layout measurement jsdom can't provide; render children inline.
+vi.mock("./lib/gridStackLayout", () => ({
+  GridStackLayout: ({ panelIds, children }: { panelIds: string[]; children: (id: string) => React.ReactNode }) => (
+    <div data-testid="gridstack-layout">{panelIds.map((id) => <div key={id} data-panel={id}>{children(id)}</div>)}</div>
+  ),
 }));
 
 // The market hub hooks use a real WebSocket; stub them with canned data.
@@ -80,14 +87,15 @@ describe("App terminal layout", () => {
     expect(screen.getByText("ETHUSDT")).toBeInTheDocument();
     expect(screen.getByText("SOLUSDT")).toBeInTheDocument();
     expect(screen.getByTestId("chart")).toBeInTheDocument();
-    expect(screen.getByText("订单簿")).toBeInTheDocument();
+    expect(screen.getByText("订单簿 / 成交")).toBeInTheDocument();
     expect(screen.getByText("最新成交")).toBeInTheDocument();
     expect(screen.getByText(/AI 分析模块预留/)).toBeInTheDocument();
+    expect(screen.getByText("RaiBro Trading")).toBeInTheDocument();
   });
 
   it("selecting a symbol updates the header", async () => {
     render(<App />);
     fireEvent.click(screen.getByTestId("ticker-ETHUSDT"));
-    await waitFor(() => expect(screen.getByText("◆ AI-Trade").nextElementSibling?.textContent).toBe("ETHUSDT"));
+    await waitFor(() => expect(screen.getByText("RaiBro Trading").nextElementSibling?.textContent).toBe("ETHUSDT"));
   });
 });

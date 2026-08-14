@@ -23,7 +23,7 @@ function Row({
   const pct = (depth / max) * 100;
   const color = tone === "ask" ? "text-down" : "text-up";
   return (
-    <div className="relative grid grid-cols-[1fr_1fr] px-2 py-0.5 text-[11px] tnum" data-testid={`book-${tone}`}>
+    <div className="relative grid grid-cols-[1fr_1fr] px-2 py-0.5 text-xs tnum" data-testid={`book-${tone}`}>
       <div
         className="absolute inset-y-0 right-0"
         style={{ width: `${pct}%`, background: tone === "ask" ? "rgba(234,57,67,0.12)" : "rgba(22,199,132,0.12)" }}
@@ -52,10 +52,10 @@ export const OrderBook = memo(function OrderBook({
 
   return (
     <div className="flex flex-col h-full min-h-0 text-xs">
-      <div className="px-2 py-1 border-b border-border text-[10px] text-muted uppercase tracking-wide">
+      <div className="px-2 py-1.5 border-b border-border text-xs font-semibold text-text uppercase tracking-wide">
         订单簿{spread != null ? ` · 价差 ${spread.toFixed(precision)}` : ""}
       </div>
-      <div className="grid grid-cols-[1fr_1fr] px-2 pb-1 text-[10px] text-muted">
+      <div className="grid grid-cols-[1fr_1fr] px-2 pb-1 text-xs font-medium text-muted">
         <span>价格(USDT)</span>
         <span className="text-right">数量</span>
       </div>
@@ -64,7 +64,7 @@ export const OrderBook = memo(function OrderBook({
           <Row key={`a-${l.price}`} level={l} depth={l.size} tone="ask" precision={precision} max={askMax} />
         ))}
         {spread != null && (
-          <div className="flex justify-between px-2 py-1 text-[10px] text-muted tnum border-y border-border">
+          <div className="flex justify-between px-2 py-1 text-xs text-muted tnum border-y border-border">
             <span>买一 {bids[0]?.price.toFixed(precision) ?? "--"}</span>
             <span>卖一 {asks[0]?.price.toFixed(precision) ?? "--"}</span>
           </div>

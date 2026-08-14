@@ -31,9 +31,9 @@ export const TickerItem = memo(function TickerItem({
       }`}
       data-testid={`ticker-${t.instId}`}
     >
-      <span className="text-xs font-semibold text-text">{t.instId}</span>
-      <span className={`tnum text-xs ${priceClass(t.lastPr)}`}>{t.lastPr ?? "--"}</span>
-      <span className={`tnum text-[10px] ${changeClass(t.price24hPcnt)}`}>
+      <span className="text-[13px] font-semibold text-text">{t.instId}</span>
+      <span className={`tnum text-[13px] ${priceClass(t.lastPr)}`}>{t.lastPr ?? "--"}</span>
+      <span className={`tnum text-xs ${changeClass(t.price24hPcnt)}`}>
         {change > 0 ? "+" : ""}
         {(change * 100).toFixed(2)}%
       </span>

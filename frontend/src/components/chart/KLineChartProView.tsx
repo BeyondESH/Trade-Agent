@@ -42,6 +42,7 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         periods: props.periods,
         datafeed: props.datafeed,
         theme: props.theme ?? "dark",
+        watermark: "",
         drawingBarVisible: props.drawingBarVisible ?? true,
         mainIndicators: props.mainIndicators ?? ["MA"],
         subIndicators: props.subIndicators ?? ["VOL"],

@@ -25,8 +25,10 @@ beforeEach(() => {
 describe("periodToTimeframe", () => {
   it("maps minute/hour/day periods", () => {
     expect(periodToTimeframe({ multiplier: 5, timespan: "minute", text: "5m" })).toBe("5m");
-    expect(periodToTimeframe({ multiplier: 1, timespan: "hour", text: "1H" })).toBe("1H");
-    expect(periodToTimeframe({ multiplier: 1, timespan: "day", text: "1D" })).toBe("1D");
+    expect(periodToTimeframe({ multiplier: 1, timespan: "hour", text: "1H" })).toBe("1h");
+    expect(periodToTimeframe({ multiplier: 4, timespan: "hour", text: "4H" })).toBe("4h");
+    expect(periodToTimeframe({ multiplier: 12, timespan: "hour", text: "12H" })).toBe("12h");
+    expect(periodToTimeframe({ multiplier: 1, timespan: "day", text: "1D" })).toBe("1d");
   });
 });
 

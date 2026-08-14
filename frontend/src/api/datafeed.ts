@@ -18,11 +18,11 @@ export function periodToTimeframe(period: Period): string {
     case "minute":
       return `${period.multiplier}m`;
     case "hour":
-      return `${period.multiplier}H`;
+      return `${period.multiplier}h`;
     case "day":
-      return `${period.multiplier}D`;
+      return `${period.multiplier}d`;
     default:
-      return period.text;
+      return period.text.toLowerCase();
   }
 }
 

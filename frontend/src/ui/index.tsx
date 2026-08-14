@@ -12,7 +12,7 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <div className={`bg-panel border border-border rounded-md flex flex-col min-h-0 ${className}`}>
+    <div className={`bg-panel border border-border rounded-panel shadow-panel flex flex-col min-h-0 ${className}`}>
       {title && (
         <div className="flex items-center justify-between px-3 py-2 border-b border-border text-xs font-semibold text-muted uppercase tracking-wide">
           <span>{title}</span>
@@ -36,7 +36,7 @@ const BTN_STYLES: Record<string, string> = {
 export function Button({ variant = "ghost", className = "", ...rest }: ButtonProps) {
   return (
     <button
-      className={`px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition ${BTN_STYLES[variant]} ${className}`}
+      className={`px-3 py-1.5 rounded-btn text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition ${BTN_STYLES[variant]} ${className}`}
       {...rest}
     />
   );
@@ -45,7 +45,7 @@ export function Button({ variant = "ghost", className = "", ...rest }: ButtonPro
 export function Input({ className = "", ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={`bg-base border border-border rounded px-2 py-1.5 text-xs text-text tnum outline-none focus:border-accent w-full ${className}`}
+      className={`bg-base border border-border rounded-btn px-2 py-1.5 text-[13px] text-text tnum outline-none focus:border-accent w-full ${className}`}
       {...rest}
     />
   );
