@@ -9,9 +9,9 @@ const configPath = path.resolve(
 );
 
 describe("tailwind content scanning", () => {
-  it("includes Vue SFC files so component utility classes are generated", () => {
+  it("includes TS/TSX component files so utility classes are generated", () => {
     const raw = readFileSync(configPath, "utf-8");
-    expect(raw).toMatch(/content:.*\.\{vue,ts,tsx\}/);
+    expect(raw).toMatch(/content:.*\.\{ts,tsx\}/);
   });
 
   it("keeps html entry in the scan list", () => {

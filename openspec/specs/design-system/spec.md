@@ -5,7 +5,7 @@ TBD - created by archiving change frontend-okx-theme. Update Purpose after archi
 ## Requirements
 ### Requirement: Tailwind 设计系统与 UI 原子
 
-系统 SHALL 接入 Tailwind CSS 并定义 OKX 风格设计 tokens(深色底、涨绿跌红、紧凑排版),提供一套可复用 UI 原子组件(Panel/Button/Input/Tabs/Table/Modal/Badge)。工程 MUST 仍通过 typecheck 与生产构建。
+系统 SHALL 接入 Tailwind CSS 并定义 OKX 风格设计 tokens(深色底、涨绿跌红、紧凑排版),提供一套可复用 React UI 原子组件(Panel/Button/Input/Tabs/Table/Modal/Badge)。工程 MUST 仍通过 typecheck 与生产构建。
 
 #### Scenario: 构建通过
 
