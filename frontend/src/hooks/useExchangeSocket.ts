@@ -1,0 +1,149 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
+export interface WsFrame {
+  channel: string;
+  symbol?: string;
+  action?: "snapshot" | "update";
+  event?: "subscribed" | "unsubscribed" | "pong";
+  data?: unknown;
+}
+
+export interface SubArgs {
+  channel: string;
+  symbol?: string;
+  timeframe?: string;
+  category?: string;
+}
+
+type Listener = (frame: WsFrame) => void;
+
+/** Raw subscribe/unsubscribe over a single shared exchange WS connection. */
+export class ExchangeSocket {
+  private sock: WebSocket | null = null;
+  private listeners = new Map<string, Set<Listener>>();
+  private active = new Set<string>();
+  private retry = 0;
+
+  private key(channel: string, symbol: string): string {
+    return `${channel}/${symbol}`;
+  }
+
+  /** Subscribe to a channel/symbol; the frame is delivered to the listener. */
+  subscribe(args: SubArgs, listener: Listener): () => void {
+    const k = this.key(args.channel, args.symbol ?? "default");
+    let set = this.listeners.get(k);
+    if (!set) {
+      set = new Set();
+      this.listeners.set(k, set);
+    }
+    set.add(listener);
+    if (!this.active.has(k)) {
+      this.active.add(k);
+      this.sendFrame({ op: "subscribe", args: [args] });
+    }
+    this.ensureOpen();
+    return () => this.unsubscribe(args, listener);
+  }
+
+  unsubscribe(args: SubArgs, listener: Listener): void {
+    const k = this.key(args.channel, args.symbol ?? "default");
+    const set = this.listeners.get(k);
+    if (!set) return;
+    set.delete(listener);
+    if (set.size === 0) {
+      this.listeners.delete(k);
+      if (this.active.has(k)) {
+        this.active.delete(k);
+        this.sendFrame({ op: "unsubscribe", args: [args] });
+      }
+    }
+  }
+
+  private ensureOpen(): void {
+    if (this.sock && this.sock.readyState === WebSocket.OPEN) return;
+    this.open();
+  }
+
+  private open(): void {
+    if (this.sock && (this.sock.readyState === WebSocket.OPEN || this.sock.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+    const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    const url = `${proto}://${window.location.host}/ws`;
+    const sock = new WebSocket(url);
+    this.sock = sock;
+    sock.onopen = () => {
+      this.retry = 0;
+      // resubscribe everything that was requested while disconnected
+      for (const k of this.active) {
+        const [channel, symbol] = k.split("/");
+        this.sendFrame({ op: "subscribe", args: [{ channel, symbol }] });
+      }
+    };
+    sock.onmessage = (ev) => {
+      let frame: WsFrame;
+      try {
+        frame = JSON.parse(ev.data) as WsFrame;
+      } catch {
+        return;
+      }
+      const k = this.key(frame.channel, frame.symbol ?? "default");
+      const set = this.listeners.get(k);
+      if (set) {
+        for (const fn of [...set]) {
+          try {
+            fn(frame);
+          } catch {
+            /* listener errors must not break the socket */
+          }
+        }
+      }
+    };
+    sock.onclose = () => {
+      this.sock = null;
+      if (this.active.size > 0) {
+        this.retry += 1;
+        window.setTimeout(() => this.open(), Math.min(500 * this.retry, 5000));
+      }
+    };
+    sock.onerror = () => sock.close();
+  }
+
+  private sendFrame(frame: Record<string, unknown>): void {
+    if (this.sock && this.sock.readyState === WebSocket.OPEN) {
+      this.sock.send(JSON.stringify(frame));
+    }
+  }
+
+  /** Close the socket and clear all subscriptions (used by tests). */
+  teardown(): void {
+    this.active.clear();
+    this.listeners.clear();
+    if (this.sock) {
+      this.sock.onclose = null;
+      this.sock.close();
+      this.sock = null;
+    }
+  }
+}
+
+/** Single shared socket for the whole app. */
+export const exchangeSocket = new ExchangeSocket();
+
+/** Subscribe to frames for a channel/symbol via the shared socket. */
+export function useExchangeSocket(
+  channel: string,
+  symbol: string,
+  onFrame: (frame: WsFrame) => void,
+  extra?: Partial<SubArgs>,
+): void {
+  const fnRef = useRef(onFrame);
+  fnRef.current = onFrame;
+
+  useEffect(() => {
+    const args: SubArgs = { channel, symbol, ...extra };
+    const off = exchangeSocket.subscribe(args, (frame) => fnRef.current(frame));
+    return off;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel, symbol, JSON.stringify(extra ?? {})]);
+}

@@ -4,10 +4,12 @@ import type {
   AppConfig,
   Candle,
   ChartConfig,
+  Instrument,
   Level,
   Portfolio,
   SeriesRef,
   StructureResponse,
+  Ticker,
 } from "./types";
 
 const BASE = "/api";
@@ -47,6 +49,10 @@ function qs(params: Record<string, string | number | undefined>): string {
 
 export const api = {
   health: () => request<{ status: string }>("/health"),
+
+  tickers: () => request<{ tickers: Ticker[] }>("/tickers"),
+
+  instruments: () => request<{ instruments: Instrument[] }>("/instruments"),
 
   candles: (s: SeriesRef, start?: number, end?: number, limit = 500) =>
     request<{ candles: Candle[]; count: number }>(

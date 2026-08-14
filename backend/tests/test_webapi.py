@@ -64,6 +64,58 @@ class _FakeStream:
         return
 
 
+class _FakeMarket:
+    """Minimal market-hub stand-in for endpoint/ws tests."""
+
+    def __init__(self) -> None:
+        self.subscribed: list[tuple[str, str]] = []
+        self.unsubscribed: list[tuple[str, str]] = []
+        self._listeners: list = []
+
+    def add_listener(self, listener) -> None:  # noqa: ANN001
+        self._listeners.append(listener)
+
+    def remove_listener(self, listener) -> None:  # noqa: ANN001
+        if listener in self._listeners:
+            self._listeners.remove(listener)
+
+    def subscribe(self, channel: str, symbol: str) -> None:
+        self.subscribed.append((channel, symbol))
+
+    def unsubscribe(self, channel: str, symbol: str) -> None:
+        self.unsubscribed.append((channel, symbol))
+
+    def tickers(self) -> dict:
+        return {"BTCUSDT": {"instId": "BTCUSDT", "lastPr": "123.4", "price24hPcnt": "-0.01"}}
+
+    def ticker(self, symbol: str) -> dict | None:  # noqa: ARG001
+        return self.tickers().get(symbol)
+
+    def orderbook(self, symbol: str) -> dict | None:  # noqa: ARG001
+        return {"asks": [(101.0, 5.0)], "bids": [(100.0, 4.0)], "seq": 10}
+
+    def trades(self, symbol: str, limit: int | None = None) -> list:  # noqa: ARG001
+        return [{"instId": symbol, "price": "1", "size": "1", "side": "buy", "ts": "1"}]
+
+    def mark_prices(self) -> dict:
+        return {"BTCUSDT": {"instId": "BTCUSDT", "markPrice": "123.0"}}
+
+    def funding(self) -> dict:
+        return {"BTCUSDT": {"instId": "BTCUSDT", "fundingRate": "0.0001"}}
+
+    def instruments(self) -> dict:
+        return {"BTCUSDT": {"symbol": "BTCUSDT", "pricePrecision": "2", "quantityPrecision": "6"}}
+
+    def instrument(self, symbol: str) -> dict | None:  # noqa: ARG001
+        return self.instruments().get(symbol)
+
+    def start(self) -> None:
+        return
+
+    async def stop(self) -> None:
+        return
+
+
 # -- 8.1 core --------------------------------------------------------------
 def test_health() -> None:
     with _tmp() as tmp:
@@ -194,46 +246,103 @@ def test_backtest_job() -> None:
         assert status["status"] in ("done", "running", "error")
 
 
-# -- 8.7 websocket ---------------------------------------------------------
-def test_ws_snapshot() -> None:
+# -- 8.7 websocket subscription protocol ---------------------------------
+def test_ws_candle_subscribe() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        with c.websocket_connect("/ws?symbol=BTCUSDT&timeframe=5m&interval=0.01") as ws:
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            # first message is the candle snapshot
             msg = ws.receive_json()
-            assert "price" in msg and "portfolio" in msg
+            assert msg["channel"] == "candle" and msg["action"] == "snapshot"
+            assert "price" in msg["data"] and "portfolio" in msg["data"]
+            # subscription ack
+            ack = ws.receive_json()
+            assert ack["event"] == "subscribed"
 
 
-def test_ws_disconnect_clean_and_reconnect() -> None:
+def test_ws_books_subscribe_and_unsubscribe() -> None:
     with _tmp() as tmp:
-        c = _client(tmp)
-        with c.websocket_connect("/ws?interval=0.01") as ws:
+        settings = _seed(tmp)
+        market = _FakeMarket()
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [{"channel": "books", "symbol": "BTCUSDT"}]})
+            # snapshot then ack
+            snap = ws.receive_json()
+            assert snap["channel"] == "books" and snap["action"] == "snapshot"
+            assert snap["data"]["asks"] == [[101.0, 5.0]]
+            assert ws.receive_json()["event"] == "subscribed"
+            assert ("books", "BTCUSDT") in market.subscribed
+            ws.send_json({"op": "unsubscribe", "args": [{"channel": "books", "symbol": "BTCUSDT"}]})
+            assert ws.receive_json()["event"] == "unsubscribed"
+            assert ("books", "BTCUSDT") in market.unsubscribed
+
+
+def test_ws_ticker_subscribe() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        market = _FakeMarket()
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [{"channel": "ticker"}]})
+            snap = ws.receive_json()
+            assert snap["channel"] == "ticker" and snap["action"] == "snapshot"
+            assert "BTCUSDT" in snap["data"]
+            # full-market ticker is served from the REST mirror; no per-symbol WS subscribe
+            assert market.subscribed == []
+
+
+def test_ws_disconnect_releases_subscriptions() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        market = _FakeMarket()
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [{"channel": "books", "symbol": "BTCUSDT"}]})
             ws.receive_json()
-        # server survives the disconnect: a fresh connection still works.
-        with c.websocket_connect("/ws?interval=0.01") as ws2:
-            assert "price" in ws2.receive_json()
+            ws.receive_json()
+        assert ("books", "BTCUSDT") in market.unsubscribed
+        # server survives: a fresh connection still works
+        with c.websocket_connect("/ws") as ws2:
+            ws2.send_json({"op": "subscribe", "args": [{"channel": "candle",
+                                                        "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            assert ws2.receive_json()["channel"] == "candle"
 
 
-def test_snapshot_injects_live_candle() -> None:
+# -- 8.8 exchange hub REST endpoints --------------------------------------
+def test_rest_snapshot_endpoints() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
-        bar = {"open_time": 1700000000000, "open": 100.0, "high": 101.0,
-               "low": 99.0, "close": 123.4, "volume": 5.0}
-        app = create_app(settings, stream=_FakeStream(bar))
-        with TestClient(app).websocket_connect("/ws?symbol=BTCUSDT&timeframe=5m&interval=0.01") as ws:
-            msg = ws.receive_json()
-        assert msg["price"] == 123.4
-        assert msg["last_candle"] == bar
+        market = _FakeMarket()
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
+        assert c.get("/tickers").json()["tickers"][0]["lastPr"] == "123.4"
+        book = c.get("/books/BTCUSDT").json()
+        assert book["asks"] == [[101.0, 5.0]] and book["seq"] == 10
+        trades = c.get("/trades/BTCUSDT").json()["trades"]
+        assert trades[0]["side"] == "buy"
+        assert c.get("/funding").json()["funding"][0]["fundingRate"] == "0.0001"
+        assert c.get("/mark-price").json()["mark_prices"][0]["markPrice"] == "123.0"
+        insts = c.get("/instruments").json()["instruments"]
+        assert insts[0]["pricePrecision"] == "2"
 
 
-def test_snapshot_fallback_without_live() -> None:
+def test_books_empty_when_not_subscribed() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
-        app = create_app(settings, stream=_FakeStream(None))
-        with TestClient(app).websocket_connect("/ws?symbol=BTCUSDT&timeframe=5m&interval=0.01") as ws:
-            msg = ws.receive_json()
-        assert "last_candle" not in msg
-        df = ParquetStore(settings.parquet_dir).read(Series("USDT-FUTURES", "BTCUSDT", "5m"))
-        assert msg["price"] == float(df["close"].iloc[-1])
+
+        class _Empty(_FakeMarket):
+            def orderbook(self, symbol: str) -> dict | None:  # noqa: ARG001
+                return None
+
+            def trades(self, symbol: str, limit: int | None = None) -> list:  # noqa: ARG001
+                return []
+
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=_Empty()))
+        book = c.get("/books/ETHUSDT").json()
+        assert book["asks"] == [] and book["bids"] == [] and book["seq"] is None
+        assert c.get("/trades/ETHUSDT").json()["trades"] == []
 
 
 def test_candles_recent_returns_stream_batch() -> None:

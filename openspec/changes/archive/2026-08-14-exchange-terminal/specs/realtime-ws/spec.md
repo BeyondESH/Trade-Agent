@@ -1,8 +1,5 @@
-# realtime-ws Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change web-api. Update Purpose after archive.
-## Requirements
 ### Requirement: 定时快照 WebSocket
 
 系统 SHALL 提供客户端驱动的 WebSocket 订阅端点，替代原定时快照推送：客户端发送 `{"op":"subscribe","args":[{"channel":"<channel>","symbol":"<symbol>"}]}` / `{"op":"unsubscribe",...}` 帧订阅或退订频道，系统按帧回推 `{"channel":..., "symbol":..., "action":"snapshot|update", "data":...}`；支持行情、订单簿、成交、标记价格、资金费率等频道，并为 K 线图表保留 `snapshot`（最新 K 线 + 指标 + Top-N S/R + 组合浮盈）推送能力。
@@ -26,4 +23,3 @@ TBD - created by archiving change web-api. Update Purpose after archive.
 
 - **WHEN** 客户端连接断开
 - **THEN** 系统 SHALL 释放其全部订阅并停止向其推送
-

@@ -8,6 +8,7 @@ use a two-step confirm-token flow and always pass the #3/#4 risk gates.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -43,6 +44,7 @@ from market_data.realtime import BitgetWsStream
 from market_data.risk import Portfolio, RiskEngine
 from market_data.smc import SmcEngine
 from market_data.store import ParquetStore
+from market_data.streamhub import MarketStream
 from market_data.structure import StructureEngine
 
 logger = logging.getLogger(__name__)
@@ -95,6 +97,7 @@ def _levels_json(lst) -> list[dict]:  # noqa: ANN001
 def create_app(
     settings: Settings | None = None,
     stream: BitgetWsStream | None = None,
+    market: MarketStream | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     stream = stream or BitgetWsStream(
@@ -102,6 +105,12 @@ def create_app(
         category=settings.category,
         symbols=settings.symbols,
         timeframes=settings.timeframes,
+        heartbeat_seconds=settings.ws_heartbeat_seconds,
+        reconnect_seconds=settings.ws_reconnect_seconds,
+    )
+    market = market or MarketStream(
+        url=settings.ws_public_url,
+        category=settings.category,
         heartbeat_seconds=settings.ws_heartbeat_seconds,
         reconnect_seconds=settings.ws_reconnect_seconds,
     )
@@ -113,9 +122,14 @@ def create_app(
         except Exception as exc:  # noqa: BLE001 - stream is best-effort
             logger.warning("Real-time stream start failed: %s", exc)
         try:
+            market.start()
+        except Exception as exc:  # noqa: BLE001 - market stream is best-effort
+            logger.warning("Market stream start failed: %s", exc)
+        try:
             yield
         finally:
             await stream.stop()
+            await market.stop()
 
     app = FastAPI(title="AI Trading API", version="0.1.0", lifespan=_lifespan)
 
@@ -197,6 +211,34 @@ def create_app(
             "order_blocks": {k: (asdict(v) if v else None) for k, v in sm["order_blocks"].items()},
             "bos_choch": [asdict(e) for e in sm["bos_choch"]],
         }
+
+    # -- exchange market hub (REST snapshots) ------------------------------
+    @app.get("/tickers")
+    def tickers() -> dict:
+        return {"tickers": [dict(t) for t in market.tickers().values()]}
+
+    @app.get("/books/{symbol}")
+    def books(symbol: str) -> dict:
+        book = market.orderbook(symbol)
+        if book is None:
+            return {"symbol": symbol, "asks": [], "bids": [], "seq": None}
+        return {"symbol": symbol, "asks": book["asks"], "bids": book["bids"], "seq": book["seq"]}
+
+    @app.get("/trades/{symbol}")
+    def trades(symbol: str, limit: int = 50) -> dict:
+        return {"symbol": symbol, "trades": market.trades(symbol, limit=limit)}
+
+    @app.get("/funding")
+    def funding() -> dict:
+        return {"funding": [dict(f) for f in market.funding().values()]}
+
+    @app.get("/mark-price")
+    def mark_price() -> dict:
+        return {"mark_prices": [dict(m) for m in market.mark_prices().values()]}
+
+    @app.get("/instruments")
+    def instruments() -> dict:
+        return {"instruments": [dict(i) for i in market.instruments().values()]}
 
     # -- background jobs (backtest / pull) --------------------------------
     def _run_backtest(job_id: str, category: str, symbol: str, timeframe: str) -> None:
@@ -326,7 +368,7 @@ def create_app(
             res = engine.place(req, ob.price)
         return {"approved": res.approved, "filled": res.filled, "reason": res.reason, "live": not run_control.paper_only}
 
-    # -- websocket snapshot ------------------------------------------------
+    # -- websocket subscription protocol -----------------------------------
     def _snapshot(category: str, symbol: str, timeframe: str) -> dict:
         df = _read(category, symbol, timeframe)
         if len(df) < 1:
@@ -345,14 +387,128 @@ def create_app(
         return snap
 
     @app.websocket("/ws")
-    async def ws(sock: WebSocket, symbol: str = "BTCUSDT", timeframe: str = "5m",
-                 category: str = "USDT-FUTURES", interval: float = 5.0) -> None:
+    async def ws(sock: WebSocket) -> None:
         await sock.accept()
+        # channel/symbol subscriptions for this client; each entry maps the
+        # event key (channel, symbol) to the original subscribe args. The
+        # candle channel is served from the local store/stream snapshot; the
+        # rest come from the market hub.
+        subs: dict[tuple[str, str], dict] = {}
+        send_lock = asyncio.Lock()
+
+        async def send(obj: dict) -> None:
+            async with send_lock:
+                await sock.send_json(obj)
+
+        def listener(channel: str, symbol: str, action: str, data) -> None:  # noqa: ANN001
+            if (channel, symbol) in subs or (channel, "*") in subs:
+                asyncio.create_task(send(
+                    {"channel": channel, "symbol": symbol, "action": action, "data": data}))
+
+        def event_key(channel: str, symbol: str) -> tuple[str, str]:
+            # a ticker subscription without a symbol means "full market"
+            if channel == "ticker" and symbol in (None, "", "default", "*"):
+                return "ticker", "*"
+            return channel, symbol
+
+        def hub_args(channel: str, symbol: str) -> tuple[str, str]:
+            # full-market ticker is served from the REST-seeded mirror; no WS
+            # per-symbol subscribe is issued for the wildcard subscription.
+            return channel, symbol
+
+        async def candle_loop() -> None:
+            # keep pushing candle snapshots at the subscription's interval
+            while True:
+                await asyncio.sleep(5.0)
+                for (channel, symbol), arg in list(subs.items()):
+                    if channel != "candle":
+                        continue
+                    tf = arg.get("timeframe") or "5m"
+                    category = arg.get("category") or "USDT-FUTURES"
+                    await send({"channel": "candle", "symbol": symbol, "action": "update",
+                                "data": _snapshot(category, symbol, tf)})
+
+        market.add_listener(listener)
+        candle_task = asyncio.create_task(candle_loop())
         try:
             while True:
-                await sock.send_json(_snapshot(category, symbol, timeframe))
-                await asyncio.sleep(interval)
-        except WebSocketDisconnect:
-            return
+                try:
+                    raw = await sock.receive_text()
+                except WebSocketDisconnect:
+                    break
+                try:
+                    msg = json.loads(raw)
+                except (TypeError, ValueError):
+                    continue
+                if not isinstance(msg, dict):
+                    continue
+                op = msg.get("op")
+                args = msg.get("args") or []
+                if op in ("subscribe", "unsubscribe"):
+                    for arg in args:
+                        if not isinstance(arg, dict):
+                            continue
+                        channel = arg.get("channel") or ""
+                        symbol = arg.get("symbol") or ("BTCUSDT" if channel != "ticker" else "")
+                        key = event_key(channel, symbol)
+                        if op == "subscribe":
+                            if channel == "candle":
+                                subs[key] = arg
+                                tf = arg.get("timeframe") or "5m"
+                                category = arg.get("category") or "USDT-FUTURES"
+                                await send({"channel": channel, "symbol": symbol, "action": "snapshot",
+                                            "data": _snapshot(category, symbol, tf)})
+                            elif channel == "ticker" and key == ("ticker", "*"):
+                                # full-market list: served from the REST mirror
+                                subs[key] = arg
+                                await send({"channel": "ticker", "symbol": symbol, "action": "snapshot",
+                                            "data": market.tickers()})
+                            else:
+                                hchan, hsym = hub_args(channel, symbol)
+                                subs[key] = arg
+                                market.subscribe(hchan, hsym)
+                                if channel == "ticker":
+                                    await send({"channel": "ticker", "symbol": symbol, "action": "snapshot",
+                                                "data": market.tickers()})
+                                else:
+                                    snap = _market_snapshot(channel, symbol)
+                                    if snap is not None:
+                                        await send({"channel": channel, "symbol": symbol,
+                                                    "action": "snapshot", "data": snap})
+                            await send({"channel": channel, "symbol": symbol, "event": "subscribed"})
+                        else:
+                            hchan, hsym = hub_args(channel, symbol)
+                            subs.pop(key, None)
+                            if key != ("ticker", "*"):
+                                market.unsubscribe(hchan, hsym)
+                            await send({"channel": channel, "symbol": symbol, "event": "unsubscribed"})
+                elif msg.get("event") == "ping":
+                    await send({"event": "pong"})
+        finally:
+            candle_task.cancel()
+            for (channel, symbol) in list(subs):
+                if channel == "candle":
+                    continue
+                if channel == "ticker" and (channel, symbol) == ("ticker", "*"):
+                    continue
+                hchan, hsym = hub_args(channel, symbol)
+                market.unsubscribe(hchan, hsym)
+            market.remove_listener(listener)
+
+    def _market_snapshot(channel: str, symbol: str) -> dict | None:
+        if channel == "books":
+            book = market.orderbook(symbol)
+            if book is None:
+                return None
+            return book
+        if channel == "trade":
+            return {"trades": market.trades(symbol, limit=50)}
+        if channel == "mark-price":
+            mp = market.mark_prices().get(symbol)
+            return {"mark_price": mp} if mp else None
+        if channel == "funding-time":
+            f = market.funding().get(symbol)
+            return {"funding": f} if f else None
+        return None
 
     return app

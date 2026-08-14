@@ -9,6 +9,8 @@ const m = vi.hoisted(() => ({
   analyze: vi.fn(),
   structure: vi.fn(),
   agentDecide: vi.fn(),
+  tickers: vi.fn(),
+  instruments: vi.fn(),
 }));
 
 vi.mock("./api/client", () => ({
@@ -18,12 +20,44 @@ vi.mock("./api/client", () => ({
     analyze: m.analyze,
     structure: m.structure,
     agentDecide: m.agentDecide,
+    tickers: m.tickers,
+    instruments: m.instruments,
   },
 }));
 
 // The chart needs a real canvas + Solid runtime; stub it for the layout test.
 vi.mock("./components/chart/KLineChartProView", () => ({
   KLineChartProView: forwardRef(() => <div data-testid="chart" />),
+}));
+
+// The market hub hooks use a real WebSocket; stub them with canned data.
+vi.mock("./hooks/useExchangeSocket", () => ({
+  useExchangeSocket: () => {},
+}));
+vi.mock("./hooks/useTickerList", () => ({
+  useTickerList: () => ({
+    tickers: [
+      { instId: "BTCUSDT", symbol: "BTCUSDT", lastPr: "60000", price24hPcnt: "-0.02", volume24h: "1000" },
+      { instId: "ETHUSDT", symbol: "ETHUSDT", lastPr: "3000", price24hPcnt: "0.05", volume24h: "2000" },
+      { instId: "SOLUSDT", symbol: "SOLUSDT", lastPr: "150", price24hPcnt: "0.01", volume24h: "500" },
+    ],
+    search: "",
+    sortKey: "change",
+    sortDir: "desc",
+    setSearch: () => {},
+    setTab: () => {},
+    setSort: () => {},
+    symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+  }),
+}));
+vi.mock("./hooks/useOrderBook", () => ({
+  useOrderBook: () => ({ asks: [], bids: [], seq: null, spread: null }),
+}));
+vi.mock("./hooks/useTrades", () => ({
+  useTrades: () => [],
+}));
+vi.mock("./hooks/useDerivative", () => ({
+  useDerivative: () => ({ funding: null, markPrice: null }),
 }));
 
 import App from "./App";
@@ -35,6 +69,8 @@ beforeEach(() => {
   m.analyze.mockResolvedValue({ price: 100, indicators: {}, levels: [] });
   m.structure.mockResolvedValue({ swings: [], trendlines: [], box: null, liquidity: [], order_blocks: {}, bos_choch: [] });
   m.agentDecide.mockResolvedValue({ action: "hold", symbol: "BTCUSDT", side: null, reference_price: 100, reason: "hold", confidence: 0.5 });
+  m.tickers.mockResolvedValue({ tickers: [] });
+  m.instruments.mockResolvedValue({ instruments: [] });
 });
 
 describe("App terminal layout", () => {
@@ -44,11 +80,14 @@ describe("App terminal layout", () => {
     expect(screen.getByText("ETHUSDT")).toBeInTheDocument();
     expect(screen.getByText("SOLUSDT")).toBeInTheDocument();
     expect(screen.getByTestId("chart")).toBeInTheDocument();
+    expect(screen.getByText("订单簿")).toBeInTheDocument();
+    expect(screen.getByText("最新成交")).toBeInTheDocument();
+    expect(screen.getByText(/AI 分析模块预留/)).toBeInTheDocument();
   });
 
   it("selecting a symbol updates the header", async () => {
     render(<App />);
-    fireEvent.click(screen.getByText("ETHUSDT"));
+    fireEvent.click(screen.getByTestId("ticker-ETHUSDT"));
     await waitFor(() => expect(screen.getByText("◆ AI-Trade").nextElementSibling?.textContent).toBe("ETHUSDT"));
   });
 });

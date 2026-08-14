@@ -104,6 +104,44 @@ export interface SeriesRef {
   timeframe: string;
 }
 
+export interface Ticker {
+  instId: string;
+  symbol: string;
+  lastPr?: string;
+  open24h?: string;
+  high24h?: string;
+  low24h?: string;
+  askPr?: string;
+  bidPr?: string;
+  change24h?: string;
+  price24hPcnt?: string;
+  baseVolume?: string;
+  volume24h?: string;
+  quoteVolume?: string;
+  turnover24h?: string;
+  markPrice?: string;
+  fundingRate?: string;
+  ts?: string;
+  [key: string]: unknown;
+}
+
+export type TickerSortKey = "symbol" | "price" | "change" | "volume" | "turnover";
+
+export interface Instrument {
+  symbol: string;
+  baseCoin?: string;
+  quoteCoin?: string;
+  /** price precision (Bitget REST uses pricePlace) */
+  pricePlace?: string;
+  /** quantity precision (Bitget REST uses volumePlace) */
+  volumePlace?: string;
+  symbolStatus?: string;
+  minTradeNum?: string;
+  priceEndStep?: string;
+  sizeMultiplier?: string;
+  [key: string]: unknown;
+}
+
 export interface ChartPoint {
   timestamp?: number;
   value?: number;

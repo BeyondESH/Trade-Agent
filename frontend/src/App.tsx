@@ -3,8 +3,17 @@ import type { Period, SymbolInfo } from "@klinecharts/pro";
 import { BitgetDatafeed, FIXED_SYMBOLS, periodToTimeframe } from "./api/datafeed";
 import { api } from "./api/client";
 import type { AnalyzeResponse, Candle, StructureResponse } from "./api/types";
-import { AnalysisPanel } from "./components/ai/AnalysisPanel";
+import { AiAnalysisPlaceholder } from "./components/ai/AiAnalysisPlaceholder";
 import { KLineChartProView, type KLineChartProHandle } from "./components/chart/KLineChartProView";
+import { FundingRate, MarkPrice } from "./components/derivative/FundingRate";
+import { TickerBar } from "./components/market/TickerBar";
+import { MarketList } from "./components/market/MarketList";
+import { OrderBook } from "./components/orderbook/OrderBook";
+import { TradesTape } from "./components/orderbook/TradesTape";
+import { useDerivative } from "./hooks/useDerivative";
+import { useOrderBook } from "./hooks/useOrderBook";
+import { useTickerList } from "./hooks/useTickerList";
+import { useTrades } from "./hooks/useTrades";
 import { AutoLayerController } from "./lib/chartController";
 import {
   boxToRect,
@@ -13,7 +22,6 @@ import {
   priceLineToOverlay,
   trendlineToSegment,
 } from "./lib/transform";
-import { Badge, Button, Input, Panel } from "./ui";
 
 const DEFAULT_SYMBOL: SymbolInfo = { ...FIXED_SYMBOLS[0] };
 const DEFAULT_PERIOD: Period = { multiplier: 5, timespan: "minute", text: "5m" };
@@ -30,6 +38,13 @@ const PERIODS: Period[] = [
 
 const controller = new AutoLayerController();
 
+function toSymbolInfo(ticker: string): SymbolInfo {
+  const known = FIXED_SYMBOLS.find((s) => s.ticker === ticker);
+  return known
+    ? { ...known }
+    : { ticker, shortName: ticker, market: "USDT-FUTURES", pricePrecision: 2, volumePrecision: 4 };
+}
+
 export default function App() {
   const [symbol, setSymbol] = useState<SymbolInfo>(DEFAULT_SYMBOL);
   const [period, setPeriod] = useState<Period>(DEFAULT_PERIOD);
@@ -37,10 +52,13 @@ export default function App() {
   const [structure, setStructure] = useState<StructureResponse | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
   const [layers, setLayers] = useState({ sr: true, structure: true, smc: false });
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState("market");
   const chartRef = useRef<KLineChartProHandle>(null);
   const datafeed = useMemo(() => new BitgetDatafeed(), []);
+
+  const tickerList = useTickerList();
+  const orderBook = useOrderBook(symbol.ticker);
+  const trades = useTrades(symbol.ticker);
+  const derivative = useDerivative(symbol.ticker);
 
   const timeframe = periodToTimeframe(period);
   const seriesKey = `${symbol.ticker}/${timeframe}`;
@@ -105,16 +123,16 @@ export default function App() {
     applyAutoLayers();
   }, [applyAutoLayers]);
 
-  const filteredSymbols = useMemo(() => {
-    const q = search.toLowerCase();
-    return FIXED_SYMBOLS.filter((s) => !q || s.ticker.toLowerCase().includes(q));
-  }, [search]);
-
   const price = candles.length ? candles[candles.length - 1].close : undefined;
   const change = candles.length >= 2
     ? ((candles[candles.length - 1].close - candles[0].open) / candles[0].open) * 100
     : undefined;
   const up = (change ?? 0) >= 0;
+
+  const handleSelect = useCallback((ticker: string) => {
+    setSymbol(toSymbolInfo(ticker));
+    chartRef.current?.setSymbol(toSymbolInfo(ticker));
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-base text-text">
@@ -130,49 +148,39 @@ export default function App() {
             {change.toFixed(2)}%
           </span>
         )}
-        <div className="ml-auto">
-          <Button variant="primary" onClick={() => chartRef.current?.setPeriod(DEFAULT_PERIOD)}>
-            ↻
-          </Button>
-        </div>
+        <span className="text-[10px] text-muted ml-auto">USDT-FUTURES</span>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-[220px_1fr_320px] min-h-0">
-        <div className="hidden md:block min-h-0 overflow-auto">
-          <Panel title="Markets" className="rounded-none border-0 border-r">
-            <Input placeholder="search…" value={search} onChange={(e) => setSearch(e.target.value)} className="mb-2" />
-            <div className="flex flex-col gap-0.5">
-              {filteredSymbols.map((s) => (
-                <button
-                  key={s.ticker}
-                  onClick={() => {
-                    setSymbol({ ...s });
-                    chartRef.current?.setSymbol({ ...s });
-                  }}
-                  className={`flex items-center justify-between px-2 py-1.5 rounded text-xs ${
-                    symbol.ticker === s.ticker ? "bg-panel2 text-text" : "text-muted hover:bg-panel2/50"
-                  }`}
-                >
-                  <span className="font-semibold">{s.ticker}</span>
-                  <span className="tnum text-[10px]">perp</span>
-                </button>
-              ))}
-            </div>
-          </Panel>
+      <TickerBar tickers={tickerList.tickers.slice(0, 40)} active={symbol.ticker} onSelect={handleSelect} />
+
+      <div className="flex-1 grid grid-cols-[240px_1fr_300px] min-h-0">
+        <div className="min-h-0 border-r border-border">
+          <MarketList
+            tickers={tickerList.tickers}
+            search={tickerList.search}
+            sortKey={tickerList.sortKey}
+            sortDir={tickerList.sortDir}
+            active={symbol.ticker}
+            onSearch={tickerList.setSearch}
+            onSort={tickerList.setSort}
+            onSelect={handleSelect}
+          />
         </div>
 
-        <div className="min-h-0 overflow-hidden">
-          <KLineChartProView
-            ref={chartRef}
-            symbol={symbol}
-            period={period}
-            periods={PERIODS}
-            datafeed={datafeed}
-            theme="dark"
-            onSymbolChange={(s) => setSymbol({ ...s })}
-            onPeriodChange={(p) => setPeriod({ ...p })}
-            onReady={handleChartReady}
-          />
+        <div className="min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0">
+            <KLineChartProView
+              ref={chartRef}
+              symbol={symbol}
+              period={period}
+              periods={PERIODS}
+              datafeed={datafeed}
+              theme="dark"
+              onSymbolChange={(s) => setSymbol({ ...s })}
+              onPeriodChange={(p) => setPeriod({ ...p })}
+              onReady={handleChartReady}
+            />
+          </div>
           <div className="flex items-center gap-3 px-2 py-1 border-t border-border text-[10px] text-muted">
             {(
               [
@@ -194,9 +202,22 @@ export default function App() {
           </div>
         </div>
 
-        <div className="hidden md:block min-h-0 overflow-auto">
-          <AnalysisPanel symbol={symbol.ticker} timeframe={timeframe} />
+        <div className="min-h-0 flex flex-col border-l border-border">
+          <div className="flex-1 min-h-0">
+            <OrderBook asks={orderBook.asks} bids={orderBook.bids} spread={orderBook.spread} precision={2} />
+          </div>
+          <div className="flex-1 min-h-0 border-t border-border">
+            <TradesTape trades={trades} precision={2} />
+          </div>
+          <div className="flex items-center justify-between px-2 py-1 border-t border-border">
+            <FundingRate funding={derivative.funding} />
+            <MarkPrice markPrice={derivative.markPrice} />
+          </div>
         </div>
+      </div>
+
+      <div className="h-28 shrink-0">
+        <AiAnalysisPlaceholder />
       </div>
     </div>
   );
