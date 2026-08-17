@@ -1,0 +1,472 @@
+import React, { useState } from 'react';
+import {
+  DesktopTab,
+  DesktopViewMode,
+  ThemeMode,
+} from '../../types/trading';
+import {
+  Plus,
+  X,
+  Pin,
+  Search,
+  Cloud,
+  CloudCheck,
+  Settings,
+  Bell,
+  Menu,
+  Maximize2,
+  Minimize2,
+  Minus,
+  Check,
+  HelpCircle,
+  Keyboard,
+  ExternalLink,
+  ChevronDown,
+  Monitor,
+  Layout,
+  TrendingUp,
+  Flame,
+  Filter,
+  Users,
+  Newspaper,
+  Code,
+  Briefcase,
+  Share2,
+} from 'lucide-react';
+
+interface Props {
+  tabs: DesktopTab[];
+  activeTabId: string;
+  onSelectTab: (id: string) => void;
+  onCloseTab: (id: string) => void;
+  onNewTab: (type: DesktopViewMode) => void;
+  onPinTab: (id: string) => void;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
+  onOpenCommandPalette: () => void;
+  onOpenDesktopSettings: () => void;
+  onOpenShortcutsModal: () => void;
+}
+
+export const DesktopTitleBar: React.FC<Props> = ({
+  tabs,
+  activeTabId,
+  onSelectTab,
+  onCloseTab,
+  onNewTab,
+  onPinTab,
+  theme,
+  onToggleTheme,
+  onOpenCommandPalette,
+  onOpenDesktopSettings,
+  onOpenShortcutsModal,
+}) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNewTabMenuOpen, setIsNewTabMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const isDark = theme === 'dark';
+
+  const getTabIcon = (type: DesktopViewMode) => {
+    switch (type) {
+      case 'chart':
+        return <TrendingUp className="w-3.5 h-3.5 text-[#2962ff]" />;
+      case 'markets':
+        return <Monitor className="w-3.5 h-3.5 text-[#00bcd4]" />;
+      case 'screener':
+        return <Filter className="w-3.5 h-3.5 text-[#ff9800]" />;
+      case 'heatmaps':
+        return <Flame className="w-3.5 h-3.5 text-[#f23645]" />;
+      case 'community':
+        return <Users className="w-3.5 h-3.5 text-[#9c27b0]" />;
+      case 'news':
+        return <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />;
+      case 'pine':
+        return <Code className="w-3.5 h-3.5 text-[#e91e63]" />;
+      case 'brokers':
+        return <Briefcase className="w-3.5 h-3.5 text-[#089981]" />;
+      default:
+        return <Layout className="w-3.5 h-3.5 text-[#2962ff]" />;
+    }
+  };
+
+  return (
+    <div
+      id="tradingview-desktop-titlebar"
+      className={`h-9 w-full flex items-center justify-between border-b px-2 select-none z-50 text-xs font-sans ${
+        isDark ? 'bg-[#0f1118] border-[#2a2e39] text-[#d1d4dc]' : 'bg-[#e0e3eb] border-[#cbcfd9] text-[#131722]'
+      }`}
+    >
+      {/* Left: Window Controls + TradingView Main Menu */}
+      <div className="flex items-center gap-2 h-full">
+        {/* macOS Style Window Traffic Lights */}
+        <div className="flex items-center gap-1.5 px-1.5 py-1">
+          <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] cursor-pointer hover:opacity-80 shadow-xs" title="Close Window" />
+          <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] cursor-pointer hover:opacity-80 shadow-xs" title="Minimize Window" />
+          <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] cursor-pointer hover:opacity-80 shadow-xs" title="Zoom / Maximize" />
+        </div>
+
+        {/* TV Hamburger App Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors font-bold ${
+              isDark ? 'hover:bg-[#1e222d] text-white' : 'hover:bg-white text-black'
+            }`}
+          >
+            <div className="w-4 h-4 bg-[#2962ff] text-white rounded flex items-center justify-center font-black text-[10px]">
+              TV
+            </div>
+            <span className="font-semibold text-xs tracking-tight">TradingView</span>
+            <ChevronDown className="w-3 h-3 opacity-60" />
+          </button>
+
+          {isMenuOpen && (
+            <div
+              className={`absolute top-full left-0 mt-1 w-56 rounded-lg shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
+                isDark ? 'bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]' : 'bg-white border-[#e0e3eb] text-[#131722]'
+              }`}
+            >
+              <div className="px-3 py-1.5 border-b border-gray-500/20 text-[11px] font-semibold text-gray-400">
+                TradingView Desktop v2.8.4 Pro
+              </div>
+
+              <button
+                onClick={() => {
+                  onNewTab('chart');
+                  setIsMenuOpen(false);
+                }}
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between ${
+                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                }`}
+              >
+                <span>New Chart Tab</span>
+                <span className="text-[10px] text-gray-400 font-mono">⌘T</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onOpenCommandPalette();
+                  setIsMenuOpen(false);
+                }}
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between ${
+                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                }`}
+              >
+                <span>Command Palette</span>
+                <span className="text-[10px] text-gray-400 font-mono">⌘K</span>
+              </button>
+
+              <div className="my-1 border-t border-gray-500/20" />
+
+              <button
+                onClick={() => {
+                  onToggleTheme();
+                  setIsMenuOpen(false);
+                }}
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between ${
+                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                }`}
+              >
+                <span>Color Theme: {theme === 'dark' ? 'Dark' : 'Light'}</span>
+                <span className="text-[10px] text-[#2962ff] font-semibold">Toggle</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onOpenDesktopSettings();
+                  setIsMenuOpen(false);
+                }}
+                className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Desktop App Settings</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onOpenShortcutsModal();
+                  setIsMenuOpen(false);
+                }}
+                className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                }`}
+              >
+                <Keyboard className="w-3.5 h-3.5" />
+                <span>Keyboard Shortcuts</span>
+              </button>
+
+              <div className="my-1 border-t border-gray-500/20" />
+
+              <div className="px-3 py-1 text-[10px] text-gray-400 flex items-center justify-between">
+                <span>Cloud Sync: Active</span>
+                <span className="w-2 h-2 rounded-full bg-[#089981]"></span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Multi-Tab Bar Container */}
+        <div className="flex items-center h-full gap-1 overflow-x-auto no-scrollbar max-w-[620px]">
+          {tabs.map((tab) => {
+            const isActive = tab.id === activeTabId;
+            return (
+              <div
+                key={tab.id}
+                onClick={() => onSelectTab(tab.id)}
+                className={`group flex items-center gap-1.5 px-3 h-[28px] rounded-t-md cursor-pointer border-t border-x transition-all duration-100 select-none ${
+                  isActive
+                    ? isDark
+                      ? 'bg-[#131722] border-[#2a2e39] text-white font-medium shadow-xs'
+                      : 'bg-white border-[#cbcfd9] text-black font-semibold shadow-xs'
+                    : isDark
+                    ? 'border-transparent text-gray-400 hover:bg-[#1e222d] hover:text-gray-200'
+                    : 'border-transparent text-gray-600 hover:bg-[#d8dce6] hover:text-black'
+                }`}
+              >
+                {getTabIcon(tab.type)}
+                <span className="truncate max-w-[120px] text-[11px]">{tab.title}</span>
+
+                {tab.isPinned && <Pin className="w-2.5 h-2.5 text-[#2962ff] rotate-45" />}
+
+                {tabs.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCloseTab(tab.id);
+                    }}
+                    className="p-0.5 rounded-full hover:bg-gray-500/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3 text-gray-400 hover:text-white" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          {/* "+" New Tab Button with Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setIsNewTabMenuOpen(!isNewTabMenuOpen)}
+              className={`p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors ${
+                isNewTabMenuOpen ? 'bg-gray-500/30 text-white' : ''
+              }`}
+              title="Add New Workspace Tab"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+
+            {isNewTabMenuOpen && (
+              <div
+                className={`absolute top-full left-0 mt-1 w-48 rounded-lg shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
+                  isDark ? 'bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]' : 'bg-white border-[#e0e3eb] text-[#131722]'
+                }`}
+              >
+                <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Open Workspace
+                </div>
+
+                <button
+                  onClick={() => {
+                    onNewTab('chart');
+                    setIsNewTabMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5 text-[#2962ff]" />
+                  <span>SuperCharts</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onNewTab('markets');
+                    setIsNewTabMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Monitor className="w-3.5 h-3.5 text-[#00bcd4]" />
+                  <span>Markets Overview</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onNewTab('screener');
+                    setIsNewTabMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Filter className="w-3.5 h-3.5 text-[#ff9800]" />
+                  <span>Screener 2.0</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onNewTab('heatmaps');
+                    setIsNewTabMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5 text-[#f23645]" />
+                  <span>Market Heatmaps</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onNewTab('community');
+                    setIsNewTabMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-[#9c27b0]" />
+                  <span>Community Ideas</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onNewTab('news');
+                    setIsNewTabMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />
+                  <span>News & Calendar</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onNewTab('pine');
+                    setIsNewTabMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Code className="w-3.5 h-3.5 text-[#e91e63]" />
+                  <span>Pine Script Studio</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onNewTab('brokers');
+                    setIsNewTabMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
+                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-[#089981]" />
+                  <span>Brokers & Trading</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Center/Right: Global Search Bar + Utilities + Profile */}
+      <div className="flex items-center gap-2">
+        {/* Global Quick Search Bar */}
+        <button
+          onClick={onOpenCommandPalette}
+          className={`flex items-center gap-2 px-3 py-1 rounded-md border text-xs transition-colors ${
+            isDark
+              ? 'bg-[#131722] border-[#2a2e39] text-gray-400 hover:text-white hover:border-[#2962ff]'
+              : 'bg-white border-[#cbcfd9] text-gray-600 hover:text-black hover:border-[#2962ff]'
+          }`}
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span>Quick search...</span>
+          <kbd className="px-1.5 py-0.5 rounded bg-gray-500/20 text-[10px] font-mono">⌘K</kbd>
+        </button>
+
+        {/* Cloud Auto-Save Status */}
+        <div
+          className="flex items-center gap-1 text-[11px] text-gray-400 px-1 cursor-pointer"
+          title="All changes autosaved to TradingView Cloud"
+        >
+          <Cloud className="w-3.5 h-3.5 text-[#089981]" />
+          <span className="hidden md:inline">Saved</span>
+        </div>
+
+        {/* Notification Bell */}
+        <div className="relative">
+          <button
+            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            className="p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors relative"
+            title="Notifications"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#2962ff]" />
+          </button>
+
+          {isNotificationsOpen && (
+            <div
+              className={`absolute top-full right-0 mt-1 w-72 rounded-lg shadow-2xl border p-3 z-50 text-xs animate-in fade-in zoom-in-95 duration-100 ${
+                isDark ? 'bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]' : 'bg-white border-[#e0e3eb] text-[#131722]'
+              }`}
+            >
+              <div className="font-bold text-xs mb-2 flex items-center justify-between">
+                <span>Notifications</span>
+                <span className="text-[10px] text-[#2962ff] cursor-pointer">Mark all read</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="p-2 rounded bg-[#2962ff]/10 border border-[#2962ff]/30 text-[11px]">
+                  <div className="font-bold text-[#2962ff]">Price Alert Triggered</div>
+                  <div className="text-gray-300">BTCUSDT crossed above $96,000</div>
+                  <div className="text-[9px] text-gray-500 mt-1">4 minutes ago</div>
+                </div>
+                <div className="p-2 rounded bg-gray-500/10 text-[11px]">
+                  <div className="font-bold">New Pine Script Update</div>
+                  <div className="text-gray-400">SuperTrend Dynamic Breakout v4 updated</div>
+                  <div className="text-[9px] text-gray-500 mt-1">1 hour ago</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Shortcuts Icon */}
+        <button
+          onClick={onOpenShortcutsModal}
+          className="p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors"
+          title="Keyboard Shortcuts (?)"
+        >
+          <Keyboard className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Settings Icon */}
+        <button
+          onClick={onOpenDesktopSettings}
+          className="p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors"
+          title="Desktop App Settings"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Profile Avatar */}
+        <div
+          className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded cursor-pointer hover:bg-gray-500/20"
+          title="Trader Profile (Pro Plan Active)"
+        >
+          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#2962ff] to-[#00bcd4] flex items-center justify-center text-white font-bold text-[10px]">
+            TV
+          </div>
+          <span className="font-semibold text-[11px] hidden sm:inline">Pro+</span>
+        </div>
+      </div>
+    </div>
+  );
+};

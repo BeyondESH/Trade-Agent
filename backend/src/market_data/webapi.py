@@ -20,7 +20,7 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocke
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from market_data import dlquant, indicators, levels
+from market_data import blockbeats, dlquant, indicators, levels
 from market_data.agent import build_agent_context
 from market_data.alertstore import AlertStore
 from market_data.appconfig import ConfigStore
@@ -318,6 +318,25 @@ def create_app(
     @app.get("/instruments")
     def instruments(category: str | None = None) -> dict:
         return {"instruments": [dict(i) for i in market.instruments(category).values()]}
+
+    # -- BlockBeats news / data proxy (key stays server-side) --------------
+    @app.get("/blockbeats/newsflash/{type_}")
+    def blockbeats_newsflash(type_: str, page: int = 1, size: int = 10, lang: str = "cn") -> dict:
+        try:
+            return blockbeats.fetch_newsflash(type_, page=page, size=size, lang=lang)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=f"blockbeats upstream error: {exc}") from exc
+
+    @app.get("/blockbeats/data/{endpoint}")
+    def blockbeats_data(endpoint: str, network: str | None = None) -> dict:
+        try:
+            return blockbeats.fetch_data(endpoint, network=network) if network else blockbeats.fetch_data(endpoint)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=f"blockbeats upstream error: {exc}") from exc
 
     # -- background jobs (backtest / pull) --------------------------------
     def _run_backtest(job_id: str, category: str, symbol: str, timeframe: str) -> None:

@@ -173,4 +173,25 @@ export const api = {
     }),
   deleteAlert: (id: string) =>
     request<{ ok: boolean }>(`/alerts/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  // BlockBeats news/data (proxied server-side; key never leaves the backend).
+  blockbeatsNews: (type: string, page = 1, size = 20, lang = "cn") =>
+    request<{
+      status: number;
+      page: number;
+      data: Array<{
+        id: number;
+        title: string;
+        content: string;
+        pic?: string;
+        link?: string;
+        url?: string;
+        create_time: string | number;
+      }>;
+    }>(`/blockbeats/newsflash/${encodeURIComponent(type)}${qs({ page, size, lang })}`),
+
+  blockbeatsData: (endpoint: string, network?: string) =>
+    request<{ status: number; data: unknown }>(
+      `/blockbeats/data/${encodeURIComponent(endpoint)}${qs({ network })}`,
+    ),
 };

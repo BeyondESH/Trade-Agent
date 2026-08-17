@@ -1,10 +1,10 @@
-/// <reference types="vitest" />
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       // Vendored klinecharts-pro (prebuilt ESM; package resolution via file: is flaky on Windows).

@@ -131,6 +131,15 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
     if (props.locale) proRef.current?.setLocale(props.locale);
   }, [props.locale]);
 
+  // Symbol / period are driven reactively by the template toolbar state:
+  // the pro instance only (re)loads data when these change.
+  useEffect(() => {
+    proRef.current?.setSymbol(props.symbol);
+  }, [props.symbol]);
+  useEffect(() => {
+    proRef.current?.setPeriod(props.period);
+  }, [props.period]);
+
     return <div ref={containerRef} className="w-full h-full min-h-0" />;
   },
 );
