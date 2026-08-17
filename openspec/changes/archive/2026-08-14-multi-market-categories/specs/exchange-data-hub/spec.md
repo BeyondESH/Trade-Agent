@@ -1,9 +1,5 @@
-# exchange-data-hub Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by syncing change exchange-terminal.
-
-## Requirements
 ### Requirement: 多频道实时行情接入
 
 系统 SHALL 基于现有 Bitget 公共 WS 管道接入以下频道并提供按品类隔离的统一内存镜像：`ticker`、`books`、`trade`、`mark-price`、`funding-time`。镜像按 `category`（`SPOT`/`MARGIN`/`USDT-FUTURES`/`USDC-FUTURES`/`COIN-FUTURES`）分别维护，各品类使用对应 `instType` 建立订阅。
@@ -71,36 +67,7 @@ TBD - created by syncing change exchange-terminal.
 - **WHEN** 客户端订阅帧未携带 category
 - **THEN** 系统 SHALL 按 `USDT-FUTURES` 处理
 
-#### Scenario: 退订停止推送
-
-- **WHEN** 客户端发送 `unsubscribe` 帧
-- **THEN** 系统 SHALL 停止向该客户端推送对应 channel 数据
-
 #### Scenario: 断连清理
 
 - **WHEN** 客户端连接断开
 - **THEN** 系统 SHALL 释放其全部订阅并停止向其推送
-
-### Requirement: REST 快照端点
-
-系统 SHALL 提供 REST 端点供前端初次加载：`/tickers`（全量行情）、`/books/{symbol}`（订单簿快照）、`/trades/{symbol}`（最近成交）、`/funding`（资金费率）、`/mark-price`（标记价格）、`/instruments`（合约静态规格：价格/数量精度、状态）。
-
-#### Scenario: 加载全量行情
-
-- **WHEN** 请求 `GET /tickers`
-- **THEN** 系统 SHALL 返回全部合约的最新行情（价格、24h 涨跌幅/成交量、买一/卖一）
-
-#### Scenario: 加载订单簿快照
-
-- **WHEN** 请求 `GET /books/{symbol}`
-- **THEN** 系统 SHALL 返回该 symbol 当前全深订单簿与序号
-
-#### Scenario: 加载合约静态规格
-
-- **WHEN** 请求 `GET /instruments`
-- **THEN** 系统 SHALL 返回合约列表及价格精度、数量精度、上下架状态等静态信息
-
-#### Scenario: 未订阅数据返回空
-
-- **WHEN** 请求未订阅 symbol 的 `/books/{symbol}` 或 `/trades/{symbol}`
-- **THEN** 系统 SHALL 返回空数据结构而非报错

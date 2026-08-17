@@ -110,7 +110,7 @@ def create_app(
     )
     market = market or MarketStream(
         url=settings.ws_public_url,
-        category=settings.category,
+        categories=settings.categories,
         heartbeat_seconds=settings.ws_heartbeat_seconds,
         reconnect_seconds=settings.ws_reconnect_seconds,
     )
@@ -214,31 +214,43 @@ def create_app(
 
     # -- exchange market hub (REST snapshots) ------------------------------
     @app.get("/tickers")
-    def tickers() -> dict:
-        return {"tickers": [dict(t) for t in market.tickers().values()]}
+    def tickers(category: str | None = None) -> dict:
+        data = market.tickers(category)
+        return {"tickers": [dict(t) for t in data.values()]}
 
     @app.get("/books/{symbol}")
-    def books(symbol: str) -> dict:
-        book = market.orderbook(symbol)
+    def books(symbol: str, category: str = "USDT-FUTURES") -> dict:
+        book = market.orderbook(symbol, category=category)
         if book is None:
-            return {"symbol": symbol, "asks": [], "bids": [], "seq": None}
-        return {"symbol": symbol, "asks": book["asks"], "bids": book["bids"], "seq": book["seq"]}
+            return {"symbol": symbol, "category": category, "asks": [], "bids": [], "seq": None}
+        return {"symbol": symbol, "category": category, "asks": book["asks"], "bids": book["bids"], "seq": book["seq"]}
+
+    @app.get("/books/{category}/{symbol}")
+    def books_categorized(category: str, symbol: str) -> dict:
+        book = market.orderbook(symbol, category=category)
+        if book is None:
+            return {"symbol": symbol, "category": category, "asks": [], "bids": [], "seq": None}
+        return {"symbol": symbol, "category": category, "asks": book["asks"], "bids": book["bids"], "seq": book["seq"]}
 
     @app.get("/trades/{symbol}")
-    def trades(symbol: str, limit: int = 50) -> dict:
-        return {"symbol": symbol, "trades": market.trades(symbol, limit=limit)}
+    def trades(symbol: str, limit: int = 50, category: str = "USDT-FUTURES") -> dict:
+        return {"symbol": symbol, "category": category, "trades": market.trades(symbol, limit=limit, category=category)}
+
+    @app.get("/trades/{category}/{symbol}")
+    def trades_categorized(category: str, symbol: str, limit: int = 50) -> dict:
+        return {"symbol": symbol, "category": category, "trades": market.trades(symbol, limit=limit, category=category)}
 
     @app.get("/funding")
-    def funding() -> dict:
-        return {"funding": [dict(f) for f in market.funding().values()]}
+    def funding(category: str | None = None) -> dict:
+        return {"funding": [dict(f) for f in market.funding(category).values()]}
 
     @app.get("/mark-price")
-    def mark_price() -> dict:
-        return {"mark_prices": [dict(m) for m in market.mark_prices().values()]}
+    def mark_price(category: str | None = None) -> dict:
+        return {"mark_prices": [dict(m) for m in market.mark_prices(category).values()]}
 
     @app.get("/instruments")
-    def instruments() -> dict:
-        return {"instruments": [dict(i) for i in market.instruments().values()]}
+    def instruments(category: str | None = None) -> dict:
+        return {"instruments": [dict(i) for i in market.instruments(category).values()]}
 
     # -- background jobs (backtest / pull) --------------------------------
     def _run_backtest(job_id: str, category: str, symbol: str, timeframe: str) -> None:
@@ -400,10 +412,11 @@ def create_app(
             async with send_lock:
                 await sock.send_json(obj)
 
-        def listener(channel: str, symbol: str, action: str, data) -> None:  # noqa: ANN001
+        def listener(category: str, channel: str, symbol: str, action: str, data) -> None:  # noqa: ANN001
             if (channel, symbol) in subs or (channel, "*") in subs:
                 asyncio.create_task(send(
-                    {"channel": channel, "symbol": symbol, "action": action, "data": data}))
+                    {"category": category, "channel": channel, "symbol": symbol,
+                     "action": action, "data": data}))
 
         def event_key(channel: str, symbol: str) -> tuple[str, str]:
             # a ticker subscription without a symbol means "full market"
@@ -450,38 +463,43 @@ def create_app(
                             continue
                         channel = arg.get("channel") or ""
                         symbol = arg.get("symbol") or ("BTCUSDT" if channel != "ticker" else "")
+                        category = arg.get("category") or "USDT-FUTURES"
                         key = event_key(channel, symbol)
                         if op == "subscribe":
                             if channel == "candle":
                                 subs[key] = arg
                                 tf = arg.get("timeframe") or "5m"
-                                category = arg.get("category") or "USDT-FUTURES"
-                                await send({"channel": channel, "symbol": symbol, "action": "snapshot",
+                                await send({"category": category, "channel": channel, "symbol": symbol,
+                                            "action": "snapshot",
                                             "data": _snapshot(category, symbol, tf)})
                             elif channel == "ticker" and key == ("ticker", "*"):
                                 # full-market list: served from the REST mirror
                                 subs[key] = arg
-                                await send({"channel": "ticker", "symbol": symbol, "action": "snapshot",
-                                            "data": market.tickers()})
+                                await send({"category": category, "channel": "ticker", "symbol": symbol,
+                                            "action": "snapshot",
+                                            "data": market.tickers(category)})
                             else:
                                 hchan, hsym = hub_args(channel, symbol)
                                 subs[key] = arg
-                                market.subscribe(hchan, hsym)
+                                market.subscribe(hchan, hsym, category)
                                 if channel == "ticker":
-                                    await send({"channel": "ticker", "symbol": symbol, "action": "snapshot",
-                                                "data": market.tickers()})
+                                    await send({"category": category, "channel": "ticker", "symbol": symbol,
+                                                "action": "snapshot",
+                                                "data": market.tickers(category)})
                                 else:
-                                    snap = _market_snapshot(channel, symbol)
+                                    snap = _market_snapshot(channel, symbol, category)
                                     if snap is not None:
-                                        await send({"channel": channel, "symbol": symbol,
+                                        await send({"category": category, "channel": channel, "symbol": symbol,
                                                     "action": "snapshot", "data": snap})
-                            await send({"channel": channel, "symbol": symbol, "event": "subscribed"})
+                            await send({"channel": channel, "symbol": symbol, "category": category,
+                                        "event": "subscribed"})
                         else:
                             hchan, hsym = hub_args(channel, symbol)
                             subs.pop(key, None)
                             if key != ("ticker", "*"):
-                                market.unsubscribe(hchan, hsym)
-                            await send({"channel": channel, "symbol": symbol, "event": "unsubscribed"})
+                                market.unsubscribe(hchan, hsym, category)
+                            await send({"channel": channel, "symbol": symbol, "category": category,
+                                        "event": "unsubscribed"})
                 elif msg.get("event") == "ping":
                     await send({"event": "pong"})
         finally:
@@ -492,22 +510,23 @@ def create_app(
                 if channel == "ticker" and (channel, symbol) == ("ticker", "*"):
                     continue
                 hchan, hsym = hub_args(channel, symbol)
-                market.unsubscribe(hchan, hsym)
+                arg = subs.get((channel, symbol)) or {}
+                market.unsubscribe(hchan, hsym, arg.get("category") or "USDT-FUTURES")
             market.remove_listener(listener)
 
-    def _market_snapshot(channel: str, symbol: str) -> dict | None:
+    def _market_snapshot(channel: str, symbol: str, category: str = "USDT-FUTURES") -> dict | None:
         if channel == "books":
-            book = market.orderbook(symbol)
+            book = market.orderbook(symbol, category=category)
             if book is None:
                 return None
             return book
         if channel == "trade":
-            return {"trades": market.trades(symbol, limit=50)}
+            return {"trades": market.trades(symbol, limit=50, category=category)}
         if channel == "mark-price":
-            mp = market.mark_prices().get(symbol)
+            mp = market.mark_prices(category).get(symbol)
             return {"mark_price": mp} if mp else None
         if channel == "funding-time":
-            f = market.funding().get(symbol)
+            f = market.funding(category).get(symbol)
             return {"funding": f} if f else None
         return None
 

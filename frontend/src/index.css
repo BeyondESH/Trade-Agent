@@ -82,3 +82,10 @@ input[type="checkbox"] {
 .grid-stack-item > .ui-resizable-sw {
   background-image: none !important;
 }
+
+/* klinecharts-pro chrome (period bar, indicator/setting/symbol modals,
+   drawing bar) inherits the global sans-serif stack */
+.klinecharts-pro * {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}

@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     timeframes: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["1m", "5m", "15m", "30m", "1h", "4h", "12h", "1d"]
     )
+    # Market categories served by the exchange hub (Bitget product lines).
+    categories: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["SPOT", "MARGIN", "USDT-FUTURES", "USDC-FUTURES", "COIN-FUTURES"]
+    )
 
     # Storage / export root.
     data_dir: Path = Path("./data")
@@ -56,7 +60,7 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
-    @field_validator("symbols", "timeframes", "mcp_args", mode="before")
+    @field_validator("symbols", "timeframes", "mcp_args", "categories", mode="before")
     @classmethod
     def _split_csv(cls, value: object) -> object:
         """Allow comma-separated strings from env (e.g. MD_SYMBOLS=BTCUSDT,ETHUSDT)."""

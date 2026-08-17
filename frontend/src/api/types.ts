@@ -98,6 +98,18 @@ export interface Snapshot {
   error?: string;
 }
 
+export type MarketCategory = "SPOT" | "MARGIN" | "USDT-FUTURES" | "USDC-FUTURES" | "COIN-FUTURES";
+
+export type SymbolType = "crypto" | "metal" | "stock" | "commodity";
+
+export const MARKET_CATEGORIES: MarketCategory[] = [
+  "SPOT",
+  "MARGIN",
+  "USDT-FUTURES",
+  "USDC-FUTURES",
+  "COIN-FUTURES",
+];
+
 export interface SeriesRef {
   category: string;
   symbol: string;
@@ -107,6 +119,7 @@ export interface SeriesRef {
 export interface Ticker {
   instId: string;
   symbol: string;
+  category?: MarketCategory;
   lastPr?: string;
   open24h?: string;
   high24h?: string;
@@ -129,16 +142,25 @@ export type TickerSortKey = "symbol" | "price" | "change" | "volume" | "turnover
 
 export interface Instrument {
   symbol: string;
+  instId?: string;
+  category?: MarketCategory;
   baseCoin?: string;
   quoteCoin?: string;
   /** price precision (Bitget REST uses pricePlace) */
   pricePlace?: string;
   /** quantity precision (Bitget REST uses volumePlace) */
   volumePlace?: string;
+  /** normalized price precision (v3 instruments) */
+  pricePrecision?: string;
+  /** normalized quantity precision (v3 instruments) */
+  quantityPrecision?: string;
   symbolStatus?: string;
   minTradeNum?: string;
   priceEndStep?: string;
   sizeMultiplier?: string;
+  symbolType?: SymbolType;
+  isRwa?: string;
+  isReality?: string;
   [key: string]: unknown;
 }
 

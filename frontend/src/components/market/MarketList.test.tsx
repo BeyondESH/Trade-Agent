@@ -30,10 +30,14 @@ function props(overrides: Record<string, unknown> = {}) {
   return {
     tickers: TICKERS,
     search: "",
+    tab: "all" as const,
+    symbolType: "all" as const,
     sortKey: "change" as TickerSortKey,
     sortDir: "desc" as const,
     active: "BTCUSDT",
     onSearch: vi.fn(),
+    onTab: vi.fn(),
+    onSymbolType: vi.fn(),
     onSort: vi.fn(),
     onSelect: vi.fn(),
     ...overrides,
@@ -62,5 +66,15 @@ describe("MarketList", () => {
     expect(onSearch).toHaveBeenCalledWith("ETH");
     fireEvent.click(screen.getByTestId("sort-price"));
     expect(onSort).toHaveBeenCalledWith("price");
+  });
+
+  it("fires category tab and symbolType filter", () => {
+    const onTab = vi.fn();
+    const onSymbolType = vi.fn();
+    render(<MarketList {...props({ onTab, onSymbolType })} />);
+    fireEvent.click(screen.getByTestId("cat-tab-SPOT"));
+    expect(onTab).toHaveBeenCalledWith("SPOT");
+    fireEvent.click(screen.getByTestId("type-filter-metal"));
+    expect(onSymbolType).toHaveBeenCalledWith("metal");
   });
 });

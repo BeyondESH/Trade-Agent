@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
-import type { Ticker, TickerSortKey } from "../api/types";
+import type { SymbolType, Ticker, TickerSortKey } from "../api/types";
 import { useExchangeSocket } from "./useExchangeSocket";
+
+export type CategoryTab = "all" | "SPOT" | "MARGIN" | "USDT-FUTURES" | "USDC-FUTURES" | "COIN-FUTURES";
 
 export interface TickerListState {
   tickers: Ticker[];
   search: string;
-  tab: string;
+  tab: CategoryTab;
+  symbolType: SymbolType | "all";
   sortKey: TickerSortKey;
   sortDir: "asc" | "desc";
   setSearch: (q: string) => void;
-  setTab: (tab: string) => void;
+  setTab: (tab: CategoryTab) => void;
+  setSymbolType: (t: SymbolType | "all") => void;
   setSort: (key: TickerSortKey) => void;
   /** all symbols the hub has told us about (sorted by ticker) */
   symbols: string[];
@@ -41,14 +45,21 @@ function toNumber(v: string | undefined): number {
   return Number.isNaN(n) ? 0 : n;
 }
 
+function snapshotKey(t: Ticker): string {
+  return `${t.category ?? "USDT-FUTURES"}:${t.instId}`;
+}
+
 export function useTickerList(): TickerListState {
   const [snapshot, setSnapshot] = useState<Record<string, Ticker>>({});
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState("all");
+  const [tab, setTab] = useState<CategoryTab>("all");
+  const [symbolType, setSymbolType] = useState<SymbolType | "all">("all");
   const [sortKey, setSortKey] = useState<TickerSortKey>("change");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  // initial snapshot from REST
+  // initial snapshot from REST (all categories merged; key includes category so
+  // the same symbol across categories (e.g. BTCUSDT in SPOT and USDT-FUTURES)
+  // is kept distinct)
   useEffect(() => {
     let alive = true;
     api
@@ -56,7 +67,9 @@ export function useTickerList(): TickerListState {
       .then(({ tickers }) => {
         if (!alive) return;
         const m: Record<string, Ticker> = {};
-        for (const t of tickers) m[t.symbol] = t;
+        for (const t of tickers) {
+          m[snapshotKey(t)] = t;
+        }
         setSnapshot((prev) => ({ ...prev, ...m }));
       })
       .catch(() => {
@@ -78,7 +91,7 @@ export function useTickerList(): TickerListState {
       let changed = false;
       for (const t of batch) {
         if (t && t.instId) {
-          next[t.instId] = t;
+          next[snapshotKey(t)] = t;
           changed = true;
         }
       }
@@ -99,9 +112,12 @@ export function useTickerList(): TickerListState {
 
   const list = useMemo(() => {
     const q = search.toLowerCase();
-    const rows = Object.values(snapshot).filter(
-      (t) => !q || t.instId.toLowerCase().includes(q),
-    );
+    const rows = Object.values(snapshot).filter((t) => {
+      if (q && !t.instId.toLowerCase().includes(q)) return false;
+      if (tab !== "all" && t.category && t.category !== tab) return false;
+      if (symbolType !== "all" && t.symbolType && t.symbolType !== symbolType) return false;
+      return true;
+    });
     const dir = sortDir === "asc" ? 1 : -1;
     rows.sort((a, b) => {
       const va = sortValue(a, sortKey);
@@ -114,10 +130,10 @@ export function useTickerList(): TickerListState {
       return sa === sb ? defaultSort(a, b) : sa.localeCompare(sb) * dir;
     });
     return rows;
-  }, [snapshot, search, sortKey, sortDir]);
+  }, [snapshot, search, tab, symbolType, sortKey, sortDir]);
 
   const symbols = useMemo(
-    () => Object.keys(snapshot).sort((a, b) => a.localeCompare(b)),
+    () => Array.from(new Set(Object.values(snapshot).map((t) => t.instId))).sort((a, b) => a.localeCompare(b)),
     [snapshot],
   );
 
@@ -125,10 +141,12 @@ export function useTickerList(): TickerListState {
     tickers: list,
     search,
     tab,
+    symbolType,
     sortKey,
     sortDir,
     setSearch,
     setTab,
+    setSymbolType,
     setSort,
     symbols,
   };

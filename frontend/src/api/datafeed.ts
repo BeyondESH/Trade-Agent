@@ -1,17 +1,41 @@
 import type { Datafeed, DatafeedSubscribeCallback, Period, SymbolInfo } from "@klinecharts/pro";
 import type { KLineData } from "klinecharts";
 import { api } from "./client";
-import type { SeriesRef } from "./types";
+import type { Instrument, SeriesRef } from "./types";
 import { connectSnapshot } from "./ws";
 import { candleToKLine } from "../lib/transform";
 
-const CATEGORY = "USDT-FUTURES";
+const DEFAULT_CATEGORY = "USDT-FUTURES";
 
-export const FIXED_SYMBOLS: SymbolInfo[] = [
-  { ticker: "BTCUSDT", shortName: "BTCUSDT", market: "USDT-FUTURES", pricePrecision: 1, volumePrecision: 4 },
-  { ticker: "ETHUSDT", shortName: "ETHUSDT", market: "USDT-FUTURES", pricePrecision: 2, volumePrecision: 5 },
-  { ticker: "SOLUSDT", shortName: "SOLUSDT", market: "USDT-FUTURES", pricePrecision: 3, volumePrecision: 3 },
-];
+// Instrument cache for symbol search (reloaded on a TTL or a clear).
+let instrumentCache: Instrument[] | null = null;
+let instrumentCacheAt = 0;
+const INSTRUMENT_TTL_MS = 60_000;
+
+async function loadInstruments(force = false): Promise<Instrument[]> {
+  const now = Date.now();
+  if (!force && instrumentCache && now - instrumentCacheAt < INSTRUMENT_TTL_MS) {
+    return instrumentCache;
+  }
+  try {
+    const { instruments } = await api.instruments();
+    instrumentCache = instruments;
+    instrumentCacheAt = now;
+    return instruments;
+  } catch {
+    return instrumentCache ?? [];
+  }
+}
+
+function instrumentToSymbolInfo(inst: Instrument): SymbolInfo {
+  return {
+    ticker: inst.symbol,
+    shortName: inst.symbol,
+    market: inst.category ?? DEFAULT_CATEGORY,
+    pricePrecision: Number(inst.pricePrecision ?? inst.pricePlace ?? 2),
+    volumePrecision: Number(inst.quantityPrecision ?? inst.volumePlace ?? 4),
+  };
+}
 
 export function periodToTimeframe(period: Period): string {
   switch (period.timespan) {
@@ -28,7 +52,7 @@ export function periodToTimeframe(period: Period): string {
 
 function toSeries(symbol: SymbolInfo, period: Period): SeriesRef {
   return {
-    category: symbol.market ?? CATEGORY,
+    category: symbol.market ?? DEFAULT_CATEGORY,
     symbol: symbol.ticker,
     timeframe: periodToTimeframe(period),
   };
@@ -37,11 +61,21 @@ function toSeries(symbol: SymbolInfo, period: Period): SeriesRef {
 export class BitgetDatafeed implements Datafeed {
   private subscriptions = new Map<string, { close: () => void }>();
 
+  /** Dynamically search the full market (all categories) from instruments. */
   async searchSymbols(search?: string): Promise<SymbolInfo[]> {
-    const q = (search ?? "").toLowerCase();
-    return FIXED_SYMBOLS.filter(
-      (s) => !q || s.ticker.toLowerCase().includes(q) || s.shortName?.toLowerCase().includes(q),
-    ).map((s) => ({ ...s }));
+    const q = (search ?? "").trim().toLowerCase();
+    const instruments = await loadInstruments();
+    const matched = instruments.filter((inst) => {
+      if (inst.symbolStatus && inst.symbolStatus !== "online") return false;
+      if (!q) return true;
+      return (
+        inst.symbol.toLowerCase().includes(q) ||
+        (inst.baseCoin ?? "").toLowerCase().includes(q)
+      );
+    });
+    // prefer smaller/quoted symbols first for stable ordering
+    matched.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    return matched.slice(0, 100).map(instrumentToSymbolInfo);
   }
 
   async getHistoryKLineData(
@@ -66,7 +100,7 @@ export class BitgetDatafeed implements Datafeed {
   }
 
   subscribe(symbol: SymbolInfo, period: Period, callback: DatafeedSubscribeCallback): void {
-    const key = `${symbol.ticker}/${period.text}`;
+    const key = `${symbol.market ?? DEFAULT_CATEGORY}/${symbol.ticker}/${period.text}`;
     this.unsubscribe(symbol, period);
     const conn = connectSnapshot(toSeries(symbol, period), (snap) => {
       if (snap.last_candle) callback(candleToKLine(snap.last_candle));
@@ -75,7 +109,7 @@ export class BitgetDatafeed implements Datafeed {
   }
 
   unsubscribe(symbol: SymbolInfo, period: Period): void {
-    const key = `${symbol.ticker}/${period.text}`;
+    const key = `${symbol.market ?? DEFAULT_CATEGORY}/${symbol.ticker}/${period.text}`;
     const conn = this.subscriptions.get(key);
     if (conn) {
       conn.close();

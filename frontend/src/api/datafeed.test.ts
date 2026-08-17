@@ -5,10 +5,13 @@ import type { Period, SymbolInfo } from "@klinecharts/pro";
 const m = vi.hoisted(() => ({
   candles: vi.fn(),
   candlesRecent: vi.fn(),
+  instruments: vi.fn(),
   connectSnapshot: vi.fn(),
 }));
 
-vi.mock("./client", () => ({ api: { candles: m.candles, candlesRecent: m.candlesRecent } }));
+vi.mock("./client", () => ({
+  api: { candles: m.candles, candlesRecent: m.candlesRecent, instruments: m.instruments },
+}));
 vi.mock("./ws", () => ({ connectSnapshot: m.connectSnapshot }));
 vi.mock("../lib/transform", async (orig) => {
   const mod = await orig<typeof import("../lib/transform")>();
@@ -18,8 +21,16 @@ vi.mock("../lib/transform", async (orig) => {
 const SYMBOL: SymbolInfo = { ticker: "BTCUSDT", market: "USDT-FUTURES" };
 const PERIOD: Period = { multiplier: 5, timespan: "minute", text: "5m" };
 
+const INSTRUMENTS = [
+  { symbol: "BTCUSDT", category: "USDT-FUTURES", pricePrecision: "1", quantityPrecision: "4", symbolType: "crypto", symbolStatus: "online" },
+  { symbol: "ETHUSDT", category: "USDT-FUTURES", pricePrecision: "2", quantityPrecision: "5", symbolType: "crypto", symbolStatus: "online" },
+  { symbol: "XAUUSDT", category: "SPOT", pricePrecision: "2", quantityPrecision: "3", symbolType: "metal", symbolStatus: "online" },
+  { symbol: "AAPLUSDT", category: "USDT-FUTURES", pricePrecision: "2", quantityPrecision: "2", symbolType: "stock", isReality: "yes", symbolStatus: "online" },
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
+  m.instruments.mockResolvedValue({ instruments: INSTRUMENTS });
 });
 
 describe("periodToTimeframe", () => {
@@ -32,15 +43,39 @@ describe("periodToTimeframe", () => {
   });
 });
 
-describe("BitgetDatafeed", () => {
-  it("searches fixed symbols", async () => {
+describe("BitgetDatafeed.searchSymbols", () => {
+  it("searches real instruments from the API", async () => {
     const d = new BitgetDatafeed();
     const all = await d.searchSymbols();
-    expect(all.length).toBeGreaterThanOrEqual(3);
+    expect(m.instruments).toHaveBeenCalled();
+    expect(all.length).toBeGreaterThanOrEqual(4);
+    expect(all.map((s) => s.ticker)).toEqual(["AAPLUSDT", "BTCUSDT", "ETHUSDT", "XAUUSDT"]);
+  });
+
+  it("filters by search keyword", async () => {
+    const d = new BitgetDatafeed();
     const eth = await d.searchSymbols("eth");
     expect(eth.map((s) => s.ticker)).toEqual(["ETHUSDT"]);
   });
 
+  it("finds metals and stock symbols", async () => {
+    const d = new BitgetDatafeed();
+    const gold = await d.searchSymbols("xau");
+    expect(gold.map((s) => s.ticker)).toEqual(["XAUUSDT"]);
+    expect(gold[0].market).toBe("SPOT");
+    const apple = await d.searchSymbols("aapl");
+    expect(apple[0].market).toBe("USDT-FUTURES");
+  });
+
+  it("carries precision metadata", async () => {
+    const d = new BitgetDatafeed();
+    const btc = (await d.searchSymbols("BTCUSDT"))[0];
+    expect(btc.pricePrecision).toBe(1);
+    expect(btc.volumePrecision).toBe(4);
+  });
+});
+
+describe("BitgetDatafeed history", () => {
   it("loads history with fallback to recent", async () => {
     m.candles.mockResolvedValue({ candles: [], count: 0 });
     m.candlesRecent.mockResolvedValue({

@@ -50,9 +50,11 @@ function qs(params: Record<string, string | number | undefined>): string {
 export const api = {
   health: () => request<{ status: string }>("/health"),
 
-  tickers: () => request<{ tickers: Ticker[] }>("/tickers"),
+  tickers: (category?: string) =>
+    request<{ tickers: Ticker[] }>(`/tickers${qs({ category })}`),
 
-  instruments: () => request<{ instruments: Instrument[] }>("/instruments"),
+  instruments: (category?: string) =>
+    request<{ instruments: Instrument[] }>(`/instruments${qs({ category })}`),
 
   candles: (s: SeriesRef, start?: number, end?: number, limit = 500) =>
     request<{ candles: Candle[]; count: number }>(
@@ -63,6 +65,22 @@ export const api = {
     request<{ candles: Candle[]; count: number }>(
       `/candles/recent${qs({ ...s, limit })}`,
     ),
+
+  books: (s: { category: string; symbol: string }) =>
+    request<{ symbol: string; category: string; asks: [number, number][]; bids: [number, number][]; seq: number | null }>(
+      `/books/${s.category}/${s.symbol}`,
+    ),
+
+  trades: (s: { category: string; symbol: string }, limit = 50) =>
+    request<{ symbol: string; category: string; trades: Record<string, unknown>[] }>(
+      `/trades/${s.category}/${s.symbol}${qs({ limit })}`,
+    ),
+
+  funding: (category?: string) =>
+    request<{ funding: Record<string, unknown>[] }>(`/funding${qs({ category })}`),
+
+  markPrice: (category?: string) =>
+    request<{ mark_prices: Record<string, unknown>[] }>(`/mark-price${qs({ category })}`),
 
   analyze: (s: SeriesRef, top = 8) =>
     request<AnalyzeResponse>(`/analyze${qs({ ...s, top })}`),

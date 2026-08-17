@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Period, SymbolInfo } from "@klinecharts/pro";
-import { BitgetDatafeed, FIXED_SYMBOLS, periodToTimeframe } from "./api/datafeed";
+import { BitgetDatafeed, periodToTimeframe } from "./api/datafeed";
 import { api } from "./api/client";
-import type { AnalyzeResponse, Candle, StructureResponse } from "./api/types";
+import type { AnalyzeResponse, Candle, StructureResponse, Ticker } from "./api/types";
 import { AiAnalysisPlaceholder } from "./components/ai/AiAnalysisPlaceholder";
 import { KLineChartProView, type KLineChartProHandle } from "./components/chart/KLineChartProView";
 import { FundingRate, MarkPrice } from "./components/derivative/FundingRate";
@@ -24,7 +24,13 @@ import {
   trendlineToSegment,
 } from "./lib/transform";
 
-const DEFAULT_SYMBOL: SymbolInfo = { ...FIXED_SYMBOLS[0] };
+const DEFAULT_SYMBOL: SymbolInfo = {
+  ticker: "BTCUSDT",
+  shortName: "BTCUSDT",
+  market: "USDT-FUTURES",
+  pricePrecision: 1,
+  volumePrecision: 4,
+};
 const DEFAULT_PERIOD: Period = { multiplier: 5, timespan: "minute", text: "5m" };
 const PERIODS: Period[] = [
   { multiplier: 1, timespan: "minute", text: "1m" },
@@ -41,10 +47,16 @@ const PANEL_IDS = ["market-list", "chart", "right-panel", "ai-panel"] as const;
 
 const controller = new AutoLayerController();
 
-function toSymbolInfo(ticker: string): SymbolInfo {
-  const known = FIXED_SYMBOLS.find((s) => s.ticker === ticker);
-  return known
-    ? { ...known }
+function toSymbolInfo(ticker: string, tickers: Ticker[]): SymbolInfo {
+  const t = tickers.find((x) => x.instId === ticker || x.symbol === ticker);
+  return t
+    ? {
+        ticker: t.instId,
+        shortName: t.instId,
+        market: (t.category as string) ?? "USDT-FUTURES",
+        pricePrecision: 2,
+        volumePrecision: 4,
+      }
     : { ticker, shortName: ticker, market: "USDT-FUTURES", pricePrecision: 2, volumePrecision: 4 };
 }
 
@@ -71,12 +83,13 @@ export default function App() {
   const datafeed = useMemo(() => new BitgetDatafeed(), []);
 
   const tickerList = useTickerList();
-  const orderBook = useOrderBook(symbol.ticker);
-  const trades = useTrades(symbol.ticker);
-  const derivative = useDerivative(symbol.ticker);
+  const category = symbol.market ?? "USDT-FUTURES";
+  const orderBook = useOrderBook(symbol.ticker, category);
+  const trades = useTrades(symbol.ticker, category);
+  const derivative = useDerivative(symbol.ticker, category);
 
   const timeframe = periodToTimeframe(period);
-  const seriesKey = `${symbol.ticker}/${timeframe}`;
+  const seriesKey = `${category}/${symbol.ticker}/${timeframe}`;
 
   useEffect(() => {
     let alive = true;
@@ -153,9 +166,10 @@ export default function App() {
   const up = (change ?? 0) >= 0;
 
   const handleSelect = useCallback((ticker: string) => {
-    setSymbol(toSymbolInfo(ticker));
-    chartRef.current?.setSymbol(toSymbolInfo(ticker));
-  }, []);
+    const info = toSymbolInfo(ticker, tickerList.tickers);
+    setSymbol(info);
+    chartRef.current?.setSymbol(info);
+  }, [tickerList.tickers]);
 
   const renderPanel = useCallback(
     (id: string): ReactNode => {
@@ -166,10 +180,14 @@ export default function App() {
               <MarketList
                 tickers={tickerList.tickers}
                 search={tickerList.search}
+                tab={tickerList.tab}
+                symbolType={tickerList.symbolType}
                 sortKey={tickerList.sortKey}
                 sortDir={tickerList.sortDir}
                 active={symbol.ticker}
                 onSearch={tickerList.setSearch}
+                onTab={tickerList.setTab}
+                onSymbolType={tickerList.setSymbolType}
                 onSort={tickerList.setSort}
                 onSelect={handleSelect}
               />
@@ -248,7 +266,7 @@ export default function App() {
   return (
     <div className="flex h-screen flex-col bg-base text-text">
       <header className="flex h-12 shrink-0 items-center gap-4 border-b border-border bg-panel px-4">
-        <span className="text-base font-bold text-accent">RaiBro Trading</span>
+        <span className="text-base font-bold text-text">RaiBro Trading</span>
         <span className="font-semibold">{symbol.ticker}</span>
         <span className="tnum text-base" style={{ color: up ? "#16c784" : "#ea3943" }}>
           {price != null ? price.toFixed(2) : "--"}
@@ -259,7 +277,7 @@ export default function App() {
             {change.toFixed(2)}%
           </span>
         )}
-        <span className="ml-auto text-xs text-muted">USDT-FUTURES</span>
+        <span className="ml-auto text-xs text-muted">{category}</span>
       </header>
 
       <TickerBar tickers={tickerList.tickers.slice(0, 40)} active={symbol.ticker} onSelect={handleSelect} />

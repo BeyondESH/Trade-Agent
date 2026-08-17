@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export interface WsFrame {
   channel: string;
   symbol?: string;
+  category?: string;
   action?: "snapshot" | "update";
   event?: "subscribed" | "unsubscribed" | "pong";
   data?: unknown;
@@ -21,16 +22,16 @@ type Listener = (frame: WsFrame) => void;
 export class ExchangeSocket {
   private sock: WebSocket | null = null;
   private listeners = new Map<string, Set<Listener>>();
-  private active = new Set<string>();
+  private active = new Map<string, SubArgs>();
   private retry = 0;
 
-  private key(channel: string, symbol: string): string {
-    return `${channel}/${symbol}`;
+  private key(args: SubArgs): string {
+    return `${args.channel}/${args.symbol ?? "default"}/${args.category ?? "USDT-FUTURES"}`;
   }
 
   /** Subscribe to a channel/symbol; the frame is delivered to the listener. */
   subscribe(args: SubArgs, listener: Listener): () => void {
-    const k = this.key(args.channel, args.symbol ?? "default");
+    const k = this.key(args);
     let set = this.listeners.get(k);
     if (!set) {
       set = new Set();
@@ -38,7 +39,7 @@ export class ExchangeSocket {
     }
     set.add(listener);
     if (!this.active.has(k)) {
-      this.active.add(k);
+      this.active.set(k, { ...args });
       this.sendFrame({ op: "subscribe", args: [args] });
     }
     this.ensureOpen();
@@ -46,7 +47,7 @@ export class ExchangeSocket {
   }
 
   unsubscribe(args: SubArgs, listener: Listener): void {
-    const k = this.key(args.channel, args.symbol ?? "default");
+    const k = this.key(args);
     const set = this.listeners.get(k);
     if (!set) return;
     set.delete(listener);
@@ -75,9 +76,8 @@ export class ExchangeSocket {
     sock.onopen = () => {
       this.retry = 0;
       // resubscribe everything that was requested while disconnected
-      for (const k of this.active) {
-        const [channel, symbol] = k.split("/");
-        this.sendFrame({ op: "subscribe", args: [{ channel, symbol }] });
+      for (const args of this.active.values()) {
+        this.sendFrame({ op: "subscribe", args: [args] });
       }
     };
     sock.onmessage = (ev) => {
@@ -87,7 +87,11 @@ export class ExchangeSocket {
       } catch {
         return;
       }
-      const k = this.key(frame.channel, frame.symbol ?? "default");
+      const k = this.key({
+        channel: frame.channel,
+        symbol: frame.symbol ?? "default",
+        category: (frame as { category?: string }).category ?? "USDT-FUTURES",
+      });
       const set = this.listeners.get(k);
       if (set) {
         for (const fn of [...set]) {

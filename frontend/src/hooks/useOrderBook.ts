@@ -29,7 +29,7 @@ function mergeInto(levels: Map<number, number>, rows: unknown[]): void {
 }
 
 /** Full-depth order book with snapshot + incremental merge. */
-export function useOrderBook(symbol: string): OrderBookState {
+export function useOrderBook(symbol: string, category = "USDT-FUTURES"): OrderBookState {
   const [book, setBook] = useState<OrderBookState>(EMPTY_BOOK);
 
   const apply = useCallback(
@@ -62,7 +62,7 @@ export function useOrderBook(symbol: string): OrderBookState {
       const d = frame.data as { asks?: unknown[]; bids?: unknown[]; seq?: number | null };
       apply(d);
     }
-  });
+  }, { category });
 
   return book;
 }

@@ -1,7 +1,33 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useRef } from "react";
-import type { Ticker, TickerSortKey } from "../../api/types";
+import type { SymbolType, Ticker, TickerSortKey } from "../../api/types";
+import type { CategoryTab } from "../../hooks/useTickerList";
 import { Input } from "../../ui";
+
+const CATEGORY_TABS: { id: CategoryTab; label: string }[] = [
+  { id: "all", label: "全部" },
+  { id: "SPOT", label: "现货" },
+  { id: "USDT-FUTURES", label: "U合约" },
+  { id: "USDC-FUTURES", label: "USDC" },
+  { id: "COIN-FUTURES", label: "币本位" },
+  { id: "MARGIN", label: "杠杆" },
+];
+
+const SYMBOL_TYPE_FILTERS: { id: SymbolType | "all"; label: string }[] = [
+  { id: "all", label: "全部" },
+  { id: "crypto", label: "加密货币" },
+  { id: "metal", label: "贵金属" },
+  { id: "stock", label: "股票" },
+  { id: "commodity", label: "大宗" },
+];
+
+function symbolTypeLabel(t: Ticker): string {
+  const st = t.symbolType as SymbolType | undefined;
+  if (t.isReality === "yes" || st === "stock") return "股票";
+  if (st === "metal") return "贵金属";
+  if (st === "commodity") return "大宗";
+  return t.category ?? "";
+}
 
 const COLUMNS: { key: TickerSortKey; label: string; align: "left" | "right" }[] = [
   { key: "symbol", label: "合约", align: "left" },
@@ -45,7 +71,12 @@ export const MarketRow = memo(function MarketRow({
       }`}
       data-testid={`market-row-${t.instId}`}
     >
-      <span className="text-left font-semibold">{t.instId}</span>
+      <span className="flex items-center gap-1 text-left font-semibold">
+        {t.instId}
+        {symbolTypeLabel(t) && (
+          <span className="rounded-chip bg-panel2 px-1 text-[9px] font-medium text-muted">{symbolTypeLabel(t)}</span>
+        )}
+      </span>
       <span className={`tnum text-right ${color}`}>{t.lastPr ?? "--"}</span>
       <span className={`tnum text-right ${color}`}>
         {t.change24h != null || t.price24hPcnt != null ? changeText(t.change24h ?? t.price24hPcnt) : "--"}
@@ -59,19 +90,27 @@ export const MarketRow = memo(function MarketRow({
 export function MarketList({
   tickers,
   search,
+  tab,
+  symbolType,
   sortKey,
   sortDir,
   active,
   onSearch,
+  onTab,
+  onSymbolType,
   onSort,
   onSelect,
 }: {
   tickers: Ticker[];
   search: string;
+  tab: CategoryTab;
+  symbolType: SymbolType | "all";
   sortKey: TickerSortKey;
   sortDir: "asc" | "desc";
   active: string;
   onSearch: (q: string) => void;
+  onTab: (tab: CategoryTab) => void;
+  onSymbolType: (t: SymbolType | "all") => void;
   onSort: (key: TickerSortKey) => void;
   onSelect: (symbol: string) => void;
 }) {
@@ -85,6 +124,34 @@ export function MarketList({
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      <div className="flex gap-1 border-b border-border px-2 py-1">
+        {CATEGORY_TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => onTab(t.id)}
+            className={`px-2 py-0.5 text-xs rounded-chip font-medium ${
+              tab === t.id ? "bg-active text-text" : "text-muted hover:text-text"
+            }`}
+            data-testid={`cat-tab-${t.id}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-1 border-b border-border px-2 py-1">
+        {SYMBOL_TYPE_FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => onSymbolType(f.id)}
+            className={`px-2 py-0.5 text-[11px] rounded-chip ${
+              symbolType === f.id ? "bg-active text-text" : "text-muted hover:text-text"
+            }`}
+            data-testid={`type-filter-${f.id}`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
       <div className="p-2">
         <Input placeholder="搜索合约…" value={search} onChange={(e) => onSearch(e.target.value)} />
       </div>

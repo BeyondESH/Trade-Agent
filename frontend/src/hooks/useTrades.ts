@@ -12,7 +12,7 @@ export interface Trade {
 const MAX_TRADES = 50;
 
 /** Recent trades tape: REST snapshot on symbol change, then incremental appends. */
-export function useTrades(symbol: string): Trade[] {
+export function useTrades(symbol: string, category = "USDT-FUTURES"): Trade[] {
   const [trades, setTrades] = useState<Trade[]>([]);
 
   useExchangeSocket("trade", symbol, (frame) => {
@@ -31,7 +31,7 @@ export function useTrades(symbol: string): Trade[] {
         return next.slice(0, MAX_TRADES);
       });
     }
-  });
+  }, { category });
 
   return trades;
 }

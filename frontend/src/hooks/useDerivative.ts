@@ -21,7 +21,7 @@ export interface DerivativeState {
 }
 
 /** Funding rate + mark price for a symbol via the shared WS. */
-export function useDerivative(symbol: string): DerivativeState {
+export function useDerivative(symbol: string, category = "USDT-FUTURES"): DerivativeState {
   const [funding, setFunding] = useState<FundingInfo | null>(null);
   const [markPrice, setMarkPrice] = useState<MarkPriceInfo | null>(null);
 
@@ -33,7 +33,7 @@ export function useDerivative(symbol: string): DerivativeState {
         ? (d as { funding: FundingInfo }).funding
         : (d as FundingInfo | undefined);
     if (info && info.instId === symbol) setFunding(info);
-  });
+  }, { category });
 
   useExchangeSocket("mark-price", symbol, (frame) => {
     const d = frame.data as { mark_price?: MarkPriceInfo } | MarkPriceInfo | undefined;
@@ -43,7 +43,7 @@ export function useDerivative(symbol: string): DerivativeState {
         ? (d as { mark_price: MarkPriceInfo }).mark_price
         : (d as MarkPriceInfo | undefined);
     if (info && info.instId === symbol) setMarkPrice(info);
-  });
+  }, { category });
 
   return { funding, markPrice };
 }
