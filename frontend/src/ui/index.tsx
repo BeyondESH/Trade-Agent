@@ -12,7 +12,7 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <div className={`bg-panel border border-border rounded-panel shadow-panel flex flex-col min-h-0 ${className}`}>
+    <div className={`bg-panel border border-border rounded-modal flex flex-col min-h-0 ${className}`}>
       {title && (
         <div className="flex items-center justify-between px-3 py-2 border-b border-border text-xs font-semibold text-muted uppercase tracking-wide">
           <span>{title}</span>

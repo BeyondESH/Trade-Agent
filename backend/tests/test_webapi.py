@@ -447,6 +447,165 @@ def test_journal_endpoint() -> None:
         assert any(t["id"] == "x1" and t["pnl"] == 50.0 for t in trades)
 
 
+class _FakeMcpClient:
+    """Context-manager stand-in for McpDataClient: serves canned candle pages."""
+
+    def __init__(self, pages: list, fail_rate_limits: int = 0, rate_msg: str = "rate limit exceeded") -> None:
+        self.pages = list(pages)
+        self.fail_rate_limits = fail_rate_limits
+        self.rate_msg = rate_msg
+        self.calls: list[dict] = []
+
+    def __enter__(self) -> "_FakeMcpClient":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def call_tool(self, name: str, arguments: dict):  # noqa: ANN001
+        from market_data.mcp_client import McpError
+
+        self.calls.append(dict(arguments))
+        if self.fail_rate_limits > 0:
+            self.fail_rate_limits -= 1
+            raise McpError(self.rate_msg)
+        if self.pages:
+            return {"data": self.pages.pop(0)}
+        return {"data": []}
+
+
+def test_backfill_appends_older_history_and_candles_continue() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        settings.candle_page_limit = 3
+        older = [[BASE - (i + 1) * STEP, 1.0, 2.0, 0.5, 1.5, 1.0] for i in range(5)]
+        fake = _FakeMcpClient([older])
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake))
+        r = c.post("/candles/backfill", json={
+            "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
+            "before": BASE, "max_pages": 3,
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["appended"] == 5
+        assert body["earliest_reached"] is True  # page shorter than page limit
+
+        rows = c.get("/candles", params={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "start": BASE - 6 * STEP, "end": BASE + 2 * STEP, "limit": 500,
+        }).json()["candles"]
+        assert rows[0]["open_time"] == BASE - 5 * STEP
+        assert any(row["open_time"] == BASE for row in rows)  # contiguous with seeded range
+
+
+def test_backfill_terminates_when_exchange_has_nothing_older() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        fake = _FakeMcpClient([])
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake))
+        body = c.post("/candles/backfill", json={
+            "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
+            "before": BASE,
+        }).json()
+        assert body["appended"] == 0
+        assert body["earliest_reached"] is True
+
+
+def test_backfill_rate_limit_retry_keeps_progress() -> None:
+    import market_data.ingestion as ingestion_mod
+
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        settings.candle_page_limit = 2
+        page1 = [[BASE - 2 * STEP, 1, 2, 0, 1, 1], [BASE - 3 * STEP, 1, 2, 0, 1, 1]]
+        page2 = [[BASE - 5 * STEP, 1, 2, 0, 1, 1]]
+        fake = _FakeMcpClient([page1, page2], fail_rate_limits=1)
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake))
+
+        original_sleep = ingestion_mod.time.sleep
+        sleeps: list[float] = []
+        ingestion_mod.time.sleep = lambda s: sleeps.append(s)
+        try:
+            r = c.post("/candles/backfill", json={
+                "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
+                "before": BASE, "max_pages": 5,
+            })
+        finally:
+            ingestion_mod.time.sleep = original_sleep
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["appended"] == 3
+        assert body["earliest_reached"] is True
+        assert len(sleeps) == 1  # one backoff pause
+        assert len(fake.calls) == 3  # failed attempt + 2 successful pages
+
+        rows = c.get("/candles", params={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "start": BASE - 6 * STEP, "end": BASE, "limit": 500,
+        }).json()["candles"]
+        assert [row["open_time"] for row in rows] == [BASE - 5 * STEP, BASE - 3 * STEP, BASE - 2 * STEP, BASE]
+
+
+def test_backfill_rejects_invalid_max_pages() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        fake = _FakeMcpClient([])
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake))
+        for bad in (0, 21):
+            r = c.post("/candles/backfill", json={
+                "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
+                "before": BASE, "max_pages": bad,
+            })
+            assert r.status_code == 422
+        assert fake.calls == []  # never hit the upstream
+
+
+def test_alerts_crud_and_persistence() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+
+        # empty at first
+        assert c.get("/alerts").json() == {"alerts": []}
+
+        # create
+        r = c.post("/alerts", json={"symbol": "BTCUSDT", "condition": "above", "threshold": 70000})
+        assert r.status_code == 200
+        created = r.json()["alert"]
+        assert created["symbol"] == "BTCUSDT"
+        alert_id = created["id"]
+
+        # list reflects the create
+        listed = c.get("/alerts").json()["alerts"]
+        assert len(listed) == 1 and listed[0]["threshold"] == 70000
+
+        # update threshold + triggered
+        r = c.put(f"/alerts/{alert_id}", json={"threshold": 72000, "triggered": True})
+        assert r.status_code == 200
+        assert r.json()["alert"]["threshold"] == 72000
+        assert r.json()["alert"]["triggered"] is True
+
+        # rejects invalid condition
+        assert c.post("/alerts", json={"symbol": "BTC", "condition": "sideways", "threshold": 1}).status_code == 400
+
+        # delete
+        assert c.delete(f"/alerts/{alert_id}").json() == {"ok": True}
+        assert c.get("/alerts").json() == {"alerts": []}
+        assert c.delete(f"/alerts/{alert_id}").status_code == 404
+
+
+def test_alerts_persist_across_app_restart() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        c1 = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        c1.post("/alerts", json={"symbol": "ETHUSDT", "condition": "below", "threshold": 2500})
+        # a brand-new app instance over the same data_dir
+        c2 = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        alerts = c2.get("/alerts").json()["alerts"]
+        assert len(alerts) == 1 and alerts[0]["symbol"] == "ETHUSDT"
+
+
 def _run_all() -> None:
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

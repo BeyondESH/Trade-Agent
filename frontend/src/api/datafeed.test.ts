@@ -5,14 +5,18 @@ import type { Period, SymbolInfo } from "@klinecharts/pro";
 const m = vi.hoisted(() => ({
   candles: vi.fn(),
   candlesRecent: vi.fn(),
+  backfill: vi.fn(),
   instruments: vi.fn(),
-  connectSnapshot: vi.fn(),
+  wsSubscribe: vi.fn(),
+  wsOnStatus: vi.fn(),
 }));
 
 vi.mock("./client", () => ({
-  api: { candles: m.candles, candlesRecent: m.candlesRecent, instruments: m.instruments },
+  api: { candles: m.candles, candlesRecent: m.candlesRecent, backfill: m.backfill, instruments: m.instruments },
 }));
-vi.mock("./ws", () => ({ connectSnapshot: m.connectSnapshot }));
+vi.mock("./bitgetWs", () => ({
+  bitgetWs: { subscribe: m.wsSubscribe, onStatus: m.wsOnStatus },
+}));
 vi.mock("../lib/transform", async (orig) => {
   const mod = await orig<typeof import("../lib/transform")>();
   return { ...mod, candleToKLine: (c: any) => ({ timestamp: c.open_time, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume }) };
@@ -31,6 +35,8 @@ const INSTRUMENTS = [
 beforeEach(() => {
   vi.clearAllMocks();
   m.instruments.mockResolvedValue({ instruments: INSTRUMENTS });
+  m.wsSubscribe.mockReturnValue({ close: vi.fn() });
+  m.wsOnStatus.mockReturnValue(() => {});
 });
 
 describe("periodToTimeframe", () => {
@@ -98,17 +104,122 @@ describe("BitgetDatafeed history", () => {
     expect(m.candlesRecent).not.toHaveBeenCalled();
   });
 
-  it("subscribe bridges ws last_candle to callback and unsubscribes", () => {
+  it("subscribe bridges the live WS candle to the callback and unsubscribes", () => {
     const close = vi.fn();
-    m.connectSnapshot.mockReturnValue({ close });
+    m.wsSubscribe.mockReturnValue({ close });
     const d = new BitgetDatafeed();
     const cb = vi.fn();
     d.subscribe(SYMBOL, PERIOD, cb);
-    expect(m.connectSnapshot).toHaveBeenCalledTimes(1);
-    const onMsg = m.connectSnapshot.mock.calls[0][1];
-    onMsg({ last_candle: { open_time: 1000, open: 1, high: 2, low: 0, close: 3, volume: 1 } });
+    expect(m.wsSubscribe).toHaveBeenCalledTimes(1);
+    expect(m.wsSubscribe.mock.calls[0][0]).toMatchObject({
+      category: "USDT-FUTURES",
+      symbol: "BTCUSDT",
+      timeframe: "5m",
+    });
+    const onCandle = m.wsSubscribe.mock.calls[0][1];
+    onCandle({ open_time: 1000, open: 1, high: 2, low: 0, close: 3, volume: 1 });
     expect(cb).toHaveBeenCalledWith(expect.objectContaining({ timestamp: 1000, close: 3 }));
     d.unsubscribe(SYMBOL, PERIOD);
     expect(close).toHaveBeenCalled();
+  });
+
+  it("subscribes via the shared WS feed, not the legacy snapshot poll", () => {
+    const d = new BitgetDatafeed();
+    d.subscribe(SYMBOL, PERIOD, vi.fn());
+    d.subscribe(SYMBOL, PERIOD, vi.fn());
+    // Each subscribe replaces the previous one for the same series key.
+    expect(m.wsSubscribe).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops live candles while suspended (replay) and resumes after", () => {
+    m.wsSubscribe.mockReturnValue({ close: vi.fn() });
+    const d = new BitgetDatafeed();
+    const cb = vi.fn();
+    d.subscribe(SYMBOL, PERIOD, cb);
+    const onCandle = m.wsSubscribe.mock.calls[0][1];
+    d.suspendUpdates(true);
+    onCandle({ open_time: 1000, open: 1, high: 2, low: 0, close: 3, volume: 1 });
+    expect(cb).not.toHaveBeenCalled();
+    d.suspendUpdates(false);
+    onCandle({ open_time: 2000, open: 1, high: 2, low: 0, close: 4, volume: 1 });
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ timestamp: 2000, close: 4 }));
+  });
+
+  it("forwards the shared WS connection status to the listener", () => {
+    const unsub = vi.fn();
+    m.wsOnStatus.mockReturnValue(unsub);
+    const d = new BitgetDatafeed();
+    const listener = vi.fn();
+    d.setConnStateListener(listener);
+    expect(m.wsOnStatus).toHaveBeenCalledTimes(1);
+    m.wsOnStatus.mock.calls[0][0]("reconnecting");
+    expect(listener).toHaveBeenCalledWith("reconnecting");
+    d.setConnStateListener(undefined);
+    expect(unsub).toHaveBeenCalled();
+  });
+});
+
+const candle = (t: number) => ({ open_time: t, open: 1, high: 2, low: 0, close: 1, volume: 1 });
+
+describe("BitgetDatafeed backfill", () => {
+  it("does not backfill on the very first load", async () => {
+    m.candles.mockResolvedValue({ candles: [candle(1000)], count: 1 });
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    expect(m.backfill).not.toHaveBeenCalled();
+  });
+
+  it("triggers backfill when paging beyond the known earliest, then serves refetched range", async () => {
+    m.candles
+      .mockResolvedValueOnce({ candles: [candle(1000)], count: 1 })
+      .mockResolvedValueOnce({ candles: [candle(1000)], count: 1 })
+      .mockResolvedValueOnce({ candles: [candle(500)], count: 1 });
+    m.backfill.mockResolvedValue({ series: "s", appended: 1, earliest_reached: false });
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    expect(m.backfill).not.toHaveBeenCalled();
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 400, 2000);
+    expect(m.backfill).toHaveBeenCalledTimes(1);
+    expect(m.backfill.mock.calls[0][1]).toBe(1000);
+    expect(bars[0].timestamp).toBe(500);
+  });
+
+  it("stops backfilling once earliest_reached", async () => {
+    m.candles.mockResolvedValue({ candles: [candle(1000)], count: 1 });
+    m.backfill.mockResolvedValue({ series: "s", appended: 0, earliest_reached: true });
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    await d.getHistoryKLineData(SYMBOL, PERIOD, -100, 2000);
+    await d.getHistoryKLineData(SYMBOL, PERIOD, -200, 2000);
+    expect(m.backfill).toHaveBeenCalledTimes(1);
+  });
+
+  it("dedupes overlapping backfill requests for the same series/before", async () => {
+    let resolveBf: (v: { series: string; appended: number; earliest_reached: boolean }) => void = () => {};
+    const pending = new Promise<{ series: string; appended: number; earliest_reached: boolean }>((r) => {
+      resolveBf = r;
+    });
+    m.candles.mockResolvedValue({ candles: [candle(1000)], count: 1 });
+    m.backfill.mockReturnValue(pending);
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    const p1 = d.getHistoryKLineData(SYMBOL, PERIOD, 400, 2000);
+    const p2 = d.getHistoryKLineData(SYMBOL, PERIOD, 300, 2000);
+    resolveBf({ series: "s", appended: 0, earliest_reached: false });
+    await Promise.all([p1, p2]);
+    expect(m.backfill).toHaveBeenCalledTimes(1);
+  });
+
+  it("prefetchDeeper throttles and skips unknown series", async () => {
+    m.candles.mockResolvedValue({ candles: [candle(1000)], count: 1 });
+    m.backfill.mockResolvedValue({ series: "s", appended: 0, earliest_reached: false });
+    const d = new BitgetDatafeed();
+    d.prefetchDeeper(SYMBOL, PERIOD);
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    d.prefetchDeeper(SYMBOL, PERIOD);
+    d.prefetchDeeper(SYMBOL, PERIOD);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(m.backfill).toHaveBeenCalledTimes(1);
   });
 });

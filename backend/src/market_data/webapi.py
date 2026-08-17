@@ -10,9 +10,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import asdict
+from typing import Any, Callable
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -20,10 +22,12 @@ from pydantic import BaseModel
 
 from market_data import dlquant, indicators, levels
 from market_data.agent import build_agent_context
+from market_data.alertstore import AlertStore
 from market_data.appconfig import ConfigStore
 from market_data.chartstore import ChartStore
 from market_data.config import Settings, get_settings
 from market_data.execution import ExecutionEngine, LiveBroker, OrderRequest
+from market_data.ingestion import KlineIngestor
 from market_data.llm import (
     LLMTextProvider,
     ProviderConfig,
@@ -74,11 +78,36 @@ class SeriesBody(BaseModel):
     timeframe: str
 
 
+class BackfillBody(BaseModel):
+    category: str = "USDT-FUTURES"
+    symbol: str
+    timeframe: str
+    before: int
+    max_pages: int = 3
+
+
 class ChartConfigBody(BaseModel):
     category: str = "USDT-FUTURES"
     symbol: str
     timeframe: str
     state: dict
+
+
+class AlertBody(BaseModel):
+    symbol: str
+    condition: str
+    threshold: float
+    enabled: bool = True
+    triggered: bool = False
+    createdAt: int | None = None
+
+
+class AlertPatchBody(BaseModel):
+    symbol: str | None = None
+    condition: str | None = None
+    threshold: float | None = None
+    enabled: bool | None = None
+    triggered: bool | None = None
 
 
 # -- helpers ---------------------------------------------------------------
@@ -98,6 +127,7 @@ def create_app(
     settings: Settings | None = None,
     stream: BitgetWsStream | None = None,
     market: MarketStream | None = None,
+    backfill_client_factory: Callable[[], Any] | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     stream = stream or BitgetWsStream(
@@ -136,11 +166,26 @@ def create_app(
     store = ParquetStore(settings.parquet_dir)
     config_store = ConfigStore(settings.data_dir / "config" / "app.json")
     chart_store = ChartStore(settings.chart_config_path)
+    alert_store = AlertStore(settings.data_dir / "alerts" / "alerts.json")
     journal = TradeJournal(settings.data_dir / "memory" / "trades.jsonl")
     engine = ExecutionEngine(portfolio=Portfolio(equity=1000.0))
     run_control = RunControl()
     jobs: dict[str, dict] = {}
     pending: dict[str, OrderBody] = {}
+
+    # Backfill throttling: per-series serialization + a small cross-series
+    # concurrency cap (the MCP bridge is the bottleneck and Bitget rate
+    # limits must not be tripped by parallel deep-history pulls).
+    backfill_locks: dict[str, threading.Lock] = {}
+    backfill_locks_guard = threading.Lock()
+    backfill_sem = threading.Semaphore(2)
+
+    def _default_client_factory() -> Any:
+        from market_data.mcp_client import McpDataClient  # noqa: PLC0415
+
+        return McpDataClient(settings.mcp_command, list(settings.mcp_args))
+
+    client_factory = backfill_client_factory or _default_client_factory
 
     def _series(category: str, symbol: str, timeframe: str) -> Series:
         return Series(category, symbol, timeframe)
@@ -173,6 +218,28 @@ def create_app(
             raise HTTPException(status_code=422, detail="limit must be <= 500")
         bars = stream.recent(category, symbol, timeframe, limit=limit)
         return {"series": f"{category}/{symbol}/{timeframe}", "count": len(bars), "candles": bars}
+
+    @app.post("/candles/backfill")
+    async def candles_backfill(body: BackfillBody) -> dict:
+        if body.max_pages < 1 or body.max_pages > 20:
+            raise HTTPException(status_code=422, detail="max_pages must be within 1..20")
+        series = _series(body.category, body.symbol, body.timeframe)
+        key = series.relative_path()
+
+        def _run() -> tuple[int, bool]:
+            with backfill_locks_guard:
+                series_lock = backfill_locks.setdefault(key, threading.Lock())
+            with series_lock, backfill_sem:
+                with client_factory() as client:
+                    ingestor = KlineIngestor(client, store, page_limit=settings.candle_page_limit)
+                    return ingestor.backfill_before(series, body.before, max_pages=body.max_pages)
+
+        try:
+            appended, earliest_reached = await asyncio.to_thread(_run)
+        except Exception as exc:  # noqa: BLE001 - upstream fetch failure
+            logger.warning("Backfill failed for %s: %s", key, exc)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {"series": key, "appended": appended, "earliest_reached": earliest_reached}
 
     @app.get("/analyze")
     def analyze(symbol: str, timeframe: str, category: str = "USDT-FUTURES", top: int = 8) -> dict:
@@ -290,6 +357,30 @@ def create_app(
     @app.put("/chart-config")
     def put_chart_config(body: ChartConfigBody) -> dict:
         return chart_store.save(body.category, body.symbol, body.timeframe, body.state)
+
+    # -- alerts (server-side persistence, cross-device) ---------------------
+    @app.get("/alerts")
+    def alerts_list() -> dict:
+        return {"alerts": alert_store.list()}
+
+    @app.post("/alerts")
+    def alerts_create(body: AlertBody) -> dict:
+        alert = alert_store.create(body.model_dump())  # raises ValueError -> 400
+        return {"ok": True, "alert": alert}
+
+    @app.put("/alerts/{alert_id}")
+    def alerts_update(alert_id: str, body: AlertPatchBody) -> dict:
+        patch = body.model_dump(exclude_unset=True)
+        alert = alert_store.update(alert_id, patch)  # raises ValueError -> 400
+        if alert is None:
+            raise HTTPException(status_code=404, detail="alert not found")
+        return {"ok": True, "alert": alert}
+
+    @app.delete("/alerts/{alert_id}")
+    def alerts_delete(alert_id: str) -> dict:
+        if not alert_store.delete(alert_id):
+            raise HTTPException(status_code=404, detail="alert not found")
+        return {"ok": True}
 
     # -- agent -------------------------------------------------------------
     def _augmented_decision(df, category, symbol, timeframe):  # noqa: ANN001

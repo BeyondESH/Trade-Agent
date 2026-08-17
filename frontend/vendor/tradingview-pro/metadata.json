@@ -1,0 +1,6 @@
+{
+  "name": "TradingView Pro",
+  "description": "1:1 pixel-perfect TradingView client with real-time interactive candlestick charts, multi-timeframe indicators, drawing tools, paper trading simulator, Pine Editor, screener, and market watchlist.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

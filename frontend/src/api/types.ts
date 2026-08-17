@@ -116,6 +116,22 @@ export interface SeriesRef {
   timeframe: string;
 }
 
+export interface AlertRecord {
+  id: string;
+  symbol: string;
+  condition: "above" | "below";
+  threshold: number;
+  enabled: boolean;
+  triggered: boolean;
+  createdAt: number;
+}
+
+export interface BackfillResponse {
+  series: string;
+  appended: number;
+  earliest_reached: boolean;
+}
+
 export interface Ticker {
   instId: string;
   symbol: string;
@@ -138,7 +154,15 @@ export interface Ticker {
   [key: string]: unknown;
 }
 
-export type TickerSortKey = "symbol" | "price" | "change" | "volume" | "turnover";
+export type TickerSortKey =
+  | "symbol"
+  | "price"
+  | "change"
+  | "volume"
+  | "turnover"
+  | "funding"
+  | "amplitude"
+  | "mark";
 
 export interface Instrument {
   symbol: string;
@@ -169,6 +193,26 @@ export interface ChartPoint {
   value?: number;
 }
 
+export interface GridCellPersist {
+  category: string;
+  symbol: string;
+  timeframe: string;
+  indicators?: { paneId: string; name: string }[];
+}
+
+export interface GridLayoutPersist {
+  layoutCount: number;
+  activeCell: number;
+  syncFlags: {
+    symbol: boolean;
+    period: boolean;
+    crosshair: boolean;
+    range: boolean;
+    draw: boolean;
+  };
+  cells: GridCellPersist[];
+}
+
 export interface ChartConfig {
   indicators: { name: string; pane: "candle" | "sub" }[];
   drawings: {
@@ -179,4 +223,6 @@ export interface ChartConfig {
     groupId?: string;
   }[];
   layers: { sr: boolean; structure: boolean; smc: boolean };
+  /** Multi-chart workspace layout (tv-multichart-sync). */
+  grid?: GridLayoutPersist;
 }

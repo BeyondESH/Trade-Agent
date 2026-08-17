@@ -1,0 +1,89 @@
+/* TradingView theme override for the klinecharts-pro chrome.
+   Must be imported AFTER the vendor `klinecharts-pro.css`. */
+.klinecharts-pro,
+.klinecharts-pro[data-theme="dark"] {
+  --klinecharts-pro-primary-color: var(--tv-accent);
+  --klinecharts-pro-hover-background-color: rgba(41, 98, 255, 0.15);
+  --klinecharts-pro-background-color: var(--tv-bg);
+  --klinecharts-pro-popover-background-color: #1e222d;
+  --klinecharts-pro-text-color: var(--tv-text);
+  --klinecharts-pro-text-second-color: var(--tv-muted);
+  --klinecharts-pro-border-color: var(--tv-border);
+  --klinecharts-pro-selected-color: rgba(41, 98, 255, 0.15);
+}
+
+.klinecharts-pro[data-theme="light"] {
+  --klinecharts-pro-primary-color: var(--tv-accent);
+  --klinecharts-pro-hover-background-color: rgba(41, 98, 255, 0.1);
+  --klinecharts-pro-background-color: var(--tv-bg);
+  --klinecharts-pro-popover-background-color: #ffffff;
+  --klinecharts-pro-text-color: var(--tv-text);
+  --klinecharts-pro-text-second-color: var(--tv-muted);
+  --klinecharts-pro-border-color: var(--tv-border);
+  --klinecharts-pro-selected-color: rgba(41, 98, 255, 0.1);
+}
+
+/* fill the center canvas instead of the vendor default 80vh */
+.klinecharts-pro {
+  height: 100%;
+}
+
+/* hide the vendor top chrome (period bar); its buttons stay in the DOM and are
+   driven programmatically by lib/chartChromeBridge.ts from our own top bar */
+.klinecharts-pro-period-bar {
+  display: none !important;
+}
+
+.klinecharts-pro-content {
+  height: 100%;
+}
+
+/* vendor modals become app-level centered overlays */
+.klinecharts-pro-modal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.klinecharts-pro-modal .inner {
+  border-radius: 8px;
+}
+
+/* left drawing bar: TV density (28x28 icons in 34px slots, 52px rail) */
+.klinecharts-pro-drawing-bar {
+  width: 52px;
+}
+
+.klinecharts-pro-drawing-bar .item {
+  margin-top: 3px;
+}
+
+.klinecharts-pro-drawing-bar .item .icon-overlay {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+}
+
+.klinecharts-pro-drawing-bar .item .icon-arrow {
+  height: 28px;
+}
+
+.klinecharts-pro-drawing-bar .split-line {
+  margin-top: 3px;
+}
+
+/* low-opacity text watermark (3-5%), replaced per symbol/period by the app */
+.klinecharts-pro-watermark {
+  opacity: 0.04;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.klinecharts-pro-watermark .logo {
+  display: none;
+}

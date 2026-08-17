@@ -76,4 +76,23 @@ export class AutoLayerController {
     this.widget?.removeOverlay();
     this.overlayIds.clear();
   }
+
+  /** Record an overlay created outside the controller (vendor drawing bar etc.). */
+  recordOverlayId(id: string | null): void {
+    if (id) this.overlayIds.add(id);
+  }
+
+  /** All known overlay ids in creation order. */
+  getOverlayIds(): string[] {
+    return [...this.overlayIds];
+  }
+
+  /** Undo the most recently created drawing (no native klinecharts undo). */
+  undoLastDrawing(): void {
+    const ids = this.getOverlayIds();
+    const id = ids[ids.length - 1];
+    if (!id) return;
+    this.widget?.removeOverlay({ id });
+    this.overlayIds.delete(id);
+  }
 }

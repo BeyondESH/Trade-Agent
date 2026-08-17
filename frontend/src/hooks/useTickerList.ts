@@ -5,6 +5,11 @@ import { useExchangeSocket } from "./useExchangeSocket";
 
 export type CategoryTab = "all" | "SPOT" | "MARGIN" | "USDT-FUTURES" | "USDC-FUTURES" | "COIN-FUTURES";
 
+/** Composite unique key for a symbol: `category:instId` (same instId may exist in several categories). */
+export function symbolKey(instId: string, category?: string | null): string {
+  return `${category ?? "USDT-FUTURES"}:${instId}`;
+}
+
 export interface TickerListState {
   tickers: Ticker[];
   search: string;
@@ -16,15 +21,17 @@ export interface TickerListState {
   setTab: (tab: CategoryTab) => void;
   setSymbolType: (t: SymbolType | "all") => void;
   setSort: (key: TickerSortKey) => void;
-  /** all symbols the hub has told us about (sorted by ticker) */
+  /** all symbols the hub has told us about, as `category:instId` keys (sorted) */
   symbols: string[];
+  /** instId -> latest price (numeric) for trigger evaluation */
+  priceMap: Record<string, number | undefined>;
 }
 
 function defaultSort(a: Ticker, b: Ticker): number {
   return a.symbol.localeCompare(b.symbol);
 }
 
-function sortValue(t: Ticker, key: TickerSortKey): number | string {
+function sortValue(t: Ticker, key: TickerSortKey): number | string | null {
   switch (key) {
     case "price":
       return toNumber(t.lastPr);
@@ -34,6 +41,12 @@ function sortValue(t: Ticker, key: TickerSortKey): number | string {
       return toNumber(t.baseVolume ?? t.volume24h);
     case "turnover":
       return toNumber(t.quoteVolume ?? t.turnover24h);
+    case "funding":
+      return numOrNull(t.fundingRate);
+    case "mark":
+      return numOrNull(t.markPrice);
+    case "amplitude":
+      return amplitudeOf(t);
     default:
       return t.symbol;
   }
@@ -43,6 +56,20 @@ function toNumber(v: string | undefined): number {
   if (v == null) return 0;
   const n = Number(v);
   return Number.isNaN(n) ? 0 : n;
+}
+
+function numOrNull(v: string | undefined): number | null {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isNaN(n) ? null : n;
+}
+
+/** 24h amplitude = (high - low) / low; null when unavailable (used as a volatility proxy). */
+export function amplitudeOf(t: Ticker): number | null {
+  const hi = numOrNull(t.high24h);
+  const lo = numOrNull(t.low24h);
+  if (hi == null || lo == null || lo === 0) return null;
+  return (hi - lo) / lo;
 }
 
 function snapshotKey(t: Ticker): string {
@@ -122,6 +149,10 @@ export function useTickerList(): TickerListState {
     rows.sort((a, b) => {
       const va = sortValue(a, sortKey);
       const vb = sortValue(b, sortKey);
+      // Missing numeric values always sort to the end, regardless of direction.
+      if (va == null && vb == null) return defaultSort(a, b);
+      if (va == null) return 1;
+      if (vb == null) return -1;
       if (typeof va === "number" && typeof vb === "number") {
         return va === vb ? defaultSort(a, b) : (va - vb) * dir;
       }
@@ -133,9 +164,21 @@ export function useTickerList(): TickerListState {
   }, [snapshot, search, tab, symbolType, sortKey, sortDir]);
 
   const symbols = useMemo(
-    () => Array.from(new Set(Object.values(snapshot).map((t) => t.instId))).sort((a, b) => a.localeCompare(b)),
+    () =>
+      Array.from(new Set(Object.values(snapshot).map((t) => symbolKey(t.instId, t.category)))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
     [snapshot],
   );
+
+  const priceMap = useMemo(() => {
+    const m: Record<string, number | undefined> = {};
+    for (const t of Object.values(snapshot)) {
+      const v = toNumber(t.lastPr);
+      if (v > 0 || t.lastPr === "0") m[t.instId] = v;
+    }
+    return m;
+  }, [snapshot]);
 
   return {
     tickers: list,
@@ -149,5 +192,6 @@ export function useTickerList(): TickerListState {
     setSymbolType,
     setSort,
     symbols,
+    priceMap,
   };
 }

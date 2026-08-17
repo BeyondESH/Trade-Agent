@@ -26,7 +26,7 @@ function Row({
     <div className="relative grid grid-cols-[1fr_1fr] px-2 py-0.5 text-xs tnum" data-testid={`book-${tone}`}>
       <div
         className="absolute inset-y-0 right-0"
-        style={{ width: `${pct}%`, background: tone === "ask" ? "rgba(234,57,67,0.12)" : "rgba(22,199,132,0.12)" }}
+        style={{ width: `${pct}%`, background: tone === "ask" ? "rgba(242,54,69,0.12)" : "rgba(8,153,129,0.12)" }}
       />
       <span className={`relative ${color}`}>{level.price.toFixed(precision)}</span>
       <span className="relative text-right text-muted">{level.size.toFixed(precision + 1)}</span>

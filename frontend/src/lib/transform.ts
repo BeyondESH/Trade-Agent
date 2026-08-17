@@ -52,7 +52,7 @@ export function levelsToPriceLines(levels: Level[]): PriceLineConfig[] {
   return levels.map((l) => ({
     price: l.price,
     kind: l.kind,
-    color: l.kind === "support" ? "#26a69a" : "#ef5350",
+    color: l.kind === "support" ? "#089981" : "#f23645",
     title: `${l.kind} (${l.strength.toFixed(1)})`,
   }));
 }

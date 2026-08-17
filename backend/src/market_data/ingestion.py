@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import logging
+import time
+from collections.abc import Callable
 from typing import Any
 
 import pandas as pd
 
-from market_data.mcp_client import McpDataClient
+from market_data.mcp_client import McpDataClient, McpError
 from market_data.models import (
     OHLCV_COLUMNS,
     Series,
@@ -117,6 +119,92 @@ class KlineIngestor:
         if missing:
             logger.warning("%s has %d missing bars.", series.relative_path(), len(missing))
         return missing
+
+    # -- deep backfill: paginate towards the earliest available history ----
+    _RATE_LIMIT_HINTS = ("rate", "limit", "frequen", "too many")
+
+    def backfill_before(
+        self,
+        series: Series,
+        before_ms: int,
+        *,
+        max_pages: int = 3,
+        max_retries: int = 3,
+        backoff_base: float = 0.5,
+        sleep: Callable[[float], None] | None = None,
+    ) -> tuple[int, bool]:
+        """Fetch history strictly before `before_ms`, walking backwards.
+
+        Each page is merged into the store immediately so progress survives
+        rate-limit retries. Returns (rows_appended, earliest_reached) where
+        `earliest_reached` means the exchange has no older history.
+        """
+        pause = sleep if sleep is not None else time.sleep
+        step = timeframe_step_ms(series.timeframe)
+        interval = timeframe_to_granularity(series.timeframe)
+        # `cursor_end` is an exclusive upper bound; the first page may still
+        # contain already-stored rows (the store dedupes on save).
+        cursor_end = before_ms
+        appended = 0
+
+        for _page in range(max(1, max_pages)):
+            payload = self._call_with_backoff(
+                series, interval, cursor_end, max_retries, backoff_base, pause
+            )
+            page = self._normalize_payload(payload)
+            page = page[(page["open_time"] < cursor_end) & (page["open_time"] >= 0)]
+            if page.empty:
+                return appended, True
+            appended += self._store.save(series, page)
+            page_min = int(page["open_time"].min())
+            if len(page) < self._page_limit:
+                return appended, True
+            next_end = page_min - step
+            if next_end >= cursor_end or next_end < 0:
+                return appended, True
+            cursor_end = next_end
+        return appended, False
+
+    def _call_with_backoff(
+        self,
+        series: Series,
+        interval: str,
+        cursor_end: int,
+        max_retries: int,
+        backoff_base: float,
+        pause: Callable[[float], None],
+    ) -> Any:
+        last_exc: McpError | None = None
+        for attempt in range(max(1, max_retries)):
+            try:
+                return self._client.call_tool(
+                    MARKET_TOOL,
+                    {
+                        "action": CANDLES_ACTION,
+                        "category": series.category,
+                        "symbol": series.symbol,
+                        "interval": interval,
+                        "endTime": str(cursor_end),
+                        "limit": str(self._page_limit),
+                    },
+                )
+            except McpError as exc:
+                last_exc = exc
+                if not self._is_rate_limited(exc):
+                    raise
+                logger.warning(
+                    "Rate limited fetching %s (%s); retry %d/%d.",
+                    series.relative_path(), interval, attempt + 1, max_retries,
+                )
+                if attempt < max_retries - 1:
+                    pause(backoff_base * (attempt + 1))
+        assert last_exc is not None
+        raise last_exc
+
+    @classmethod
+    def _is_rate_limited(cls, exc: McpError) -> bool:
+        msg = str(exc).lower()
+        return any(hint in msg for hint in cls._RATE_LIMIT_HINTS)
 
     # -- normalization -----------------------------------------------------
     @staticmethod

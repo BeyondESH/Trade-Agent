@@ -2,8 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* TradingView design tokens — dual theme via CSS variables.
+   Theme is switched by setting data-theme on <html>. */
+:root,
+:root[data-theme="dark"] {
   color-scheme: dark;
+  --tv-bg: #131722;
+  --tv-panel: #1e222d;
+  --tv-panel2: #2a2e39;
+  --tv-border: #2a2e39;
+  --tv-borderSoft: #1e222d;
+  --tv-text: #d1d4dc;
+  --tv-muted: #787b86;
+  --tv-up: #089981;
+  --tv-down: #f23645;
+  --tv-accent: #2962ff;
+  --tv-hover: #2a2e39;
+  --tv-active: #363a45;
+  --tv-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --tv-bg: #ffffff;
+  --tv-panel: #ffffff;
+  --tv-panel2: #f0f3fa;
+  --tv-border: #e0e3eb;
+  --tv-borderSoft: #e0e3eb;
+  --tv-text: #131722;
+  --tv-muted: #787b86;
+  --tv-up: #089981;
+  --tv-down: #f23645;
+  --tv-accent: #2962ff;
+  --tv-hover: #f0f3fa;
+  --tv-active: #e0e3eb;
+  --tv-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 html,
@@ -14,35 +47,36 @@ body,
 
 body {
   margin: 0;
-  background: #0b0e11;
-  color: #eaecef;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+  background: var(--tv-bg);
+  color: var(--tv-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, "PingFang SC",
     "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  font-size: 14px;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-size: 12px;
+  /* tabular numerals everywhere so numeric columns never jitter on update */
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* tabular numbers for price/data alignment (sans-serif, keeps columns aligned) */
+/* tabular numbers for price/data alignment */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   font-family: inherit;
 }
 
-/* slim rounded dark scrollbars */
+/* slim themed scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a3240;
+  background: var(--tv-border);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a4454;
+  background: var(--tv-muted);
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -50,7 +84,7 @@ body {
 
 /* subtle focus rings */
 *:focus-visible {
-  outline: 2px solid rgba(240, 185, 11, 0.55);
+  outline: 2px solid var(--tv-accent);
   outline-offset: 1px;
   border-radius: 4px;
 }
@@ -67,12 +101,11 @@ input[type="checkbox"] {
     box-shadow 0.15s ease;
 }
 
-/* gridstack panel content fills cell */
+/* gridstack cell content: flat, borderless (center multi-chart grid only) */
 .grid-stack-item-content {
   overflow: hidden;
-  border-radius: 12px;
-  background: #12161c;
-  border: 1px solid #232a33;
+  background: var(--tv-bg);
+  border: 1px solid var(--tv-borderSoft);
 }
 
 /* hide gridstack's built-in corner arrow logos on resize handles */
@@ -86,6 +119,6 @@ input[type="checkbox"] {
 /* klinecharts-pro chrome (period bar, indicator/setting/symbol modals,
    drawing bar) inherits the global sans-serif stack */
 .klinecharts-pro * {
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+  font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, "PingFang SC",
     "Microsoft YaHei", "Noto Sans SC", sans-serif;
 }

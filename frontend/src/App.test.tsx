@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { forwardRef, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const m = vi.hoisted(() => ({
@@ -11,6 +10,8 @@ const m = vi.hoisted(() => ({
   agentDecide: vi.fn(),
   tickers: vi.fn(),
   instruments: vi.fn(),
+  saveChartConfig: vi.fn(),
+  chartConfig: vi.fn(),
 }));
 
 vi.mock("./api/client", () => ({
@@ -22,19 +23,15 @@ vi.mock("./api/client", () => ({
     agentDecide: m.agentDecide,
     tickers: m.tickers,
     instruments: m.instruments,
+    saveChartConfig: m.saveChartConfig,
+    chartConfig: m.chartConfig,
   },
 }));
 
-// The chart needs a real canvas + Solid runtime; stub it for the layout test.
-vi.mock("./components/chart/KLineChartProView", () => ({
-  KLineChartProView: forwardRef(() => <div data-testid="chart" />),
-}));
-
-// gridstack needs layout measurement jsdom can't provide; render children inline.
-vi.mock("./lib/gridStackLayout", () => ({
-  GridStackLayout: ({ panelIds, children }: { panelIds: string[]; children: (id: string) => React.ReactNode }) => (
-    <div data-testid="gridstack-layout">{panelIds.map((id) => <div key={id} data-panel={id}>{children(id)}</div>)}</div>
-  ),
+// The real chart needs a canvas + Solid runtime; stub the grid for the shell test.
+vi.mock("./components/chart/ChartGrid", () => ({
+  ChartGrid: () => <div data-testid="chart" />,
+  CHART_LAYOUTS: [1, 2, 4, 6, 8],
 }));
 
 // The market hub hooks use a real WebSocket; stub them with canned data.
@@ -42,6 +39,8 @@ vi.mock("./hooks/useExchangeSocket", () => ({
   useExchangeSocket: () => {},
 }));
 vi.mock("./hooks/useTickerList", () => ({
+  symbolKey: (instId: string, category?: string | null) => `${category ?? "USDT-FUTURES"}:${instId}`,
+  amplitudeOf: () => null,
   useTickerList: () => ({
     tickers: [
       { instId: "BTCUSDT", symbol: "BTCUSDT", lastPr: "60000", price24hPcnt: "-0.02", volume24h: "1000" },
@@ -49,12 +48,16 @@ vi.mock("./hooks/useTickerList", () => ({
       { instId: "SOLUSDT", symbol: "SOLUSDT", lastPr: "150", price24hPcnt: "0.01", volume24h: "500" },
     ],
     search: "",
+    tab: "all",
+    symbolType: "all",
     sortKey: "change",
     sortDir: "desc",
     setSearch: () => {},
     setTab: () => {},
+    setSymbolType: () => {},
     setSort: () => {},
     symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+    priceMap: { BTCUSDT: 60000, ETHUSDT: 3000, SOLUSDT: 150 },
   }),
 }));
 vi.mock("./hooks/useOrderBook", () => ({
@@ -67,10 +70,23 @@ vi.mock("./hooks/useDerivative", () => ({
   useDerivative: () => ({ funding: null, markPrice: null }),
 }));
 
+// jsdom has no layout, so virtual scrolling never measures rows; stub it to
+// render every item.
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (opts: { count: number }) => {
+    const items = Array.from({ length: opts.count }, (_, i) => ({ key: i, index: i, start: i * 30 }));
+    return {
+      getTotalSize: () => items.length * 30,
+      getVirtualItems: () => items,
+    };
+  },
+}));
+
 import App from "./App";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   m.candles.mockResolvedValue({ candles: [], count: 0 });
   m.candlesRecent.mockResolvedValue({ candles: [], count: 0 });
   m.analyze.mockResolvedValue({ price: 100, indicators: {}, levels: [] });
@@ -78,24 +94,42 @@ beforeEach(() => {
   m.agentDecide.mockResolvedValue({ action: "hold", symbol: "BTCUSDT", side: null, reference_price: 100, reason: "hold", confidence: 0.5 });
   m.tickers.mockResolvedValue({ tickers: [] });
   m.instruments.mockResolvedValue({ instruments: [] });
+  m.chartConfig.mockResolvedValue({ indicators: [], drawings: [], layers: {} });
 });
 
-describe("App terminal layout", () => {
-  it("renders market list with symbols", async () => {
+describe("App TV shell", () => {
+  it("renders the five TV regions and the watchlist", async () => {
     render(<App />);
-    expect(screen.getAllByText("BTCUSDT").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId("tv-top-bar")).toBeInTheDocument();
+    expect(screen.getByTestId("chart")).toBeInTheDocument();
+    expect(screen.getByTestId("tv-right-sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("tv-bottom-dock")).toBeInTheDocument();
+    expect(screen.getByTestId("tv-status-bar")).toBeInTheDocument();
     expect(screen.getByText("ETHUSDT")).toBeInTheDocument();
     expect(screen.getByText("SOLUSDT")).toBeInTheDocument();
-    expect(screen.getByTestId("chart")).toBeInTheDocument();
-    expect(screen.getByText("订单簿 / 成交")).toBeInTheDocument();
-    expect(screen.getByText("最新成交")).toBeInTheDocument();
-    expect(screen.getByText(/AI 分析模块预留/)).toBeInTheDocument();
-    expect(screen.getByText("RaiBro Trading")).toBeInTheDocument();
   });
 
-  it("selecting a symbol updates the header", async () => {
+  it("selecting a symbol in the watchlist updates the top bar", async () => {
     render(<App />);
-    fireEvent.click(screen.getByTestId("ticker-ETHUSDT"));
-    await waitFor(() => expect(screen.getByText("RaiBro Trading").nextElementSibling?.textContent).toBe("ETHUSDT"));
+    fireEvent.click(screen.getByTestId("market-row-ETHUSDT"));
+    await waitFor(() => {
+      expect(screen.getByTestId("topbar-symbol").textContent).toContain("ETHUSDT");
+    });
+  });
+
+  it("switching the right rail tab shows the alerts panel", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByTestId("rail-alerts"));
+    await waitFor(() => {
+      expect(screen.getByTestId("alerts-panel")).toBeInTheDocument();
+    });
+  });
+
+  it("expanding the bottom dock shows the AI panel", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByTestId("dock-tab-ai"));
+    await waitFor(() => {
+      expect(screen.getByTestId("dock-panel")).toBeInTheDocument();
+    });
   });
 });

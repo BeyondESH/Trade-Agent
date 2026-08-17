@@ -36,8 +36,8 @@ describe("levelsToPriceLines", () => {
       { price: 110, kind: "resistance", strength: 3, sources: ["fib"] },
     ];
     const lines = levelsToPriceLines(levels);
-    expect(lines[0].color).toBe("#26a69a");
-    expect(lines[1].color).toBe("#ef5350");
+    expect(lines[0].color).toBe("#089981");
+    expect(lines[1].color).toBe("#f23645");
     expect(lines[0].title).toContain("support");
   });
 });

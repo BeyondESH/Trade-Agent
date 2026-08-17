@@ -1,7 +1,9 @@
 import type {
   AgentDecision,
+  AlertRecord,
   AnalyzeResponse,
   AppConfig,
+  BackfillResponse,
   Candle,
   ChartConfig,
   Instrument,
@@ -65,6 +67,12 @@ export const api = {
     request<{ candles: Candle[]; count: number }>(
       `/candles/recent${qs({ ...s, limit })}`,
     ),
+
+  backfill: (s: SeriesRef, before: number) =>
+    request<BackfillResponse>("/candles/backfill", {
+      method: "POST",
+      body: JSON.stringify({ ...s, before }),
+    }),
 
   books: (s: { category: string; symbol: string }) =>
     request<{ symbol: string; category: string; asks: [number, number][]; bids: [number, number][]; seq: number | null }>(
@@ -152,4 +160,17 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ ...s, state }),
     }),
+
+  // /alerts — server-side persistence (cross-device); the frontend mirrors
+  // writes and falls back to localStorage when the backend is unreachable.
+  alerts: () => request<{ alerts: AlertRecord[] }>("/alerts"),
+  saveAlert: (alert: AlertRecord) =>
+    request<{ ok: boolean; alert: AlertRecord }>("/alerts", { method: "POST", body: JSON.stringify(alert) }),
+  updateAlert: (id: string, patch: Partial<Omit<AlertRecord, "id" | "createdAt">>) =>
+    request<{ ok: boolean; alert: AlertRecord }>(`/alerts/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(patch),
+    }),
+  deleteAlert: (id: string) =>
+    request<{ ok: boolean }>(`/alerts/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
