@@ -78,3 +78,31 @@ TBD - created by archiving change web-frontend. Update Purpose after archive.
 - **WHEN** 图表加载完成
 - **THEN** SHALL 在主图底部显示半透明成交量柱，不挤压主图可用高度
 
+### Requirement: 空数据清图与实时引导
+
+系统 SHALL 在 candles 数据为空时清空图表（不残留上一币种/周期的 K 线）；无存量数据时可用实时缓存数据渲染图表。
+
+#### Scenario: 切到无数据币种
+
+- **WHEN** 当前 series 无存量数据
+- **THEN** 图表 SHALL 清空或显示实时引导数据，而非残留上一币种的 K 线
+
+#### Scenario: 实时引导渲染
+
+- **WHEN** 存量数据为空且实时缓存有数据
+- **THEN** 图表 SHALL 用实时缓存批次渲染 K 线
+
+### Requirement: 浏览器环境渲染验证
+
+系统 SHALL 在真实浏览器环境中渲染 K 线图表（蜡烛、指标副图、图层叠加、实时更新），而非仅依赖打桩测试。
+
+#### Scenario: 浏览器渲染 K 线
+
+- **WHEN** 后端与前端运行且提供 candles 数据
+- **THEN** 浏览器中 SHALL 显示 K 线蜡烛
+
+#### Scenario: 指标副图与图层渲染
+
+- **WHEN** 图表加载完成
+- **THEN** 浏览器中 SHALL 显示配置的指标副图（如 VOL/MACD）与开启的图层（S/R/结构/SMC）
+
