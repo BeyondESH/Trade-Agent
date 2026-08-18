@@ -46,7 +46,6 @@ import { DesktopTitleBar } from './components/desktop/DesktopTitleBar';
 import { GlobalNavRail } from './components/desktop/GlobalNavRail';
 
 // SuperCharts Components
-import { TopNavbar } from './components/header/TopNavbar';
 import { NativeChart } from './components/chart/NativeChart';
 import { RightDock } from './components/sidebar/RightDock';
 import { BottomTimebar } from './components/timebar/BottomTimebar';
@@ -120,16 +119,35 @@ export default function App() {
     [apiCandles],
   );
 
-  // Seed the symbol list from the real market feed (REST + WS), keep any
-  // transient symbols the user opened.
+  // Seed the symbol list from the real market feed (REST + WS) and keep the
+  // displayed quotes fresh: existing symbols get their price/24h fields
+  // overwritten from the live ticker map, while transient user-added symbols
+  // are preserved. New reference only when something actually changes.
   useEffect(() => {
-    if (realSymbols.length > 0) {
-      setSymbols((prev) => {
-        if (prev.length === 0) return realSymbols;
-        const existing = new Set(prev.map((s) => s.id));
-        return [...prev, ...realSymbols.filter((s) => !existing.has(s.id))];
-      });
-    }
+    if (realSymbols.length === 0) return;
+    setSymbols((prev) => {
+      if (prev.length === 0) return realSymbols;
+      const byId = new Map(prev.map((s) => [s.id, s]));
+      let changed = false;
+      for (const real of realSymbols) {
+        const cur = byId.get(real.id);
+        if (!cur) {
+          byId.set(real.id, real);
+          changed = true;
+        } else if (
+          cur.price !== real.price ||
+          cur.change24hPercent !== real.change24hPercent ||
+          cur.change24h !== real.change24h ||
+          cur.high24h !== real.high24h ||
+          cur.low24h !== real.low24h ||
+          cur.volume24h !== real.volume24h
+        ) {
+          byId.set(real.id, { ...cur, ...real });
+          changed = true;
+        }
+      }
+      return changed ? [...byId.values()] : prev;
+    });
   }, [realSymbols]);
 
   // Default active symbol to the first real one (BTCUSDT usually).
@@ -672,21 +690,14 @@ export default function App() {
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenShortcuts={() => setIsShortcutsOpen(true)}
           onOpenSettings={() => setIsDesktopSettingsOpen(true)}
+          onOpenAlertModal={() => setIsAlertOpen(true)}
+          onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
         />
 
         {/* Dynamic Workspace Router */}
         <main className="flex flex-col flex-1 h-full overflow-hidden relative">
           {activeView === 'chart' && (
             <div className="flex flex-col h-full w-full overflow-hidden">
-              {/* Minimal top bar — chart controls live in the native pro chrome */}
-              <TopNavbar
-                symbol={activeSymbol}
-                theme={theme}
-                onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                onOpenAlertModal={() => setIsAlertOpen(true)}
-                onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
-              />
-
               {/* Chart Main Layout Area */}
               <div className="flex flex-1 w-full overflow-hidden relative">
                 {/* Central native klinecharts-pro chart */}

@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import threading
+from collections.abc import Callable
 from typing import Any
 
 from websockets.asyncio.client import ClientConnection, connect
@@ -26,8 +27,8 @@ from market_data.models import timeframe_to_granularity
 
 logger = logging.getLogger(__name__)
 
-PING_FRAME = '{"event":"ping"}'
-PONG_FRAME = '{"event":"pong"}'
+PING_FRAME = "ping"
+PONG_FRAME = "pong"
 
 MAX_BARS_PER_SERIES = 200
 
@@ -53,6 +54,9 @@ class BitgetWsStream:
         # Extra (category, symbol, timeframe) subscriptions added at runtime,
         # refcounted so multiple clients sharing a series keep it alive.
         self._extra: dict[tuple[str, str, str], int] = {}
+        # Listeners notified when a series' latest bar changes. Keyed by the
+        # same (category, symbol, timeframe) triple as _extra.
+        self._listeners: dict[tuple[str, str, str], set[Callable[[dict[str, Any]], None]]] = {}
         self._lock = threading.Lock()
         self._task: asyncio.Task | None = None
         self._stopping = False
@@ -106,6 +110,42 @@ class BitgetWsStream:
         self._request("unsubscribe", category, symbol, timeframe)
         with self._lock:
             self._buffer.pop(self._series_key(category, symbol, timeframe), None)
+
+    def add_listener(self, category: str, symbol: str, timeframe: str,
+                     callback: Callable[[dict[str, Any]], None]) -> None:
+        """Register a callback invoked with the latest bar when a series changes.
+
+        The callback is called with a copy of the series' most recent bar after
+        every Bitget candle update frame that touches the series. Safe to call
+        from any thread.
+        """
+        key = (category, symbol, timeframe)
+        with self._lock:
+            self._listeners.setdefault(key, set()).add(callback)
+
+    def remove_listener(self, category: str, symbol: str, timeframe: str,
+                        callback: Callable[[dict[str, Any]], None]) -> None:
+        """Unregister a listener; idempotent."""
+        key = (category, symbol, timeframe)
+        with self._lock:
+            callbacks = self._listeners.get(key)
+            if callbacks is None:
+                return
+            callbacks.discard(callback)
+            if not callbacks:
+                self._listeners.pop(key, None)
+
+    def _notify(self, category: str, symbol: str, timeframe: str, bar: dict[str, Any]) -> None:
+        """Fan the latest bar out to the series' listeners (copy to avoid
+        mutating the set while callbacks run)."""
+        key = (category, symbol, timeframe)
+        with self._lock:
+            callbacks = list(self._listeners.get(key, ()))
+        for cb in callbacks:
+            try:
+                cb(dict(bar))
+            except Exception:  # noqa: BLE001 - a broken listener must not break the stream
+                logger.exception("candle listener failed for %s", self._series_key(*key))
 
     def _request(self, op: str, category: str, symbol: str, timeframe: str) -> None:
         payload = json.dumps({"op": op, "args": [{
@@ -216,6 +256,15 @@ class BitgetWsStream:
 
     # -- frame handling ----------------------------------------------------
     async def _handle_frame(self, ws: ClientConnection, raw: Any) -> None:
+        # Bitget heartbeats are plain strings "ping"/"pong"; handle before JSON.
+        if isinstance(raw, (bytes, str)):
+            text = raw.decode() if isinstance(raw, bytes) else raw
+            stripped = text.strip()
+            if stripped == "ping":
+                await self._safe_send(ws, PONG_FRAME)
+                return
+            if stripped == "pong":
+                return
         try:
             msg = json.loads(raw)
         except (TypeError, ValueError):
@@ -244,8 +293,13 @@ class BitgetWsStream:
         key = self._series_key(inst_type, inst_id, timeframe)
         with self._lock:
             bars = self._buffer.setdefault(key, [])
+            before = dict(bars[-1]) if bars else None
             for row in rows:
                 self._upsert(bars, KlineIngestor._coerce_row(row))
+            changed = (bars[-1] if bars else None) != before
+            latest = dict(bars[-1]) if bars else None
+        if changed and latest is not None:
+            self._notify(inst_type, inst_id, timeframe, latest)
 
     @staticmethod
     def _upsert(bars: list[dict[str, Any]], bar: dict[str, Any]) -> None:

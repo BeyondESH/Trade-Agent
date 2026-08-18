@@ -74,10 +74,11 @@ const candle = (open_time: number, close = 3): Candle => ({
   volume: 1,
 });
 
-const candleFrame = (symbol: string, category: string, c: Candle) => ({
+const candleFrame = (symbol: string, category: string, timeframe: string, c: Candle) => ({
   channel: "candle",
   symbol,
   category,
+  timeframe,
   action: "update",
   data: { last_candle: c },
 });
@@ -106,7 +107,7 @@ describe("BitgetWsClient single shared socket", () => {
     FakeWebSocket.instances[0].emitOpen();
     const subs = FakeWebSocket.instances[0].frames().filter((f) => f.op === "subscribe");
     expect(subs).toHaveLength(1);
-    FakeWebSocket.instances[0].emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", candle(1000)));
+    FakeWebSocket.instances[0].emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000)));
     expect(l1).toHaveBeenCalledTimes(1);
     expect(l2).toHaveBeenCalledTimes(1);
   });
@@ -134,7 +135,7 @@ describe("BitgetWsClient delivery", () => {
     c.subscribe(B, eth);
     const sock = FakeWebSocket.instances[0];
     sock.emitOpen();
-    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", candle(1000, 5)));
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000, 5)));
     expect(btc).toHaveBeenCalledWith(expect.objectContaining({ open_time: 1000, close: 5 }));
     expect(eth).not.toHaveBeenCalled();
   });
@@ -145,12 +146,42 @@ describe("BitgetWsClient delivery", () => {
     c.subscribe(A, cb);
     const sock = FakeWebSocket.instances[0];
     sock.emitOpen();
-    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", candle(1000)));
-    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", candle(1000)));
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000)));
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000)));
     expect(cb).toHaveBeenCalledTimes(1);
     // a changed bucket is delivered again
-    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", candle(1000, 9)));
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000, 9)));
     expect(cb).toHaveBeenCalledTimes(2);
+  });
+
+  it("routes by timeframe: a 5m bar never reaches a 1h subscriber", () => {
+    const c = new BitgetWsClient();
+    const five = vi.fn();
+    const hour = vi.fn();
+    c.subscribe({ category: "USDT-FUTURES", symbol: "BTCUSDT", timeframe: "5m" }, five);
+    c.subscribe({ category: "USDT-FUTURES", symbol: "BTCUSDT", timeframe: "1h" }, hour);
+    const sock = FakeWebSocket.instances[0];
+    sock.emitOpen();
+    // 5m bar arrives
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000, 5)));
+    expect(five).toHaveBeenCalledTimes(1);
+    expect(hour).not.toHaveBeenCalled();
+    // 1h bar arrives
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "1h", candle(2000, 7)));
+    expect(hour).toHaveBeenCalledTimes(1);
+    expect(five).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores candle frames missing the full series identity", () => {
+    const c = new BitgetWsClient();
+    const cb = vi.fn();
+    c.subscribe(A, cb);
+    const sock = FakeWebSocket.instances[0];
+    sock.emitOpen();
+    // missing timeframe -> cannot route safely -> ignored
+    sock.emitMessage({ channel: "candle", symbol: "BTCUSDT", category: "USDT-FUTURES",
+                       action: "update", data: { last_candle: candle(1000) } });
+    expect(cb).not.toHaveBeenCalled();
   });
 
   it("ignores non-candle frames and frames without last_candle", () => {
@@ -160,7 +191,8 @@ describe("BitgetWsClient delivery", () => {
     const sock = FakeWebSocket.instances[0];
     sock.emitOpen();
     sock.emitMessage({ channel: "ticker", symbol: "BTCUSDT", data: {} });
-    sock.emitMessage({ channel: "candle", symbol: "BTCUSDT", data: {} });
+    sock.emitMessage({ channel: "candle", symbol: "BTCUSDT", category: "USDT-FUTURES",
+                       timeframe: "5m", data: {} });
     expect(cb).not.toHaveBeenCalled();
   });
 });

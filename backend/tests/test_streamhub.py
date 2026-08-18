@@ -165,6 +165,30 @@ def test_ping_replies_pong() -> None:
         async def send(self, text: str) -> None:
             sent.append(text)
 
+    asyncio.run(s._handle_frame(_Ws(), "ping", CAT))
+    assert sent == [PONG_FRAME]
+
+
+def test_plain_pong_frame_ignored() -> None:
+    s = _stream()
+    sent: list[str] = []
+
+    class _Ws:
+        async def send(self, text: str) -> None:
+            sent.append(text)
+
+    asyncio.run(s._handle_frame(_Ws(), "pong", CAT))
+    assert sent == []
+
+
+def test_json_ping_frame_replies_pong() -> None:
+    s = _stream()
+    sent: list[str] = []
+
+    class _Ws:
+        async def send(self, text: str) -> None:
+            sent.append(text)
+
     asyncio.run(s._handle_frame(_Ws(), '{"event":"ping"}', CAT))
     assert sent == [PONG_FRAME]
 
@@ -246,6 +270,51 @@ def test_instrument_mirror_per_category() -> None:
     all_i = s.instruments()
     assert all_i["USDT-FUTURES:BTCUSDT"]["category"] == CAT
     assert all_i["SPOT:XAUUSD"]["category"] == SPOT
+
+
+def test_ticker_refresh_once_emits_changes() -> None:
+    rows: list[dict] = []
+
+    def fake_fetch(_cat: str) -> list[dict]:
+        return rows
+
+    s = _stream(fetch_tickers=fake_fetch)
+    events: list[tuple[str, str, str, str, object]] = []
+    s.add_listener(lambda cat, ch, sym, act, data: events.append((cat, ch, sym, act, data)))
+
+    rows = [{"instId": "BTCUSDT", "lastPr": "64000", "change24h": "1"}]
+    asyncio.run(s._refresh_tickers_once(CAT))
+    assert s.tickers(CAT)["BTCUSDT"]["lastPr"] == "64000"
+    assert len(events) == 1
+    cat, ch, sym, act, data = events[0]
+    assert (cat, ch, sym, act) == (CAT, "ticker", "*", "update")
+    assert data[0]["instId"] == "BTCUSDT"
+
+    # unchanged refresh -> no emit
+    events.clear()
+    asyncio.run(s._refresh_tickers_once(CAT))
+    assert events == []
+
+    # changed value -> emit only the changed row
+    rows = [{"instId": "BTCUSDT", "lastPr": "64100", "change24h": "1"},
+            {"instId": "ETHUSDT", "lastPr": "3000", "change24h": "2"}]
+    asyncio.run(s._refresh_tickers_once(CAT))
+    assert len(events) == 1
+    emitted = events[0][4]
+    assert {r["instId"] for r in emitted} == {"BTCUSDT", "ETHUSDT"}
+    assert s.tickers(CAT)["ETHUSDT"]["lastPr"] == "3000"
+
+
+def test_ticker_refresh_failure_is_silent() -> None:
+    def fake_fetch(_cat: str) -> list[dict]:
+        raise RuntimeError("boom")
+
+    s = _stream(fetch_tickers=fake_fetch)
+    events: list = []
+    s.add_listener(lambda *a: events.append(a))
+    asyncio.run(s._refresh_tickers_once(CAT))  # must not raise
+    assert events == []
+    assert s.tickers(CAT) == {}
 
 
 def _run_all() -> None:

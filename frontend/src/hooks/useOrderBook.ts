@@ -45,12 +45,26 @@ export function useOrderBook(symbol: string, category = "USDT-FUTURES"): OrderBo
         const bidList = [...bids.entries()].sort((a, b) => b[0] - a[0]);
         const spread =
           askList.length && bidList.length ? askList[0][0] - bidList[0][0] : null;
-        return {
+        const next = {
           asks: askList.map(([price, size]) => ({ price, size })),
           bids: bidList.map(([price, size]) => ({ price, size })),
           seq: rows.seq ?? prev.seq,
           spread,
         };
+        // Skip re-render when the visible book (best levels + spread) is
+        // unchanged, avoiding a full rebuild on every high-frequency frame.
+        const prevBestAsk = prev.asks[0]?.price ?? null;
+        const prevBestBid = prev.bids[0]?.price ?? null;
+        const prevSize = (l: { price: number; size: number }) => `${l.price}:${l.size}`;
+        const sameBook =
+          prevBestAsk === (next.asks[0]?.price ?? null) &&
+          prevBestBid === (next.bids[0]?.price ?? null) &&
+          prev.asks.length === next.asks.length &&
+          prev.bids.length === next.bids.length &&
+          prev.asks.every((l, i) => prevSize(l) === prevSize(next.asks[i])) &&
+          prev.bids.every((l, i) => prevSize(l) === prevSize(next.bids[i]));
+        if (sameBook) return prev;
+        return next;
       });
     },
     [],

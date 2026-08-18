@@ -16,6 +16,8 @@ import {
   Keyboard,
   HelpCircle,
   Settings,
+  Bell,
+  ArrowUpRight,
 } from 'lucide-react';
 
 interface Props {
@@ -26,6 +28,8 @@ interface Props {
   onOpenCommandPalette: () => void;
   onOpenShortcuts: () => void;
   onOpenSettings: () => void;
+  onOpenAlertModal?: () => void;
+  onOpenOrderModal?: (side: 'BUY' | 'SELL') => void;
 }
 
 export const GlobalNavRail: React.FC<Props> = ({
@@ -36,6 +40,8 @@ export const GlobalNavRail: React.FC<Props> = ({
   onOpenCommandPalette,
   onOpenShortcuts,
   onOpenSettings,
+  onOpenAlertModal,
+  onOpenOrderModal,
 }) => {
   const isDark = theme === 'dark';
 
@@ -124,6 +130,30 @@ export const GlobalNavRail: React.FC<Props> = ({
 
       {/* Bottom Global Action Controls */}
       <div className="flex flex-col items-center gap-1.5 w-full pt-2 border-t border-gray-500/20">
+        {onOpenAlertModal && (
+          <button
+            onClick={onOpenAlertModal}
+            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
+              isDark ? 'hover:bg-[#1e222d] hover:text-white' : 'hover:bg-white hover:text-black'
+            }`}
+            title={t('Create Alert')}
+          >
+            <Bell className="w-3.5 h-3.5 text-[#ff9800]" />
+          </button>
+        )}
+
+        {onOpenOrderModal && (
+          <button
+            onClick={() => onOpenOrderModal('BUY')}
+            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
+              isDark ? 'hover:bg-[#1e222d] hover:text-white' : 'hover:bg-white hover:text-black'
+            }`}
+            title={t('Buy / Long')}
+          >
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#089981]" />
+          </button>
+        )}
+
         <button
           onClick={onOpenCommandPalette}
           className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${

@@ -33,8 +33,8 @@ from websockets.asyncio.client import ClientConnection, connect
 
 logger = logging.getLogger(__name__)
 
-PING_FRAME = '{"event":"ping"}'
-PONG_FRAME = '{"event":"pong"}'
+PING_FRAME = "ping"
+PONG_FRAME = "pong"
 
 MAX_TRADES_PER_SYMBOL = 200
 MAX_DEPTH_LEVELS = 400
@@ -240,6 +240,7 @@ class MarketStream:
         categories: list[str],
         heartbeat_seconds: float = 30.0,
         reconnect_seconds: float = 5.0,
+        ticker_refresh_seconds: float = 5.0,
         max_trades: int = MAX_TRADES_PER_SYMBOL,
         max_depth_levels: int = MAX_DEPTH_LEVELS,
         fetch_instruments: Callable[[str], list[dict]] | None = None,
@@ -249,6 +250,7 @@ class MarketStream:
         self._categories = list(categories)
         self._heartbeat = heartbeat_seconds
         self._reconnect = reconnect_seconds
+        self._ticker_refresh = ticker_refresh_seconds
         self._max_trades = max_trades
         self._max_depth = max_depth_levels
         self._fetch_instruments = fetch_instruments or _default_fetch_instruments
@@ -284,7 +286,7 @@ class MarketStream:
         for cat in self._categories:
             self._tasks[cat] = loop.create_task(self._run_loop(cat))
             loop.create_task(self._refresh_instruments(cat))
-            loop.create_task(self._refresh_tickers(cat))
+            loop.create_task(self._ticker_loop(cat))
 
     async def stop(self) -> None:
         self._stopping = True
@@ -407,6 +409,15 @@ class MarketStream:
 
     # -- frame handling -----------------------------------------------------
     async def _handle_frame(self, ws: ClientConnection, raw: Any, category: str) -> None:
+        # Bitget heartbeats are plain strings "ping"/"pong"; handle before JSON.
+        if isinstance(raw, (bytes, str)):
+            text = raw.decode() if isinstance(raw, bytes) else raw
+            stripped = text.strip()
+            if stripped == "ping":
+                await self._safe_send(ws, PONG_FRAME)
+                return
+            if stripped == "pong":
+                return
         try:
             msg = json.loads(raw)
         except (TypeError, ValueError):
@@ -574,17 +585,41 @@ class MarketStream:
             self._instruments[category] = mirror
         logger.info("MarketStream[%s] instruments cached: %d", category, len(mirror))
 
-    async def _refresh_tickers(self, category: str) -> None:
+    async def _ticker_loop(self, category: str) -> None:
+        """Periodically refresh the full-market ticker mirror and emit updates.
+
+        Bitget's public WS ticker channel requires one instId per subscription
+        and does not support a wildcard; the REST tickers endpoint returns all
+        contracts at once. The mirror is reseeded every `_ticker_refresh`
+        seconds and changes are pushed as `action:"update"` so wildcard ticker
+        subscribers get a live feed instead of a one-shot snapshot.
+        """
+        while not self._stopping:
+            await self._refresh_tickers_once(category)
+            try:
+                await asyncio.sleep(self._ticker_refresh)
+            except asyncio.CancelledError:
+                raise
+
+    async def _refresh_tickers_once(self, category: str) -> None:
         try:
             rows = await asyncio.to_thread(self._fetch_tickers, category)
         except Exception as exc:  # noqa: BLE001
             logger.warning("MarketStream[%s] tickers refresh failed: %s", category, exc)
             return
+        changes: list[dict] = []
         with self._lock:
+            mirror = self._tickers[category]
             for row in rows:
                 norm = _normalize_ticker(row)
                 if not norm:
                     continue
                 norm.setdefault("category", category)
-                self._tickers[category][norm["instId"]] = norm
-        logger.info("MarketStream[%s] tickers seeded: %d", category, len(rows))
+                sid = norm["instId"]
+                prev = mirror.get(sid)
+                if prev != norm:
+                    mirror[sid] = norm
+                    changes.append(norm)
+        if changes:
+            self._emit(category, "ticker", "*", "update", changes)
+            logger.debug("MarketStream[%s] tickers updated: %d", category, len(changes))

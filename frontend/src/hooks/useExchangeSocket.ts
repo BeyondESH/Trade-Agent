@@ -87,13 +87,23 @@ export class ExchangeSocket {
       } catch {
         return;
       }
-      const k = this.key({
-        channel: frame.channel,
-        symbol: frame.symbol ?? "default",
-        category: (frame as { category?: string }).category ?? "USDT-FUTURES",
-      });
-      const set = this.listeners.get(k);
-      if (set) {
+      const frameChannel = frame.channel;
+      const frameSymbol = frame.symbol ?? "default";
+      const frameCategory = (frame as { category?: string }).category ?? "USDT-FUTURES";
+      // Deliver to every matching subscription: exact key, or any subscription
+      // whose symbol is a wildcard (default / *) for the same channel+category.
+      // This lets `ticker/default` receive per-instId update frames from the
+      // backend instead of being stuck on the one-shot REST snapshot.
+      for (const [k, args] of this.active) {
+        if (args.channel !== frameChannel) continue;
+        const subCat = args.category ?? "USDT-FUTURES";
+        // category "*" matches every category (all-market ticker feed)
+        if (subCat !== "*" && subCat !== frameCategory) continue;
+        const subSym = args.symbol ?? "default";
+        const isWildcard = subSym === "default" || subSym === "*" || subSym === "";
+        if (!isWildcard && subSym !== frameSymbol) continue;
+        const set = this.listeners.get(k);
+        if (!set) continue;
         for (const fn of [...set]) {
           try {
             fn(frame);

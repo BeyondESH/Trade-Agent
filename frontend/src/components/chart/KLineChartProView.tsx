@@ -50,8 +50,38 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
     const proRef = useRef<ChartPro | null>(null);
     const propsRef = useRef(props);
     propsRef.current = props;
+    // Guards against React StrictMode's double-mount (dev) and fast remounts:
+    // the second mount reuses the live instance instead of creating a second
+    // chart (vendor KLineChartPro has no dispose(), so a duplicated instance
+    // would steal the datafeed subscription and leave the visible chart stale).
+    const mountedRef = useRef(false);
+    const disposeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
+      // StrictMode remount / fast remount while the instance is still alive:
+      // cancel the pending disposal scheduled by the previous cleanup and reuse
+      // the existing chart so there is exactly one instance on the page. The
+      // returned cleanup schedules disposal for when the reused component truly
+      // unmounts.
+      if (mountedRef.current) {
+        if (disposeTimerRef.current) {
+          clearTimeout(disposeTimerRef.current);
+          disposeTimerRef.current = null;
+        }
+        return () => {
+          disposeTimerRef.current = setTimeout(() => {
+            propsRef.current.datafeed.unsubscribe(
+              propsRef.current.symbol,
+              propsRef.current.period,
+            );
+            if (containerRef.current) containerRef.current.innerHTML = "";
+            proRef.current = null;
+            mountedRef.current = false;
+            disposeTimerRef.current = null;
+          }, 0);
+        };
+      }
+
       const pro = new KLineChartPro({
         container: containerRef.current as HTMLElement,
         symbol: props.symbol,
@@ -116,13 +146,23 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         },
       });
       proRef.current = pro;
+      mountedRef.current = true;
       props.onReady?.((pro.getChart() ?? null) as Chart | null);
       return () => {
-        // Pro has no dispose(); clear the mounted tree and release the
-        // datafeed subscription so listeners don't leak.
-        props.datafeed.unsubscribe(props.symbol, props.period);
-        if (containerRef.current) containerRef.current.innerHTML = "";
-        proRef.current = null;
+        // Schedule the real disposal a tick later: React StrictMode (dev)
+        // immediately remounts the component after cleanup, in which case the
+        // pending timer is cancelled by the new mount and the existing chart is
+        // reused. A genuine unmount lets the timer fire and release everything.
+        disposeTimerRef.current = setTimeout(() => {
+          propsRef.current.datafeed.unsubscribe(
+            propsRef.current.symbol,
+            propsRef.current.period,
+          );
+          if (containerRef.current) containerRef.current.innerHTML = "";
+          proRef.current = null;
+          mountedRef.current = false;
+          disposeTimerRef.current = null;
+        }, 0);
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

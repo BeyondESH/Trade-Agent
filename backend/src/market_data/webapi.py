@@ -556,28 +556,31 @@ def create_app(
     @app.websocket("/ws")
     async def ws(sock: WebSocket) -> None:
         await sock.accept()
-        # channel/symbol subscriptions for this client; each entry maps the
-        # event key (channel, symbol) to the original subscribe args. The
-        # candle channel is served from the local store/stream snapshot; the
-        # rest come from the market hub.
-        subs: dict[tuple[str, str], dict] = {}
+        # Subscriptions for this client keyed by the full series identity
+        # (channel, category, symbol, timeframe). The candle channel is served
+        # from the local store/stream snapshot; the rest come from the market
+        # hub. Non-candle market channels carry no timeframe ("").
+        subs: dict[tuple[str, str, str, str], dict] = {}
         send_lock = asyncio.Lock()
 
         async def send(obj: dict) -> None:
             async with send_lock:
                 await sock.send_json(obj)
 
-        def listener(category: str, channel: str, symbol: str, action: str, data) -> None:  # noqa: ANN001
-            if (channel, symbol) in subs or (channel, "*") in subs:
-                asyncio.create_task(send(
-                    {"category": category, "channel": channel, "symbol": symbol,
-                     "action": action, "data": data}))
-
-        def event_key(channel: str, symbol: str) -> tuple[str, str]:
+        def series_key(channel: str, category: str, symbol: str, timeframe: str) -> tuple[str, str, str, str]:
             # a ticker subscription without a symbol means "full market"
             if channel == "ticker" and symbol in (None, "", "default", "*"):
-                return "ticker", "*"
-            return channel, symbol
+                return "ticker", category, "*", ""
+            return channel, category, symbol, timeframe
+
+        def listener(category: str, channel: str, symbol: str, action: str, data) -> None:  # noqa: ANN001
+            # Exact (cat,sym), per-symbol wildcard, or all-category wildcard.
+            if ((channel, category, symbol, "") in subs
+                    or (channel, category, "*", "") in subs
+                    or (channel, "*", "*", "") in subs):
+                asyncio.create_task(send(
+                    {"category": category, "channel": channel, "symbol": symbol,
+                     "timeframe": "", "action": action, "data": data}))
 
         def hub_args(channel: str, symbol: str) -> tuple[str, str]:
             # full-market ticker is served from the REST-seeded mirror; no WS
@@ -585,16 +588,74 @@ def create_app(
             return channel, symbol
 
         async def candle_loop() -> None:
-            # keep pushing candle snapshots at the subscription's interval
+            # Low-frequency indicator/S-R refresh only: pushes the full snapshot
+            # (with levels/indicators) for subscribed candle series every ~5s.
+            # Real-time price updates are event-driven via stream listeners.
             while True:
                 await asyncio.sleep(5.0)
-                for (channel, symbol), arg in list(subs.items()):
+                for (channel, category, symbol, tf), arg in list(subs.items()):
                     if channel != "candle":
                         continue
-                    tf = arg.get("timeframe") or "5m"
-                    category = arg.get("category") or "USDT-FUTURES"
-                    await send({"channel": "candle", "symbol": symbol, "action": "update",
-                                "data": _snapshot(category, symbol, tf)})
+                    snap = _snapshot(category, symbol, tf)
+                    if "error" in snap:
+                        continue
+                    await send({"channel": "candle", "category": category, "symbol": symbol,
+                                "timeframe": tf, "action": "update",
+                                "data": snap})
+
+        # Event-driven real-time candle pushes. Each subscribed series gets a
+        # stream listener whose update frames carry only `last_candle` + `price`
+        # (no indicator/S-R recomputation), throttled to ~1s with "send latest"
+        # coalescing so a quiet market never drops the newest bar.
+        candle_throttle: dict[tuple[str, str, str], float] = {}
+        candle_pending: dict[tuple[str, str, str], dict] = {}
+        candle_timers: set[tuple[str, str, str]] = set()
+        candle_listener_regs: dict[tuple[str, str, str], Callable[[dict], None]] = {}
+        loop = asyncio.get_running_loop()
+
+        def candle_series_key(category: str, symbol: str, timeframe: str) -> tuple[str, str, str]:
+            return (category, symbol, timeframe)
+
+        def candle_update_listener(category: str, symbol: str, timeframe: str) -> Callable[[dict], None]:
+            """Build a stream listener for one series of this connection."""
+            skey = candle_series_key(category, symbol, timeframe)
+
+            async def _flush() -> None:
+                candle_timers.discard(skey)
+                frame = candle_pending.pop(skey, None)
+                if frame is not None:
+                    candle_throttle[skey] = loop.time()
+                    await send(frame)
+
+            def _on_bar(bar: dict) -> None:
+                # Only forward while this connection still holds the candle sub.
+                if (("candle", category, symbol, timeframe) not in subs):
+                    return
+                frame = {"channel": "candle", "category": category, "symbol": symbol,
+                         "timeframe": timeframe, "action": "update",
+                         "data": {"price": float(bar["close"]), "last_candle": bar}}
+                now = loop.time()
+                last = candle_throttle.get(skey, 0.0)
+                if now - last >= 1.0:
+                    candle_throttle[skey] = now
+                    asyncio.create_task(send(frame))
+                else:
+                    candle_pending[skey] = frame
+                    if skey not in candle_timers:
+                        candle_timers.add(skey)
+                        delay = 1.0 - (now - last)
+                        loop.call_later(delay, lambda: asyncio.create_task(_flush()))
+
+            return _on_bar
+
+        def unregister_candle_listener(category: str, symbol: str, timeframe: str) -> None:
+            skey = candle_series_key(category, symbol, timeframe)
+            cb = candle_listener_regs.pop(skey, None)
+            if cb is not None:
+                stream.remove_listener(category, symbol, timeframe, cb)
+            candle_throttle.pop(skey, None)
+            candle_pending.pop(skey, None)
+            candle_timers.discard(skey)
 
         market.add_listener(listener)
         candle_task = asyncio.create_task(candle_loop())
@@ -619,56 +680,61 @@ def create_app(
                         channel = arg.get("channel") or ""
                         symbol = arg.get("symbol") or ("BTCUSDT" if channel != "ticker" else "")
                         category = arg.get("category") or "USDT-FUTURES"
-                        key = event_key(channel, symbol)
+                        tf = arg.get("timeframe") or ("5m" if channel == "candle" else "")
+                        key = series_key(channel, category, symbol, tf)
                         if op == "subscribe":
                             if channel == "candle":
                                 subs[key] = arg
-                                tf = arg.get("timeframe") or "5m"
                                 stream.subscribe(category, symbol, tf)
+                                cb = candle_update_listener(category, symbol, tf)
+                                candle_listener_regs[candle_series_key(category, symbol, tf)] = cb
+                                stream.add_listener(category, symbol, tf, cb)
                                 await send({"category": category, "channel": channel, "symbol": symbol,
-                                            "action": "snapshot",
+                                            "timeframe": tf, "action": "snapshot",
                                             "data": _snapshot(category, symbol, tf)})
-                            elif channel == "ticker" and key == ("ticker", "*"):
-                                # full-market list: served from the REST mirror
+                            elif channel == "ticker" and key[2] == "*":
+                                # full-market list: served from the REST mirror;
+                                # category "*" means all categories merged
                                 subs[key] = arg
+                                snap_cat = None if category in ("*", "default", "") else category
                                 await send({"category": category, "channel": "ticker", "symbol": symbol,
-                                            "action": "snapshot",
-                                            "data": market.tickers(category)})
+                                            "timeframe": "", "action": "snapshot",
+                                            "data": market.tickers(snap_cat)})
                             else:
                                 hchan, hsym = hub_args(channel, symbol)
                                 subs[key] = arg
                                 market.subscribe(hchan, hsym, category)
                                 if channel == "ticker":
                                     await send({"category": category, "channel": "ticker", "symbol": symbol,
-                                                "action": "snapshot",
+                                                "timeframe": "", "action": "snapshot",
                                                 "data": market.tickers(category)})
                                 else:
                                     snap = _market_snapshot(channel, symbol, category)
                                     if snap is not None:
                                         await send({"category": category, "channel": channel, "symbol": symbol,
-                                                    "action": "snapshot", "data": snap})
+                                                    "timeframe": "", "action": "snapshot", "data": snap})
                             await send({"channel": channel, "symbol": symbol, "category": category,
-                                        "event": "subscribed"})
+                                        "timeframe": tf, "event": "subscribed"})
                         else:
                             hchan, hsym = hub_args(channel, symbol)
                             arg = subs.pop(key, None)
                             if channel == "candle" and arg is not None:
-                                stream.unsubscribe(category, symbol, arg.get("timeframe") or "5m")
-                            elif key != ("ticker", "*"):
+                                stream.unsubscribe(category, symbol, tf)
+                                unregister_candle_listener(category, symbol, tf)
+                            elif key[2] != "*":
                                 market.unsubscribe(hchan, hsym, category)
                             await send({"channel": channel, "symbol": symbol, "category": category,
-                                        "event": "unsubscribed"})
+                                        "timeframe": tf, "event": "unsubscribed"})
                 elif msg.get("event") == "ping":
                     await send({"event": "pong"})
         finally:
             candle_task.cancel()
-            for (channel, symbol) in list(subs):
-                arg = subs.get((channel, symbol)) or {}
-                category = arg.get("category") or "USDT-FUTURES"
+            for (channel, category, symbol, tf) in list(subs):
                 if channel == "candle":
-                    stream.unsubscribe(category, symbol, arg.get("timeframe") or "5m")
+                    stream.unsubscribe(category, symbol, tf)
+                    unregister_candle_listener(category, symbol, tf)
                     continue
-                if channel == "ticker" and (channel, symbol) == ("ticker", "*"):
+                if channel == "ticker" and symbol == "*":
                     continue
                 hchan, hsym = hub_args(channel, symbol)
                 market.unsubscribe(hchan, hsym, category)

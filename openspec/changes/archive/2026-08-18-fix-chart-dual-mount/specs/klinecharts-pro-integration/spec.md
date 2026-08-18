@@ -1,8 +1,5 @@
-# klinecharts-pro-integration Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by syncing change react-klinecharts-pro.
-## Requirements
 ### Requirement: Pro 图表终端集成
 系统 SHALL 基于 @klinecharts/pro(clone 至项目 vendor 本地)渲染交易所式图表终端,采用其**原生开箱 UI**:Pro 内置的绘图工具条、周期条、指标管理、标的搜索、时区/设置/截图弹窗 SHALL 全部启用可见,由 Pro 自身作为图表操作的唯一 chrome;应用层 SHALL 仅保留品种/周期双向联动胶水与 datafeed 数据接入,不再提供自建指挥层(`chartCommands`/`chartChromeBridge` 已移除)。默认 `locale:'zh-CN'`,UI 中文显示。图表实例 SHALL 遵循单例守卫生命周期:组件多次挂载(含 StrictMode 双挂载)SHALL 复用同一实例,卸载 SHALL 彻底释放订阅与挂载标记,实时更新 SHALL 始终绑定到用户可见的唯一实例。
 
@@ -31,27 +28,7 @@ TBD - created by syncing change react-klinecharts-pro.
 - **WHEN** 实时 `last_candle` 到达
 - **THEN** SHALL 更新用户可见图表的最后一根蜡烛,不被重复实例抢占
 
-### Requirement: 二次开发扩展点
-系统 SHALL 对 vendor 的 Pro 源码做最小改造:暴露底层 klinecharts 实例、提供 symbol/period 变更回调;应用 SHALL 通过 `onSymbolChange`/`onPeriodChange` 实现与右侧面板/状态栏的联动。
-
-#### Scenario: 获取底层实例
-- **WHEN** 外部调用 ChartPro 的 getChart()
-- **THEN** SHALL 返回底层 klinecharts 实例(用于自动化/序列化/程序化 overlay)
-
-#### Scenario: 变更回调
-- **WHEN** 用户在 Pro 原生 chrome 内切换标的或周期
-- **THEN** SHALL 触发 onSymbolChange/onPeriodChange,应用据此更新 activeSymbol/timeframe 并联动右侧面板
-
-### Requirement: 自动层叠加
-系统 SHALL 通过暴露的 klinecharts 实例叠加 S/R/结构/SMC 程序化 overlay,并支持图层开关。
-
-#### Scenario: 叠加自动层
-- **WHEN** analyze/structure 数据就绪
-- **THEN** SHALL 在图表上叠加 S/R 价格线、结构线段/箱体、SMC 图层
-
-#### Scenario: 开关图层
-- **WHEN** 用户切换某自动层开关
-- **THEN** SHALL 对应 overlay 隐藏/显示而不影响其他图层
+## ADDED Requirements
 
 ### Requirement: 图表实例生命周期管理
 系统 SHALL 将 pro 图表实例的创建纳入统一生命周期管理:创建时机、挂载标记、卸载清理 SHALL 集中处理,确保 StrictMode/重挂载场景下行为一致。
@@ -59,4 +36,3 @@ TBD - created by syncing change react-klinecharts-pro.
 #### Scenario: 生命周期集中管理
 - **WHEN** 图表包装器经历挂载/卸载
 - **THEN** 实例创建与清理 SHALL 由同一生命周期逻辑负责,无散落的新建/清理代码
-

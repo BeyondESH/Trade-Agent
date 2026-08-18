@@ -55,4 +55,40 @@ describe("useOrderBook", () => {
     expect(result.current.asks).toEqual([]);
     expect(result.current.bids).toEqual([]);
   });
+
+  it("skips state update when the visible book is unchanged", () => {
+    const { result } = renderHook(() => useOrderBook("BTCUSDT"));
+    act(() => {
+      emitFor("BTCUSDT", {
+        channel: "books", symbol: "BTCUSDT", action: "snapshot",
+        data: { asks: [[101, 5], [102, 3]], bids: [[100, 4], [99, 2]], seq: 10 },
+      });
+    });
+    const ref = result.current;
+    act(() => {
+      emitFor("BTCUSDT", {
+        channel: "books", symbol: "BTCUSDT", action: "update",
+        data: { asks: [[101, 5], [102, 3]], bids: [[100, 4], [99, 2]], seq: 11 },
+      });
+    });
+    // identical levels -> same reference, no re-render churn
+    expect(result.current).toBe(ref);
+  });
+
+  it("updates when the best level size changes", () => {
+    const { result } = renderHook(() => useOrderBook("BTCUSDT"));
+    act(() => {
+      emitFor("BTCUSDT", {
+        channel: "books", symbol: "BTCUSDT", action: "snapshot",
+        data: { asks: [[101, 5]], bids: [[100, 4]], seq: 10 },
+      });
+    });
+    act(() => {
+      emitFor("BTCUSDT", {
+        channel: "books", symbol: "BTCUSDT", action: "update",
+        data: { asks: [[101, 9]], bids: [], seq: 11 },
+      });
+    });
+    expect(result.current.asks).toEqual([{ price: 101, size: 9 }]);
+  });
 });

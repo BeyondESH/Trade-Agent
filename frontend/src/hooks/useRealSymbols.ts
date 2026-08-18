@@ -73,6 +73,8 @@ export function useRealSymbols(): {
     };
   }, []);
 
+  // Subscribe to the ticker across all categories (backend wildcard), so
+  // watchlist/screener prices stay live regardless of product line.
   useExchangeSocket("ticker", "default", (frame) => {
     if (frame.action !== "snapshot" && frame.action !== "update") return;
     const data = frame.data as Record<string, Ticker> | Ticker[] | undefined;
@@ -94,14 +96,24 @@ export function useRealSymbols(): {
           const next = { ...prev };
           let changed = false;
           for (const t of entries) {
-            next[`${t.category ?? "USDT-FUTURES"}:${t.instId}`] = tickerToSymbolInfo(t);
+            const key = `${t.category ?? "USDT-FUTURES"}:${t.instId}`;
+            const updated = tickerToSymbolInfo(t);
+            const existing = next[key];
+            // Only write + flag a change when the quote actually differs, so an
+            // unchanged frame does not allocate a new map / new symbol refs.
+            if (existing && existing.price === updated.price
+                && existing.change24hPercent === updated.change24hPercent
+                && existing.volume24h === updated.volume24h) {
+              continue;
+            }
+            next[key] = updated;
             changed = true;
           }
           return changed ? next : prev;
         });
       });
     }
-  });
+  }, { category: "*" });
 
   const symbols = useMemo(
     () => Object.values(byKey).sort((a, b) => a.id.localeCompare(b.id)),

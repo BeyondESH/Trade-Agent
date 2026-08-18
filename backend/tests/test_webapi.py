@@ -59,6 +59,10 @@ class _FakeStream:
         self.bars = bars or ([bar] if bar else [])
         self.subscribed: list[tuple[str, str, str]] = []
         self.unsubscribed: list[tuple[str, str, str]] = []
+        self._listeners: dict[tuple[str, str, str], set] = {}
+        self.added: list[tuple[str, str, str]] = []
+        self.removed: list[tuple[str, str, str]] = []
+        self._loop = None
 
     def latest(self, category: str, symbol: str, timeframe: str) -> dict | None:  # noqa: ARG001
         return self.bar
@@ -71,6 +75,25 @@ class _FakeStream:
 
     def unsubscribe(self, category: str, symbol: str, timeframe: str) -> None:
         self.unsubscribed.append((category, symbol, timeframe))
+
+    def add_listener(self, category: str, symbol: str, timeframe: str, callback) -> None:  # noqa: ANN001
+        self.added.append((category, symbol, timeframe))
+        self._listeners.setdefault((category, symbol, timeframe), set()).add(callback)
+        if self._loop is None:
+            import asyncio
+
+            self._loop = asyncio.get_running_loop()
+
+    def remove_listener(self, category: str, symbol: str, timeframe: str, callback) -> None:  # noqa: ANN001
+        self.removed.append((category, symbol, timeframe))
+        callbacks = self._listeners.get((category, symbol, timeframe))
+        if callbacks:
+            callbacks.discard(callback)
+
+    def emit(self, category: str, symbol: str, timeframe: str, bar: dict) -> None:  # noqa: ANN001
+        """Fake a live bar update through registered listeners (event-loop safe)."""
+        for cb in list(self._listeners.get((category, symbol, timeframe), ())):
+            self._loop.call_soon_threadsafe(cb, dict(bar))
 
     def start(self) -> None:
         return
@@ -86,13 +109,23 @@ class _FakeMarket:
         self.subscribed: list[tuple[str, str, str]] = []
         self.unsubscribed: list[tuple[str, str, str]] = []
         self._listeners: list = []
+        self._loop = None
 
     def add_listener(self, listener) -> None:  # noqa: ANN001
         self._listeners.append(listener)
+        if self._loop is None:
+            import asyncio
+
+            self._loop = asyncio.get_running_loop()
 
     def remove_listener(self, listener) -> None:  # noqa: ANN001
         if listener in self._listeners:
             self._listeners.remove(listener)
+
+    def emit(self, category: str, channel: str, symbol: str, action: str, data) -> None:  # noqa: ANN001
+        """Fake a market-hub frame through registered listeners (event-loop safe)."""
+        for fn in list(self._listeners):
+            self._loop.call_soon_threadsafe(fn, category, channel, symbol, action, data)
 
     def subscribe(self, channel: str, symbol: str, category: str = "USDT-FUTURES") -> None:
         self.subscribed.append((channel, symbol, category))
@@ -343,6 +376,172 @@ def test_ws_candle_snapshot_error_when_no_stream_and_no_parquet() -> None:
             assert ws.receive_json()["event"] == "subscribed"
 
 
+def test_ws_candle_event_driven_update_frame() -> None:
+    """After subscribing, live bar updates push event-driven update frames
+    carrying last_candle + price but no indicator/S-R fields."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            assert ws.receive_json()["action"] == "snapshot"
+            assert ws.receive_json()["event"] == "subscribed"
+            assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.added
+            # fire a live bar update through the registered listener
+            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
+                        {"open_time": 1700000000000, "open": 1, "high": 2, "low": 0,
+                         "close": 1.5, "volume": 1})
+            msg = ws.receive_json()
+            assert msg["channel"] == "candle" and msg["action"] == "update"
+            assert msg["data"]["last_candle"]["close"] == 1.5
+            assert msg["data"]["price"] == 1.5
+            assert "levels" not in msg["data"]
+            assert "macd_hist" not in msg["data"]
+
+
+def test_ws_candle_unsubscribe_removes_listener() -> None:
+    """Unsubscribing releases the stream listener for that series."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            assert ws.receive_json()["action"] == "snapshot"
+            assert ws.receive_json()["event"] == "subscribed"
+            ws.send_json({"op": "unsubscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            assert ws.receive_json()["event"] == "unsubscribed"
+            assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.removed
+            assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.unsubscribed
+
+
+def test_ws_candle_disconnect_removes_listener() -> None:
+    """Closing the connection releases the candle listener for that series."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            assert ws.receive_json()["action"] == "snapshot"
+            assert ws.receive_json()["event"] == "subscribed"
+        assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.removed
+        assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.unsubscribed
+
+
+def test_ws_candle_multi_period_routing() -> None:
+    """Same symbol subscribed at multiple timeframes coexists independently;
+    frames carry the full series identity (category/symbol/timeframe)."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"},
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"},
+            ]})
+            # two snapshots then two acks (order follows the args list)
+            snap1 = ws.receive_json()
+            assert snap1["channel"] == "candle" and snap1["action"] == "snapshot"
+            assert snap1["timeframe"] == "5m"
+            assert snap1["symbol"] == "BTCUSDT"
+            assert snap1["category"] == "USDT-FUTURES"
+            ack1 = ws.receive_json()
+            assert ack1["event"] == "subscribed" and ack1["timeframe"] == "5m"
+            snap2 = ws.receive_json()
+            assert snap2["channel"] == "candle" and snap2["action"] == "snapshot"
+            assert snap2["timeframe"] == "1h"
+            ack2 = ws.receive_json()
+            assert ack2["event"] == "subscribed" and ack2["timeframe"] == "1h"
+            # both series registered as independent stream subscriptions
+            assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.subscribed
+            assert ("USDT-FUTURES", "BTCUSDT", "1h") in stream.subscribed
+            # event-driven update frames carry the full identity
+            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
+                        {"open_time": 1700000000000, "open": 1, "high": 2, "low": 0,
+                         "close": 1.5, "volume": 1})
+            upd = ws.receive_json()
+            assert upd["channel"] == "candle" and upd["action"] == "update"
+            assert upd["timeframe"] == "5m"
+            assert upd["symbol"] == "BTCUSDT"
+            assert upd["category"] == "USDT-FUTURES"
+            # unsubscribe only 1h: 5m listener must survive
+            ws.send_json({"op": "unsubscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"}]})
+            assert ws.receive_json()["event"] == "unsubscribed"
+            assert ("USDT-FUTURES", "BTCUSDT", "1h") in stream.unsubscribed
+            assert ("USDT-FUTURES", "BTCUSDT", "1h") in stream.removed
+            assert ("USDT-FUTURES", "BTCUSDT", "5m") not in stream.removed
+
+
+def test_ws_candle_multi_period_update_frames_do_not_cross() -> None:
+    """A live bar for one timeframe must not be routed to another timeframe's
+    subscriber (no cross-period contamination)."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"},
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"},
+            ]})
+            for _ in range(4):
+                ws.receive_json()
+            # 5m bar arrives: the 1h series must not see it
+            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
+                        {"open_time": 1700000000000, "open": 1, "high": 2, "low": 0,
+                         "close": 1.5, "volume": 1})
+            upd = ws.receive_json()
+            assert upd["timeframe"] == "5m"
+            assert upd["data"]["last_candle"]["open_time"] == 1700000000000
+
+
+def test_ws_candle_update_throttled_to_one_per_second() -> None:
+    """Bursts of live bars coalesce: update frames are sent at most ~1/s and
+    always carry the newest price."""
+    import time as _time
+
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            assert ws.receive_json()["action"] == "snapshot"
+            assert ws.receive_json()["event"] == "subscribed"
+            t0 = _time.monotonic()
+            # first bar: sent immediately
+            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
+                        {"open_time": 1700000000000, "open": 1, "high": 2, "low": 0,
+                         "close": 1.5, "volume": 1})
+            m1 = ws.receive_json()
+            assert m1["data"]["last_candle"]["close"] == 1.5
+            # burst: two more bars within the throttle window coalesce into one
+            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
+                        {"open_time": 1700000000000, "open": 1, "high": 3, "low": 0,
+                         "close": 2.5, "volume": 1})
+            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
+                        {"open_time": 1700000000000, "open": 1, "high": 4, "low": 0,
+                         "close": 3.5, "volume": 1})
+            m2 = ws.receive_json()  # blocks until the ~1s coalesced flush fires
+            assert m2["data"]["last_candle"]["close"] == 3.5
+            assert _time.monotonic() - t0 >= 1.0
+            # after the flush the throttle resets: the next bar sends at once
+            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
+                        {"open_time": 1700000000000, "open": 1, "high": 5, "low": 0,
+                         "close": 4.5, "volume": 1})
+            m3 = ws.receive_json()
+            assert m3["data"]["last_candle"]["close"] == 4.5
+
+
 def test_ws_books_subscribe_and_unsubscribe() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
@@ -373,6 +572,55 @@ def test_ws_ticker_subscribe() -> None:
             assert "BTCUSDT" in snap["data"]
             # full-market ticker is served from the REST mirror; no per-symbol WS subscribe
             assert market.subscribed == []
+
+
+def test_ws_ticker_wildcard_receives_periodic_update() -> None:
+    """A wildcard ticker subscription gets the initial snapshot AND subsequent
+    market-hub update frames (symbol=*), so watchlist prices stay live."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        market = _FakeMarket()
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "ticker", "symbol": "default"}]})
+            snap = ws.receive_json()
+            assert snap["channel"] == "ticker" and snap["action"] == "snapshot"
+            assert snap["symbol"] == "default"
+            ack = ws.receive_json()
+            assert ack["event"] == "subscribed"
+            # market hub emits a full-market ticker update -> forwarded to ws
+            market.emit("USDT-FUTURES", "ticker", "*", "update",
+                        [{"instId": "BTCUSDT", "lastPr": "64000"}])
+            upd = ws.receive_json()
+            assert upd["channel"] == "ticker" and upd["action"] == "update"
+            assert upd["symbol"] == "*"
+            assert upd["category"] == "USDT-FUTURES"
+            assert upd["data"][0]["instId"] == "BTCUSDT"
+
+
+def test_ws_ticker_category_wildcard_receives_any_category() -> None:
+    """A ticker subscription with category=\"*\" receives updates for any
+    product line (SPOT, USDT-FUTURES, ...) so the all-market watchlist stays
+    live across categories."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        market = _FakeMarket()
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "ticker", "symbol": "default", "category": "*"}]})
+            snap = ws.receive_json()
+            assert snap["channel"] == "ticker" and snap["action"] == "snapshot"
+            assert snap["symbol"] == "default"
+            assert ws.receive_json()["event"] == "subscribed"
+            # SPOT category update arrives despite subscribing with category="*"
+            market.emit("SPOT", "ticker", "*", "update",
+                        [{"instId": "XAUUSDT", "lastPr": "2400.0"}])
+            upd = ws.receive_json()
+            assert upd["channel"] == "ticker" and upd["action"] == "update"
+            assert upd["category"] == "SPOT"
+            assert upd["data"][0]["instId"] == "XAUUSDT"
 
 
 def test_ws_disconnect_releases_subscriptions() -> None:

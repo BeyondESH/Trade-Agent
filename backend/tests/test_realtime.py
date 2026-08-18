@@ -132,6 +132,54 @@ def test_upsert_out_of_order_inserts_sorted() -> None:
     assert recent[0]["close"] == 10 and recent[1]["close"] == 20
 
 
+# -- 1.x listener notifications -------------------------------------------
+def test_listener_notified_on_bar_update() -> None:
+    s = _stream()
+    received: list[dict] = []
+    s.add_listener(CAT, SYM, "5m", received.append)
+    asyncio.run(s._handle_frame(_FakeWs(), _update_frame("123.4")))
+    assert len(received) == 1
+    assert received[0]["close"] == 123.4
+    assert received[0]["open_time"] == 1_700_000_000_000
+    # listener receives a copy, not the internal bar dict
+    assert received[0] is not s._buffer[s._series_key(CAT, SYM, "5m")][-1]
+
+
+def test_listener_not_notified_after_remove() -> None:
+    s = _stream()
+    received: list[dict] = []
+    s.add_listener(CAT, SYM, "5m", received.append)
+    s.remove_listener(CAT, SYM, "5m", received.append)
+    asyncio.run(s._handle_frame(_FakeWs(), _update_frame("123.4")))
+    assert received == []
+
+
+def test_unchanged_bar_does_not_notify() -> None:
+    s = _stream()
+    received: list[dict] = []
+    s.add_listener(CAT, SYM, "5m", received.append)
+    asyncio.run(s._handle_frame(_FakeWs(), _update_frame("123.4")))
+    asyncio.run(s._handle_frame(_FakeWs(), _update_frame("123.4")))
+    assert len(received) == 1
+
+
+def test_listeners_isolated_per_series() -> None:
+    s = _stream(symbols=[SYM, "ETHUSDT"])
+    btc: list[dict] = []
+    eth: list[dict] = []
+    s.add_listener(CAT, SYM, "5m", btc.append)
+    s.add_listener(CAT, "ETHUSDT", "5m", eth.append)
+    asyncio.run(s._handle_frame(_FakeWs(), _update_frame("99")))
+    eth_frame = json.dumps(
+        {"action": "update", "arg": {"instType": CAT, "channel": "candle5m", "instId": "ETHUSDT"},
+         "data": [["1700000000000", "10", "11", "9", "10.5", "1"]]}
+    )
+    asyncio.run(s._handle_frame(_FakeWs(), eth_frame))
+    assert len(btc) == 1 and btc[0]["close"] == 99
+    assert len(eth) == 1 and eth[0]["close"] == 10.5
+    assert btc[0]["open_time"] == 1_700_000_000_000
+
+
 def test_buffer_trims_to_capacity() -> None:
     from market_data.realtime import MAX_BARS_PER_SERIES
 
@@ -162,6 +210,21 @@ def test_multi_series_isolated() -> None:
 
 
 def test_ping_replies_pong() -> None:
+    s = _stream()
+    ws = _FakeWs()
+    # Bitget heartbeat is a plain "ping" string
+    asyncio.run(s._handle_frame(ws, "ping"))
+    assert ws.sent == [PONG_FRAME]
+
+
+def test_plain_pong_frame_ignored() -> None:
+    s = _stream()
+    ws = _FakeWs()
+    asyncio.run(s._handle_frame(ws, "pong"))
+    assert ws.sent == []
+
+
+def test_json_ping_frame_replies_pong() -> None:
     s = _stream()
     ws = _FakeWs()
     asyncio.run(s._handle_frame(ws, '{"event":"ping"}'))

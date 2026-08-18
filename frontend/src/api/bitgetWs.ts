@@ -126,6 +126,7 @@ export class BitgetWsClient {
         channel?: string;
         symbol?: string;
         category?: string;
+        timeframe?: string;
         data?: { last_candle?: Candle };
       };
       try {
@@ -134,7 +135,11 @@ export class BitgetWsClient {
         return;
       }
       if (frame.channel !== "candle" || !frame.data?.last_candle) return;
-      this.deliver(frame.symbol ?? "", frame.category ?? "USDT-FUTURES", frame.data.last_candle);
+      // The backend relays the full series identity; without it we cannot route
+      // the bar to the right timeframe and must not guess (a misroute would
+      // corrupt other periods' charts).
+      if (!frame.symbol || !frame.category || !frame.timeframe) return;
+      this.deliver(frame.symbol, frame.category, frame.timeframe, frame.data.last_candle);
     };
     sock.onclose = () => {
       if (this.sock !== sock) return;
@@ -150,11 +155,13 @@ export class BitgetWsClient {
     sock.onerror = () => sock.close();
   }
 
-  /** Fan a candle out to every matching series, skipping unchanged buckets. */
-  private deliver(symbol: string, category: string, candle: Candle): void {
+  /** Fan a candle out to exactly the matching series (full identity), skipping
+   * unchanged buckets. Timeframe is part of the match so bars for one period
+   * never leak into another period's subscribers. */
+  private deliver(symbol: string, category: string, timeframe: string, candle: Candle): void {
     for (const entry of this.series.values()) {
       const s = entry.series;
-      if (s.symbol !== symbol || s.category !== category) continue;
+      if (s.symbol !== symbol || s.category !== category || s.timeframe !== timeframe) continue;
       if (entry.last && sameCandle(entry.last, candle)) continue; // no duplicate re-delivery
       entry.last = candle;
       for (const fn of [...entry.listeners]) {
