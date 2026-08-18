@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Trade } from '../../hooks/useTrades';
+import { t } from '../../lib/i18n';
 
 interface Props {
   trades: Trade[];
@@ -30,9 +31,9 @@ export const TradesTape: React.FC<Props> = ({ trades, precision = 2, theme }) =>
         最新成交
       </div>
       <div className={`grid grid-cols-[1fr_1fr_auto] px-3 pb-1 text-[10px] font-medium uppercase text-gray-500`}>
-        <span>Price</span>
-        <span className="text-right">Size</span>
-        <span className="text-right pl-2">Time</span>
+        <span>{t('Price')}</span>
+        <span className="text-right">{t('Size')}</span>
+        <span className="text-right pl-2">{t('Time')}</span>
       </div>
       <div className="flex-1 min-h-0 overflow-auto font-mono text-[11px]">
         {trades.length === 0 && (

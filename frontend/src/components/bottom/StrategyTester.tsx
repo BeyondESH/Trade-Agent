@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BacktestResult } from '../../types/trading';
 import { TrendingUp, Award, BarChart2, ListOrdered, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   result: BacktestResult;
@@ -17,7 +18,7 @@ export const StrategyTester: React.FC<Props> = ({ result, theme }) => {
       <div className={`px-4 py-2 border-b flex items-center justify-between flex-wrap gap-4 ${isDark ? 'border-[#2a2e39] bg-[#1e222d]' : 'border-[#e0e3eb] bg-[#f0f3fa]'}`}>
         <div className="flex items-center gap-6">
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Net Profit</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Net Profit')}</div>
             <div
               className={`font-mono font-bold text-sm ${
                 result.netProfit >= 0 ? 'text-[#089981]' : 'text-[#f23645]'
@@ -28,22 +29,22 @@ export const StrategyTester: React.FC<Props> = ({ result, theme }) => {
           </div>
 
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Total Closed Trades</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Total Closed Trades')}</div>
             <div className="font-mono font-bold text-sm">{result.totalTrades}</div>
           </div>
 
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Win Rate</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Win Rate')}</div>
             <div className="font-mono font-bold text-sm text-[#2962ff]">{result.winRate}%</div>
           </div>
 
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Profit Factor</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Profit Factor')}</div>
             <div className="font-mono font-bold text-sm">{result.profitFactor}</div>
           </div>
 
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Max Drawdown</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Max Drawdown')}</div>
             <div className="font-mono font-bold text-sm text-[#f23645]">
               -${result.maxDrawdown.toLocaleString()} ({result.maxDrawdownPercent}%)
             </div>
@@ -121,15 +122,15 @@ export const StrategyTester: React.FC<Props> = ({ result, theme }) => {
             <table className="w-full text-left font-mono text-[11px]">
               <thead>
                 <tr className={`border-b text-gray-500 uppercase text-[10px] ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
-                  <th className="py-1.5 px-2">Trade #</th>
-                  <th className="py-1.5 px-2">Type</th>
-                  <th className="py-1.5 px-2">Entry Date</th>
-                  <th className="py-1.5 px-2">Entry Price</th>
-                  <th className="py-1.5 px-2">Exit Date</th>
-                  <th className="py-1.5 px-2">Exit Price</th>
-                  <th className="py-1.5 px-2">Profit/Loss</th>
-                  <th className="py-1.5 px-2">Gain %</th>
-                  <th className="py-1.5 px-2">Exit Trigger</th>
+                  <th className="py-1.5 px-2">{t('Trade #')}</th>
+                  <th className="py-1.5 px-2">{t('Type')}</th>
+                  <th className="py-1.5 px-2">{t('Entry Date')}</th>
+                  <th className="py-1.5 px-2">{t('Entry Price')}</th>
+                  <th className="py-1.5 px-2">{t('Exit Date')}</th>
+                  <th className="py-1.5 px-2">{t('Exit Price')}</th>
+                  <th className="py-1.5 px-2">{t('Profit/Loss')}</th>
+                  <th className="py-1.5 px-2">{t('Gain %')}</th>
+                  <th className="py-1.5 px-2">{t('Exit Trigger')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-500/10">

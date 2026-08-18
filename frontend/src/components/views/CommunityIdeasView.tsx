@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CommunityIdea, ThemeMode } from '../../types/trading';
 import { COMMUNITY_IDEAS_DATA } from '../../data/marketData';
+import { t } from '../../lib/i18n';
 import {
   Users,
   ThumbsUp,
@@ -50,7 +51,7 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Users className="w-5 h-5 text-[#9c27b0]" />
-            <span>Community Trade Ideas & Market Analysis</span>
+            <span>{t('Community Trade Ideas & Market Analysis')}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
             Discover trading strategies, harmonic patterns, and price action insights published by top global traders.

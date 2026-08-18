@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { INITIAL_SCREENER_ITEMS } from '../../data/marketData';
 import { SymbolInfo } from '../../types/trading';
 import { Filter, Search, ArrowUpDown } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   symbols: SymbolInfo[];
@@ -64,14 +65,14 @@ export const ScreenerPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
         <table className="w-full text-left">
           <thead>
             <tr className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
-              <th className="py-1.5 px-2">Ticker</th>
-              <th className="py-1.5 px-2">Name</th>
-              <th className="py-1.5 px-2">Price</th>
-              <th className="py-1.5 px-2">Change %</th>
-              <th className="py-1.5 px-2">Volume</th>
-              <th className="py-1.5 px-2">RSI (14)</th>
-              <th className="py-1.5 px-2">Technical Rating</th>
-              <th className="py-1.5 px-2">Sector</th>
+              <th className="py-1.5 px-2">{t('Ticker')}</th>
+              <th className="py-1.5 px-2">{t('Name')}</th>
+              <th className="py-1.5 px-2">{t('Price')}</th>
+              <th className="py-1.5 px-2">{t('Change %')}</th>
+              <th className="py-1.5 px-2">{t('Volume')}</th>
+              <th className="py-1.5 px-2">{t('RSI (14)')}</th>
+              <th className="py-1.5 px-2">{t('Technical Rating')}</th>
+              <th className="py-1.5 px-2">{t('Sector')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-500/10">

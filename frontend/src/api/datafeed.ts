@@ -32,6 +32,8 @@ function instrumentToSymbolInfo(inst: Instrument): SymbolInfo {
   return {
     ticker: inst.symbol,
     shortName: inst.symbol,
+    name: inst.symbol,
+    exchange: "Bitget",
     market: inst.category ?? DEFAULT_CATEGORY,
     pricePrecision: Number(inst.pricePrecision ?? inst.pricePlace ?? 2),
     volumePrecision: Number(inst.quantityPrecision ?? inst.volumePlace ?? 4),

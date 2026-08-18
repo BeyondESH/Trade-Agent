@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SAMPLE_PINE_SCRIPTS } from '../../utils/pineEngine';
 import { Play, Save, FileCode, CheckCircle2, ChevronDown } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   onRunStrategy: (scriptCode: string, scriptName: string) => void;
@@ -33,7 +34,7 @@ export const PineEditor: React.FC<Props> = ({ onRunStrategy, theme }) => {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 font-bold text-xs text-[#2962ff]">
             <FileCode className="w-3.5 h-3.5" />
-            <span>Pine Editor v5</span>
+            <span>{t('Pine Editor v5')}</span>
           </div>
 
           <div className="h-4 w-[1px] bg-gray-500/20" />
@@ -64,7 +65,7 @@ export const PineEditor: React.FC<Props> = ({ onRunStrategy, theme }) => {
             }`}
           >
             <Save className="w-3.5 h-3.5" />
-            <span>Save</span>
+            <span>{t('Save')}</span>
           </button>
 
           <button
@@ -73,7 +74,7 @@ export const PineEditor: React.FC<Props> = ({ onRunStrategy, theme }) => {
             className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#2962ff] text-white font-semibold hover:bg-[#1e53e5] shadow-xs transition-colors"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Add to Chart</span>
+            <span>{t('Add to Chart')}</span>
           </button>
         </div>
       </div>

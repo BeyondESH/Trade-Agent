@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SymbolInfo } from "../types/trading";
 import { api } from "../api/client";
 import type { Ticker } from "../api/types";
@@ -42,12 +42,16 @@ function precisionOf(v: string | undefined): number {
 /**
  * Real symbol list for the watchlist: REST `/tickers` snapshot + `/ws`
  * `ticker` wildcard updates. Merges all categories, keyed by `category:instId`.
+ * Live ticker frames are coalesced with rAF so a high-frequency feed does not
+ * re-render the whole app on every frame.
  */
 export function useRealSymbols(): {
   symbols: SymbolInfo[];
   priceMap: Record<string, number | undefined>;
 } {
   const [byKey, setByKey] = useState<Record<string, SymbolInfo>>({});
+  const pending = useRef<Record<string, Ticker>>({});
+  const flushScheduled = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -75,17 +79,28 @@ export function useRealSymbols(): {
     if (!data) return;
     const batch = Array.isArray(data) ? data : Object.values(data);
     if (!batch.length) return;
-    setByKey((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const t of batch) {
-        if (t && t.instId) {
-          next[`${t.category ?? "USDT-FUTURES"}:${t.instId}`] = tickerToSymbolInfo(t);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
+    for (const t of batch) {
+      if (t && t.instId) pending.current[`${t.category ?? "USDT-FUTURES"}:${t.instId}`] = t;
+    }
+    if (!flushScheduled.current) {
+      flushScheduled.current = true;
+      requestAnimationFrame(() => {
+        flushScheduled.current = false;
+        const buf = pending.current;
+        pending.current = {};
+        const entries = Object.values(buf);
+        if (entries.length === 0) return;
+        setByKey((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          for (const t of entries) {
+            next[`${t.category ?? "USDT-FUTURES"}:${t.instId}`] = tickerToSymbolInfo(t);
+            changed = true;
+          }
+          return changed ? next : prev;
+        });
+      });
+    }
   });
 
   const symbols = useMemo(

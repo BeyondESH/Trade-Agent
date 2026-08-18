@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { t } from '../../lib/i18n';
 import { Position, Order, AccountState, SymbolInfo } from '../../types/trading';
 import { Plus, XCircle, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 
@@ -30,21 +31,21 @@ export const TradingPanel: React.FC<Props> = ({
       <div className={`px-4 py-2 border-b flex items-center justify-between flex-wrap gap-4 ${isDark ? 'border-[#2a2e39] bg-[#1e222d]' : 'border-[#e0e3eb] bg-[#f0f3fa]'}`}>
         <div className="flex items-center gap-6">
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Account Balance</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Account Balance')}</div>
             <div className="font-mono font-bold text-sm">
               ${account.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
 
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Equity</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Equity')}</div>
             <div className="font-mono font-bold text-sm text-[#2962ff]">
               ${account.equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
 
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Unrealized P&L</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Unrealized P&L')}</div>
             <div
               className={`font-mono font-bold text-sm ${
                 account.unrealizedPnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'
@@ -56,7 +57,7 @@ export const TradingPanel: React.FC<Props> = ({
           </div>
 
           <div>
-            <div className="text-[10px] text-gray-500 font-semibold uppercase">Used / Free Margin</div>
+            <div className="text-[10px] text-gray-500 font-semibold uppercase">{t('Used / Free Margin')}</div>
             <div className="font-mono font-bold text-sm">
               ${account.usedMargin.toLocaleString()} / ${account.freeMargin.toLocaleString()}
             </div>
@@ -70,14 +71,14 @@ export const TradingPanel: React.FC<Props> = ({
             className="flex items-center gap-1 px-3 py-1 rounded bg-[#089981] hover:bg-[#067a67] text-white font-semibold shadow-xs transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Buy / Long</span>
+            <span>{t('Buy / Long')}</span>
           </button>
           <button
             onClick={() => onOpenOrderModal('SELL')}
             className="flex items-center gap-1 px-3 py-1 rounded bg-[#f23645] hover:bg-[#d02534] text-white font-semibold shadow-xs transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Sell / Short</span>
+            <span>{t('Sell / Short')}</span>
           </button>
         </div>
       </div>
@@ -112,22 +113,22 @@ export const TradingPanel: React.FC<Props> = ({
           positions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-gray-500 font-sans">
               <DollarSign className="w-8 h-8 opacity-20 mb-1" />
-              <span>No open positions. Use Buy or Sell above to place paper trade.</span>
+              <span>{t('No open positions. Use Buy or Sell above to place paper trade.')}</span>
             </div>
           ) : (
             <table className="w-full text-left">
               <thead>
                 <tr className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
-                  <th className="py-1.5 px-2">Symbol</th>
-                  <th className="py-1.5 px-2">Side</th>
-                  <th className="py-1.5 px-2">Size</th>
-                  <th className="py-1.5 px-2">Entry Price</th>
-                  <th className="py-1.5 px-2">Mark Price</th>
-                  <th className="py-1.5 px-2">Margin</th>
-                  <th className="py-1.5 px-2">Take Profit</th>
-                  <th className="py-1.5 px-2">Stop Loss</th>
-                  <th className="py-1.5 px-2">Unrealized P&L</th>
-                  <th className="py-1.5 px-2">Action</th>
+                  <th className="py-1.5 px-2">{t('Symbol')}</th>
+                  <th className="py-1.5 px-2">{t('Side')}</th>
+                  <th className="py-1.5 px-2">{t('Size')}</th>
+                  <th className="py-1.5 px-2">{t('Entry Price')}</th>
+                  <th className="py-1.5 px-2">{t('Mark Price')}</th>
+                  <th className="py-1.5 px-2">{t('Margin')}</th>
+                  <th className="py-1.5 px-2">{t('Take Profit')}</th>
+                  <th className="py-1.5 px-2">{t('Stop Loss')}</th>
+                  <th className="py-1.5 px-2">{t('Unrealized P&L')}</th>
+                  <th className="py-1.5 px-2">{t('Action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-500/10">
@@ -167,19 +168,19 @@ export const TradingPanel: React.FC<Props> = ({
         {activeTab === 'orders' && (
           orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-gray-500 font-sans">
-              <span>No pending limit or stop orders.</span>
+              <span>{t('No pending limit or stop orders.')}</span>
             </div>
           ) : (
             <table className="w-full text-left">
               <thead>
                 <tr className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
-                  <th className="py-1.5 px-2">Symbol</th>
-                  <th className="py-1.5 px-2">Type</th>
-                  <th className="py-1.5 px-2">Side</th>
-                  <th className="py-1.5 px-2">Price</th>
-                  <th className="py-1.5 px-2">Amount</th>
-                  <th className="py-1.5 px-2">Filled</th>
-                  <th className="py-1.5 px-2">Action</th>
+                  <th className="py-1.5 px-2">{t('Symbol')}</th>
+                  <th className="py-1.5 px-2">{t('Type')}</th>
+                  <th className="py-1.5 px-2">{t('Side')}</th>
+                  <th className="py-1.5 px-2">{t('Price')}</th>
+                  <th className="py-1.5 px-2">{t('Amount')}</th>
+                  <th className="py-1.5 px-2">{t('Filled')}</th>
+                  <th className="py-1.5 px-2">{t('Action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-500/10">
@@ -211,20 +212,20 @@ export const TradingPanel: React.FC<Props> = ({
         {activeTab === 'account' && (
           <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 font-sans">
             <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
-              <div className="text-gray-500 text-[10px]">Broker</div>
-              <div className="font-bold text-sm text-[#2962ff]">TradingView Simulated Paper Broker</div>
+              <div className="text-gray-500 text-[10px]">{t('Broker')}</div>
+              <div className="font-bold text-sm text-[#2962ff]">{t('TradingView Simulated Paper Broker')}</div>
             </div>
             <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
-              <div className="text-gray-500 text-[10px]">Account Currency</div>
+              <div className="text-gray-500 text-[10px]">{t('Account Currency')}</div>
               <div className="font-bold text-sm">USD ($)</div>
             </div>
             <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
-              <div className="text-gray-500 text-[10px]">Max Leverage</div>
+              <div className="text-gray-500 text-[10px]">{t('Max Leverage')}</div>
               <div className="font-bold text-sm">100x Cross Margin</div>
             </div>
             <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
-              <div className="text-gray-500 text-[10px]">Execution Latency</div>
-              <div className="font-bold text-sm text-[#089981]">Instant (0ms)</div>
+              <div className="text-gray-500 text-[10px]">{t('Execution Latency')}</div>
+              <div className="font-bold text-sm text-[#089981]">{t('Instant (0ms)')}</div>
             </div>
           </div>
         )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SymbolInfo } from '../../types/trading';
 import { BookOpen, Check } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   symbol: SymbolInfo;
@@ -23,7 +24,7 @@ export const NotesPanel: React.FC<Props> = ({ symbol, theme }) => {
         </div>
         <div className="flex items-center gap-1 text-[11px] text-gray-400">
           <Check className="w-3 h-3 text-[#089981]" />
-          <span>Auto-saved</span>
+          <span>{t('Auto-saved')}</span>
         </div>
       </div>
 

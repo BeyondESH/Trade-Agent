@@ -1,6 +1,7 @@
 import React from 'react';
 import { EconomicEvent } from '../../types/trading';
 import { Calendar, AlertTriangle } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   events: EconomicEvent[];
@@ -15,7 +16,7 @@ export const CalendarPanel: React.FC<Props> = ({ events, theme }) => {
       <div className={`p-2.5 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
         <div className="flex items-center gap-1.5 font-bold text-sm">
           <Calendar className="w-4 h-4 text-[#2962ff]" />
-          <span>Economic Calendar</span>
+          <span>{t('Economic Calendar')}</span>
         </div>
       </div>
 
@@ -49,15 +50,15 @@ export const CalendarPanel: React.FC<Props> = ({ events, theme }) => {
 
             <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-gray-400 pt-1">
               <div>
-                <span className="text-gray-500 block">Actual</span>
+                <span className="text-gray-500 block">{t('Actual')}</span>
                 <span className="font-semibold text-white">{ev.actual || '-'}</span>
               </div>
               <div>
-                <span className="text-gray-500 block">Forecast</span>
+                <span className="text-gray-500 block">{t('Forecast')}</span>
                 <span>{ev.forecast || '-'}</span>
               </div>
               <div>
-                <span className="text-gray-500 block">Previous</span>
+                <span className="text-gray-500 block">{t('Previous')}</span>
                 <span>{ev.previous || '-'}</span>
               </div>
             </div>

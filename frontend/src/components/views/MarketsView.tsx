@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SymbolInfo, ThemeMode } from '../../types/trading';
 import { MARKETS_OVERVIEW_DATA } from '../../data/marketData';
+import { t } from '../../lib/i18n';
 import {
   TrendingUp,
   TrendingDown,
@@ -42,7 +43,7 @@ export const MarketsView: React.FC<Props> = ({
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Globe className="w-5 h-5 text-[#2962ff]" />
-            <span>Global Markets Overview</span>
+            <span>{t('Global Markets Overview')}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
             Real-time financial benchmarks, international market indices, currencies, and sector velocity.
@@ -95,7 +96,7 @@ export const MarketsView: React.FC<Props> = ({
           <div className="flex items-center justify-between border-b pb-2 border-gray-500/20">
             <span className="font-bold text-sm flex items-center gap-1.5 text-[#ff9800]">
               <Activity className="w-4 h-4" />
-              <span>Cryptocurrency Benchmarks</span>
+              <span>{t('Cryptocurrency Benchmarks')}</span>
             </span>
             <span className="text-[10px] text-gray-500 font-semibold">24h Vol</span>
           </div>
@@ -129,9 +130,9 @@ export const MarketsView: React.FC<Props> = ({
           <div className="flex items-center justify-between border-b pb-2 border-gray-500/20">
             <span className="font-bold text-sm flex items-center gap-1.5 text-[#00bcd4]">
               <DollarSign className="w-4 h-4" />
-              <span>Currencies & Forex</span>
+              <span>{t('Currencies & Forex')}</span>
             </span>
-            <span className="text-[10px] text-gray-500 font-semibold">Daily Pip Delta</span>
+            <span className="text-[10px] text-gray-500 font-semibold">{t('Daily Pip Delta')}</span>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -159,9 +160,9 @@ export const MarketsView: React.FC<Props> = ({
           <div className="flex items-center justify-between border-b pb-2 border-gray-500/20">
             <span className="font-bold text-sm flex items-center gap-1.5 text-[#e040fb]">
               <Layers className="w-4 h-4" />
-              <span>Commodities & Energy</span>
+              <span>{t('Commodities & Energy')}</span>
             </span>
-            <span className="text-[10px] text-gray-500 font-semibold">Spot & Futures</span>
+            <span className="text-[10px] text-gray-500 font-semibold">{t('Spot & Futures')}</span>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -188,23 +189,23 @@ export const MarketsView: React.FC<Props> = ({
       {/* Bottom Table: Top Gainers & Active Equities */}
       <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-white border-[#e0e3eb]'}`}>
         <div className="flex items-center justify-between mb-3">
-          <div className="font-bold text-sm text-white">Active Market Watchlist</div>
-          <span className="text-xs text-gray-400">Click any instrument to open in SuperCharts</span>
+          <div className="font-bold text-sm text-white">{t('Active Market Watchlist')}</div>
+          <span className="text-xs text-gray-400">{t('Click any instrument to open in SuperCharts')}</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
             <thead>
               <tr className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
-                <th className="py-2 px-3">Symbol</th>
-                <th className="py-2 px-3">Name</th>
-                <th className="py-2 px-3">Category</th>
-                <th className="py-2 px-3">Last Price</th>
+                <th className="py-2 px-3">{t('Symbol')}</th>
+                <th className="py-2 px-3">{t('Name')}</th>
+                <th className="py-2 px-3">{t('Category')}</th>
+                <th className="py-2 px-3">{t('Last Price')}</th>
                 <th className="py-2 px-3">24h Change</th>
-                <th className="py-2 px-3">24h High/Low</th>
-                <th className="py-2 px-3">Volume</th>
-                <th className="py-2 px-3">Technical Rating</th>
-                <th className="py-2 px-3 text-right">Action</th>
+                <th className="py-2 px-3">{t('24h High/Low')}</th>
+                <th className="py-2 px-3">{t('Volume')}</th>
+                <th className="py-2 px-3">{t('Technical Rating')}</th>
+                <th className="py-2 px-3 text-right">{t('Action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-500/10">
@@ -254,7 +255,7 @@ export const MarketsView: React.FC<Props> = ({
                         }}
                         className="px-2.5 py-1 rounded bg-[#2962ff] text-white hover:bg-[#1e53e5] font-sans text-xs font-semibold inline-flex items-center gap-1 shadow-xs"
                       >
-                        <span>Chart</span>
+                        <span>{t('Chart')}</span>
                         <ChevronRight className="w-3 h-3" />
                       </button>
                     </td>

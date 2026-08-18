@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from typing import Any, Callable
 
+import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -193,6 +194,34 @@ def create_app(
     def _read(category, symbol, timeframe, start=None, end=None):  # noqa: ANN001
         return store.read(_series(category, symbol, timeframe), start, end)
 
+    def _seed_candles_from_rest(category, symbol, timeframe, limit=200) -> list[dict]:  # noqa: ANN001
+        """Fetch recent klines from the Bitget public REST API (no auth).
+
+        Used when a series has no live-stream buffer yet (e.g. a freshly
+        switched symbol/timeframe), so history is available immediately.
+        """
+        from market_data.models import timeframe_to_granularity
+
+        granularity = timeframe_to_granularity(timeframe)
+        product_type = category if "FUTURES" in category else None
+        params: dict = {"symbol": symbol, "granularity": granularity, "limit": min(limit, 200)}
+        if product_type:
+            params["productType"] = product_type
+        url = "https://api.bitget.com/api/v2/mix/market/candles"
+        if category == "SPOT":
+            url = "https://api.bitget.com/api/v2/spot/market/candles"
+            params.pop("productType", None)
+        try:
+            resp = httpx.get(url, params=params, timeout=10.0)
+            resp.raise_for_status()
+            body = resp.json()
+            if body.get("code") not in ("00000", 0):
+                return []
+            rows = body.get("data") or []
+            return [KlineIngestor._coerce_row(r) for r in rows][-limit:]
+        except Exception:  # noqa: BLE001 - seed is best-effort
+            return []
+
     @app.exception_handler(ValueError)
     async def _value_error(_req, exc: ValueError):  # noqa: ANN001
         return JSONResponse(status_code=400, content={"error": str(exc)})
@@ -217,6 +246,13 @@ def create_app(
         if limit > 500:
             raise HTTPException(status_code=422, detail="limit must be <= 500")
         bars = stream.recent(category, symbol, timeframe, limit=limit)
+        if not bars:
+            # A symbol/timeframe that isn't in the live buffer yet (e.g. a
+            # freshly switched contract) still needs history: seed it from the
+            # Bitget public REST candles endpoint, then subscribe the live
+            # stream so subsequent requests get incremental updates.
+            bars = _seed_candles_from_rest(category, symbol, timeframe, limit)
+            stream.subscribe(category, symbol, timeframe)
         return {"series": f"{category}/{symbol}/{timeframe}", "count": len(bars), "candles": bars}
 
     @app.post("/candles/backfill")
@@ -492,16 +528,25 @@ def create_app(
 
     # -- websocket subscription protocol -----------------------------------
     def _snapshot(category: str, symbol: str, timeframe: str) -> dict:
-        df = _read(category, symbol, timeframe)
-        if len(df) < 1:
-            return {"error": "no data"}
+        # Live stream is the primary source for the current bar; the parquet
+        # store only supplies history/indicators and is NOT required for a
+        # usable snapshot. Without a live bar we still return a structured
+        # frame (with an explicit error) so the frontend never silently
+        # discards real-time updates.
         bar = stream.latest(category, symbol, timeframe)
-        price = float(bar["close"]) if bar else float(df["close"].iloc[-1])
+        if bar is None:
+            df = _read(category, symbol, timeframe)
+            if len(df) < 1:
+                return {"error": "no data"}
+            return {"price": float(df["close"].iloc[-1]),
+                    "portfolio": {"equity": engine.portfolio.equity,
+                                  "positions": list(engine.portfolio.positions.keys())}}
+        df = _read(category, symbol, timeframe)
+        price = float(bar["close"])
         snap = {"price": price,
                 "portfolio": {"equity": engine.portfolio.equity,
-                              "positions": list(engine.portfolio.positions.keys())}}
-        if bar:
-            snap["last_candle"] = bar
+                              "positions": list(engine.portfolio.positions.keys())},
+                "last_candle": bar}
         if len(df) >= 30:
             snap["levels"] = _levels_json(levels.build_levels(df, top_n=5))
             ind = indicators.compute(df).iloc[-1]
@@ -579,6 +624,7 @@ def create_app(
                             if channel == "candle":
                                 subs[key] = arg
                                 tf = arg.get("timeframe") or "5m"
+                                stream.subscribe(category, symbol, tf)
                                 await send({"category": category, "channel": channel, "symbol": symbol,
                                             "action": "snapshot",
                                             "data": _snapshot(category, symbol, tf)})
@@ -605,8 +651,10 @@ def create_app(
                                         "event": "subscribed"})
                         else:
                             hchan, hsym = hub_args(channel, symbol)
-                            subs.pop(key, None)
-                            if key != ("ticker", "*"):
+                            arg = subs.pop(key, None)
+                            if channel == "candle" and arg is not None:
+                                stream.unsubscribe(category, symbol, arg.get("timeframe") or "5m")
+                            elif key != ("ticker", "*"):
                                 market.unsubscribe(hchan, hsym, category)
                             await send({"channel": channel, "symbol": symbol, "category": category,
                                         "event": "unsubscribed"})
@@ -615,13 +663,15 @@ def create_app(
         finally:
             candle_task.cancel()
             for (channel, symbol) in list(subs):
+                arg = subs.get((channel, symbol)) or {}
+                category = arg.get("category") or "USDT-FUTURES"
                 if channel == "candle":
+                    stream.unsubscribe(category, symbol, arg.get("timeframe") or "5m")
                     continue
                 if channel == "ticker" and (channel, symbol) == ("ticker", "*"):
                     continue
                 hchan, hsym = hub_args(channel, symbol)
-                arg = subs.get((channel, symbol)) or {}
-                market.unsubscribe(hchan, hsym, arg.get("category") or "USDT-FUTURES")
+                market.unsubscribe(hchan, hsym, category)
             market.remove_listener(listener)
 
     def _market_snapshot(channel: str, symbol: str, category: str = "USDT-FUTURES") -> dict | None:

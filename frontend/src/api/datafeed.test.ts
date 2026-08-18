@@ -79,6 +79,13 @@ describe("BitgetDatafeed.searchSymbols", () => {
     expect(btc.pricePrecision).toBe(1);
     expect(btc.volumePrecision).toBe(4);
   });
+
+  it("exposes name and exchange for the native search list", async () => {
+    const d = new BitgetDatafeed();
+    const btc = (await d.searchSymbols("BTCUSDT"))[0];
+    expect(btc.name).toBe("BTCUSDT");
+    expect(btc.exchange).toBe("Bitget");
+  });
 });
 
 describe("BitgetDatafeed history", () => {

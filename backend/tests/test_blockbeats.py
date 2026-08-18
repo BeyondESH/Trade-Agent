@@ -38,6 +38,25 @@ def test_data_proxy_forwards_with_api_key(monkeypatch) -> None:
     assert calls == [("/v1/data/dxy", None)]
 
 
+def test_bb_api_key_reads_from_settings(monkeypatch) -> None:
+    """The key resolves through the Settings chain (env / .env), not os.environ."""
+    monkeypatch.delenv("BB_API_KEY", raising=False)
+    monkeypatch.delenv("MD_BB_API_KEY", raising=False)
+    from market_data.config import Settings
+
+    s = Settings(bb_api_key="from-settings")
+    assert s.bb_api_key == "from-settings"
+
+
+def test_bb_api_key_unsupported_env_falls_back_to_md_prefix(monkeypatch) -> None:
+    monkeypatch.delenv("BB_API_KEY", raising=False)
+    monkeypatch.setenv("MD_BB_API_KEY", "md-key")
+    from market_data.config import Settings
+
+    s = Settings()
+    assert s.bb_api_key == "md-key"
+
+
 def test_data_proxy_network_param(monkeypatch) -> None:
     calls: list[tuple[str, dict | None]] = []
 

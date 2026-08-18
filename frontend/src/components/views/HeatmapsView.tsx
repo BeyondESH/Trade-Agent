@@ -3,6 +3,7 @@ import { SymbolInfo, ThemeMode } from '../../types/trading';
 import { HEATMAP_CRYPTO_ASSETS, HEATMAP_STOCK_ASSETS } from '../../data/marketData';
 import { Flame, Layers, TrendingUp, TrendingDown, Eye, Filter } from 'lucide-react';
 import { fetchNetflow, NETFLOW_NETWORKS, type NetflowRow } from '../../lib/marketPulse';
+import { t } from '../../lib/i18n';
 
 interface Props {
   onOpenChartWithTicker: (ticker: string) => void;
@@ -81,7 +82,7 @@ export const HeatmapsView: React.FC<Props> = ({ onOpenChartWithTicker, theme }) 
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Flame className="w-5 h-5 text-[#f23645]" />
-            <span>Market Heatmap Directory</span>
+            <span>{t('Market Heatmap Directory')}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
             Visualize relative market capitalization and sector performance in real-time.
@@ -133,7 +134,7 @@ export const HeatmapsView: React.FC<Props> = ({ onOpenChartWithTicker, theme }) 
 
           {heatmapType === 'crypto' && (
             <div className="flex items-center bg-black/30 p-1 rounded-lg border border-gray-500/20 text-xs">
-              <span className="px-2 text-gray-400">Network</span>
+              <span className="px-2 text-gray-400">{t('Network')}</span>
               {NETFLOW_NETWORKS.map((n) => (
                 <button
                   key={n}

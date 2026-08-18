@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ThemeMode } from '../../types/trading';
+import { t } from '../../lib/i18n';
 import {
   Code,
   Play,
@@ -119,7 +120,7 @@ export const PineStudioView: React.FC<Props> = ({ onApplyScriptToChart, theme })
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Code className="w-5 h-5 text-[#e91e63]" />
-            <span>Pine Script® Studio (IDE v5)</span>
+            <span>{t('Pine Script® Studio (IDE v5)')}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
             Write custom quantitative indicators, automated trading algorithms, and backtest strategy execution.
@@ -145,7 +146,7 @@ export const PineStudioView: React.FC<Props> = ({ onApplyScriptToChart, theme })
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#2962ff] text-white text-xs font-bold hover:bg-[#1e53e5] shadow-xs transition-colors"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Add to Chart & Run Backtest</span>
+            <span>{t('Add to Chart & Run Backtest')}</span>
           </button>
         </div>
       </div>
@@ -169,7 +170,7 @@ export const PineStudioView: React.FC<Props> = ({ onApplyScriptToChart, theme })
             <div className="flex items-center gap-2 text-gray-400">
               <span className="text-[11px] flex items-center gap-1 text-[#089981]">
                 <CheckCircle className="w-3.5 h-3.5" />
-                <span>Syntax OK</span>
+                <span>{t('Syntax OK')}</span>
               </span>
             </div>
           </div>
@@ -202,7 +203,7 @@ export const PineStudioView: React.FC<Props> = ({ onApplyScriptToChart, theme })
           }`}>
             <div className="px-3 py-1.5 border-b border-gray-500/20 flex items-center gap-2 text-xs font-bold text-gray-400">
               <Terminal className="w-3.5 h-3.5 text-[#2962ff]" />
-              <span>Compilation Console & Strategy Debugger</span>
+              <span>{t('Compilation Console & Strategy Debugger')}</span>
             </div>
             <div className="flex-1 p-2.5 font-mono text-[11px] overflow-y-auto no-scrollbar flex flex-col gap-1 text-gray-300">
               {consoleLog.map((log, i) => (
@@ -223,7 +224,7 @@ export const PineStudioView: React.FC<Props> = ({ onApplyScriptToChart, theme })
         }`}>
           <div className="font-bold text-sm text-white flex items-center gap-1.5 border-b pb-2 border-gray-500/20">
             <BookOpen className="w-4 h-4 text-[#2962ff]" />
-            <span>Pine Script Reference</span>
+            <span>{t('Pine Script Reference')}</span>
           </div>
 
           <div className="flex-1 overflow-y-auto flex flex-col gap-3 text-xs">

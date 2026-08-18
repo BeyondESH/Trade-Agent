@@ -9,7 +9,6 @@ never shipped to the browser) and the frontend talks only to our own
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 import httpx
@@ -50,8 +49,14 @@ DATA_ENDPOINTS = (
 
 
 def api_key() -> str:
-    """Return the BlockBeats API key from the environment."""
-    key = os.environ.get("BB_API_KEY", "").strip()
+    """Return the BlockBeats API key from the app configuration.
+
+    Read through the pydantic Settings chain so `backend/.env` (`BB_API_KEY=`)
+    works out of the box, falling back to the `MD_BB_API_KEY` env var.
+    """
+    from market_data.config import get_settings
+
+    key = get_settings().bb_api_key.strip()
     if not key:
         raise ValueError("BB_API_KEY is not set")
     return key

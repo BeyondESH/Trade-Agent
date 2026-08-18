@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SymbolInfo } from '../../types/trading';
 import { Plus, Search, TrendingUp, TrendingDown, MoreVertical, Star, ChevronDown, Activity } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   symbols: SymbolInfo[];
@@ -36,7 +37,7 @@ export const WatchlistPanel: React.FC<Props> = ({
       {/* Watchlist Header */}
       <div className={`p-2.5 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
         <div className="flex items-center gap-1 font-bold text-sm">
-          <span>Watchlist</span>
+          <span>{t('Watchlist')}</span>
           <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
         </div>
         <div className="flex items-center gap-1">
@@ -44,7 +45,7 @@ export const WatchlistPanel: React.FC<Props> = ({
             id="watchlist-add-symbol-btn"
             onClick={onAddSymbol}
             className={`p-1 rounded hover:bg-gray-500/20 text-[#2962ff] transition-colors`}
-            title="Add Symbol"
+            title={t('Add Symbol')}
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -141,7 +142,7 @@ export const WatchlistPanel: React.FC<Props> = ({
         {/* Day Range Bar */}
         <div className="flex flex-col gap-1 text-[10px] text-gray-400">
           <div className="flex justify-between">
-            <span>Day Range</span>
+            <span>日内区间</span>
             <span className="font-mono">
               {activeSymbol.low24h.toFixed(activeSymbol.digits)} - {activeSymbol.high24h.toFixed(activeSymbol.digits)}
             </span>
@@ -167,13 +168,13 @@ export const WatchlistPanel: React.FC<Props> = ({
         {/* 52W Range & Market Cap */}
         <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-400 pt-1">
           <div>
-            <div className="text-gray-500">24h Volume</div>
+            <div className="text-gray-500">24小时成交量</div>
             <div className={`font-semibold font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               {activeSymbol.volume24h}
             </div>
           </div>
           <div>
-            <div className="text-gray-500">Market Cap</div>
+            <div className="text-gray-500">市值</div>
             <div className={`font-semibold font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               {activeSymbol.marketCap || 'N/A'}
             </div>

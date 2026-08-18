@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar as CalIcon, Clock, Globe } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   onSelectRange: (range: string) => void;
@@ -68,7 +69,7 @@ export const BottomTimebar: React.FC<Props> = ({
       <div className="flex items-center gap-2 font-mono">
         <div className="flex items-center gap-1 text-gray-500 text-[10px]">
           <Globe className="w-3 h-3" />
-          <span>UTC+0 (Live)</span>
+          <span>UTC+0 (实时)</span>
         </div>
 
         <div className="h-3 w-[1px] bg-gray-500/20" />
@@ -83,7 +84,7 @@ export const BottomTimebar: React.FC<Props> = ({
               ? 'hover:bg-[#2a2e39]'
               : 'hover:bg-[#f0f3fa]'
           }`}
-          title="Percentage Scale"
+          title="百分比坐标"
         >
           %
         </button>
@@ -98,7 +99,7 @@ export const BottomTimebar: React.FC<Props> = ({
               ? 'hover:bg-[#2a2e39]'
               : 'hover:bg-[#f0f3fa]'
           }`}
-          title="Logarithmic Scale"
+          title="对数坐标"
         >
           log
         </button>
@@ -113,7 +114,7 @@ export const BottomTimebar: React.FC<Props> = ({
               ? 'hover:bg-[#2a2e39]'
               : 'hover:bg-[#f0f3fa]'
           }`}
-          title="Auto Scaling"
+          title="自动坐标"
         >
           auto
         </button>

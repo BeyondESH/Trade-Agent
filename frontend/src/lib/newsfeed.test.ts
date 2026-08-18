@@ -78,9 +78,13 @@ describe("fetchNewsflash", () => {
     expect(rows[0].id).toBe("1");
   });
 
-  it("returns empty list on upstream error", async () => {
+  it("throws with a config message on missing BB_API_KEY", async () => {
+    vi.mocked(api.blockbeatsNews).mockRejectedValue(new Error("BB_API_KEY is not set"));
+    await expect(fetchNewsflash("ai")).rejects.toThrow("未配置 BB_API_KEY");
+  });
+
+  it("throws a generic message on other upstream errors", async () => {
     vi.mocked(api.blockbeatsNews).mockRejectedValue(new Error("upstream"));
-    const rows = await fetchNewsflash("ai");
-    expect(rows).toEqual([]);
+    await expect(fetchNewsflash("ai")).rejects.toThrow("新闻接口暂不可用");
   });
 });

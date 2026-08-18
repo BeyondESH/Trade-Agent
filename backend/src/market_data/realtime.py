@@ -50,21 +50,76 @@ class BitgetWsStream:
         self._heartbeat = heartbeat_seconds
         self._reconnect = reconnect_seconds
         self._buffer: dict[str, list[dict[str, Any]]] = {}
+        # Extra (category, symbol, timeframe) subscriptions added at runtime,
+        # refcounted so multiple clients sharing a series keep it alive.
+        self._extra: dict[tuple[str, str, str], int] = {}
         self._lock = threading.Lock()
         self._task: asyncio.Task | None = None
         self._stopping = False
+        self._ws: ClientConnection | None = None
 
     # -- channels ----------------------------------------------------------
     def _channels(self) -> list[dict[str, str]]:
-        return [
+        channels = [
             {"instType": self._category, "channel": f"candle{timeframe_to_granularity(tf)}", "instId": symbol}
             for symbol in self._symbols
             for tf in self._timeframes
         ]
+        with self._lock:
+            for (category, symbol, timeframe) in self._extra:
+                channels.append({
+                    "instType": category,
+                    "channel": f"candle{timeframe_to_granularity(timeframe)}",
+                    "instId": symbol,
+                })
+        return channels
 
     @staticmethod
     def _series_key(category: str, symbol: str, timeframe: str) -> str:
         return f"{category}/{symbol}/{timeframe}"
+
+    # -- dynamic subscriptions ---------------------------------------------
+    def subscribe(self, category: str, symbol: str, timeframe: str) -> None:
+        """Add a live candle subscription for a series (refcounted).
+
+        Safe to call from any thread; if the socket is already open the
+        subscription frame is sent immediately, otherwise it is picked up on
+        the next (re)connect because `_channels()` merges extra series.
+        """
+        key = (category, symbol, timeframe)
+        with self._lock:
+            if key in self._extra:
+                self._extra[key] += 1
+                return
+            self._extra[key] = 1
+        self._request("subscribe", category, symbol, timeframe)
+
+    def unsubscribe(self, category: str, symbol: str, timeframe: str) -> None:
+        """Release one ref on a series; at zero, unsubscribes from the feed."""
+        key = (category, symbol, timeframe)
+        with self._lock:
+            remaining = self._extra.get(key, 0) - 1
+            if remaining > 0:
+                self._extra[key] = remaining
+                return
+            self._extra.pop(key, None)
+        self._request("unsubscribe", category, symbol, timeframe)
+        with self._lock:
+            self._buffer.pop(self._series_key(category, symbol, timeframe), None)
+
+    def _request(self, op: str, category: str, symbol: str, timeframe: str) -> None:
+        payload = json.dumps({"op": op, "args": [{
+            "instType": category,
+            "channel": f"candle{timeframe_to_granularity(timeframe)}",
+            "instId": symbol,
+        }]})
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop (e.g. called from a test thread); the op is
+            # still registered in _extra and will be applied on (re)connect.
+            return
+        loop.create_task(self._safe_send(self._ws, payload))
 
     # -- lifecycle ---------------------------------------------------------
     def start(self) -> None:
@@ -109,8 +164,13 @@ class BitgetWsStream:
             try:
                 async with connect(self._url, open_timeout=10) as ws:
                     logger.info("Bitget WS connected: %s", self._url)
-                    await self._subscribe(ws)
-                    await self._read_loop(ws)
+                    self._ws = ws
+                    try:
+                        await self._subscribe(ws)
+                        await self._read_loop(ws)
+                    finally:
+                        if self._ws is ws:
+                            self._ws = None
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - keep the loop alive
@@ -146,7 +206,9 @@ class BitgetWsStream:
             silent = 0
             await self._handle_frame(ws, raw)
 
-    async def _safe_send(self, ws: ClientConnection, text: str) -> None:
+    async def _safe_send(self, ws: ClientConnection | None, text: str) -> None:
+        if ws is None:
+            return
         try:
             await ws.send(text)
         except Exception:  # noqa: BLE001 - surfaced by the read loop on the next recv

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { SymbolInfo, Candle, IndicatorConfig } from '../../types/trading';
 import { Layers, Activity } from 'lucide-react';
+import { t } from '../../lib/i18n';
 import {
   fetchMarketPulse,
   extractSeries,
@@ -68,7 +69,7 @@ export const DataWindowPanel: React.FC<Props> = ({
       <div className={`p-2.5 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
         <div className="flex items-center gap-1.5 font-bold text-sm">
           <Layers className="w-4 h-4 text-[#2962ff]" />
-          <span>Data Window</span>
+          <span>{t('Data Window')}</span>
         </div>
         <span className="text-[10px] text-gray-500 font-mono">{symbol.ticker}</span>
       </div>
@@ -77,35 +78,35 @@ export const DataWindowPanel: React.FC<Props> = ({
         {/* Current Bar Info */}
         <div className={`p-2.5 rounded-lg border flex flex-col gap-1.5 ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
           <div className="font-sans font-bold text-[11px] text-gray-400 uppercase tracking-wider mb-1">
-            Price Bar (OHLCV)
+            {t('Price Bar (OHLCV)')}
           </div>
           {activeCandle ? (
             <>
               <div className="flex justify-between">
-                <span className="text-gray-500 font-sans">Open</span>
+                <span className="text-gray-500 font-sans">{t('Open')}</span>
                 <span>{activeCandle.open.toFixed(symbol.digits)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 font-sans">High</span>
+                <span className="text-gray-500 font-sans">{t('High')}</span>
                 <span>{activeCandle.high.toFixed(symbol.digits)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 font-sans">Low</span>
+                <span className="text-gray-500 font-sans">{t('Low')}</span>
                 <span>{activeCandle.low.toFixed(symbol.digits)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 font-sans">Close</span>
+                <span className="text-gray-500 font-sans">{t('Close')}</span>
                 <span className={activeCandle.close >= activeCandle.open ? 'text-[#089981]' : 'text-[#f23645]'}>
                   {activeCandle.close.toFixed(symbol.digits)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 font-sans">Volume</span>
+                <span className="text-gray-500 font-sans">{t('Volume')}</span>
                 <span>{activeCandle.volume.toLocaleString()}</span>
               </div>
             </>
           ) : (
-            <div className="text-gray-500 font-sans text-center py-2">No candle data</div>
+            <div className="text-gray-500 font-sans text-center py-2">{t('No candle data')}</div>
           )}
         </div>
 
@@ -133,7 +134,7 @@ export const DataWindowPanel: React.FC<Props> = ({
           </div>
           {pulseLoading && <div className="text-gray-500 font-sans py-1">Loading...</div>}
           {!pulseLoading && pulse.length === 0 && (
-            <div className="text-gray-500 font-sans py-1">Unavailable — check BB_API_KEY</div>
+            <div className="text-gray-500 font-sans py-1">{t('Unavailable — check BB_API_KEY')}</div>
           )}
           {pulse.map((p) => (
             <div key={p.endpoint} className="flex items-center gap-2 py-0.5">

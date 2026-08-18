@@ -33,3 +33,25 @@ TBD - created by archiving change web-api. Update Purpose after archive.
 - **THEN** 客户端 SHALL 自动重连并按原 symbol/timeframe/category/interval 重订阅
 - **AND** 连接状态 SHALL 在 实时 / 重连中 / 断开 之间对外更新
 
+### Requirement: K 线更新实时流优先
+系统 SHALL 在构建 K 线 `snapshot`/`update` 帧时优先从实时流(buffer)读取最新 bar 作为 `last_candle`;当历史 parquet 存储为空时,SHALL 仍返回携带 `last_candle` 的帧,不得返回 `{"error":"no data"}` 而丢失实时能力。parquet 仅用于历史回填与指标/支撑阻力等增强字段。
+
+#### Scenario: parquet 为空仍推送 last_candle
+- **WHEN** 客户端订阅 K 线 channel 且该 series 的 parquet 存储为空
+- **THEN** SHALL 推送 `action:"snapshot"`/`action:"update"` 帧且 `data.last_candle` 为实时流最新 bar,`data` 不含 `"error"` 字段
+
+#### Scenario: 实时流无数据时的行为
+- **WHEN** 订阅的 series 实时流与 parquet 均无数据
+- **THEN** SHALL 返回含明确错误信息的帧(如 `{"error":"no data"}`),前端 SHALL 将其视为"无数据"而非丢弃有效更新
+
+### Requirement: K 线 symbol 动态订阅
+系统 SHALL 支持按客户端订阅动态增删 K 线 symbol/timeframe 的实时拉流:`/ws` 收到某 symbol 的 candle 订阅时,后端 SHALL 触发该 symbol 的实时流订阅;退订后 SHALL 释放对应订阅。不限于启动时配置的默认 symbol 集合。
+
+#### Scenario: 新 symbol 首次订阅即拉流
+- **WHEN** 客户端订阅 `XRPUSDT`(不在默认 symbol 配置)的 candle 通道
+- **THEN** SHALL 为该 symbol 建立实时流订阅并开始推送该 symbol 的 `last_candle`
+
+#### Scenario: 退订释放
+- **WHEN** 客户端退订某 symbol 的 candle 通道且无其他订阅者
+- **THEN** SHALL 释放该 symbol 的实时流订阅,后续不再推送该 symbol 数据
+

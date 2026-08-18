@@ -23,18 +23,10 @@
   --klinecharts-pro-selected-color: rgba(41, 98, 255, 0.1);
 }
 
-/* fill the center canvas instead of the vendor default 80vh */
+/* fill the center canvas instead of the vendor default 80vh. The inner
+   period bar (38px) + content heights are handled by the vendor styles
+   (calc(100% - 38px)), so no per-part height override is needed. */
 .klinecharts-pro {
-  height: 100%;
-}
-
-/* hide the vendor top chrome (period bar); its buttons stay in the DOM and are
-   driven programmatically by lib/chartChromeBridge.ts from our own top bar */
-.klinecharts-pro-period-bar {
-  display: none !important;
-}
-
-.klinecharts-pro-content {
   height: 100%;
 }
 
@@ -75,15 +67,11 @@
   margin-top: 3px;
 }
 
-/* low-opacity text watermark (3-5%), replaced per symbol/period by the app */
+/* low-opacity text watermark (3-5%), replaced per symbol by the app */
 .klinecharts-pro-watermark {
   opacity: 0.04;
   font-size: 40px;
   font-weight: 700;
   letter-spacing: 2px;
   white-space: nowrap;
-}
-
-.klinecharts-pro-watermark .logo {
-  display: none;
 }

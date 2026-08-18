@@ -1,5 +1,6 @@
 import React from 'react';
 import { DesktopViewMode, ThemeMode } from '../../types/trading';
+import { t } from '../../lib/i18n';
 import {
   TrendingUp,
   Monitor,
@@ -41,43 +42,43 @@ export const GlobalNavRail: React.FC<Props> = ({
   const navItems: { id: DesktopViewMode; label: string; icon: React.ReactNode; badge?: string }[] = [
     {
       id: 'chart',
-      label: 'SuperCharts',
+      label: t('SuperCharts'),
       icon: <TrendingUp className="w-4 h-4" />,
     },
     {
       id: 'markets',
-      label: 'Markets',
+      label: t('Markets'),
       icon: <Monitor className="w-4 h-4" />,
     },
     {
       id: 'screener',
-      label: 'Screener',
+      label: t('Screener'),
       icon: <Filter className="w-4 h-4" />,
       badge: '2.0',
     },
     {
       id: 'heatmaps',
-      label: 'Heatmaps',
+      label: t('Heatmaps'),
       icon: <Flame className="w-4 h-4" />,
     },
     {
       id: 'community',
-      label: 'Community',
+      label: t('Community'),
       icon: <Users className="w-4 h-4" />,
     },
     {
       id: 'news',
-      label: 'News',
+      label: t('News'),
       icon: <Newspaper className="w-4 h-4" />,
     },
     {
       id: 'pine',
-      label: 'Pine Studio',
+      label: t('Pine Studio'),
       icon: <Code className="w-4 h-4" />,
     },
     {
       id: 'brokers',
-      label: 'Brokers',
+      label: t('Brokers'),
       icon: <Briefcase className="w-4 h-4" />,
     },
   ];
@@ -128,7 +129,7 @@ export const GlobalNavRail: React.FC<Props> = ({
           className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
             isDark ? 'hover:bg-[#1e222d] hover:text-white' : 'hover:bg-white hover:text-black'
           }`}
-          title="Command Palette (⌘K)"
+          title={t('Command Palette (⌘K)')}
         >
           <Search className="w-3.5 h-3.5" />
         </button>
@@ -138,7 +139,7 @@ export const GlobalNavRail: React.FC<Props> = ({
           className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
             isDark ? 'hover:bg-[#1e222d] hover:text-yellow-400' : 'hover:bg-white hover:text-indigo-600'
           }`}
-          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          title={`${theme === 'dark' ? t('Switch to Light Mode') : t('Switch to Dark Mode')}`}
         >
           {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
         </button>
@@ -148,7 +149,7 @@ export const GlobalNavRail: React.FC<Props> = ({
           className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
             isDark ? 'hover:bg-[#1e222d] hover:text-white' : 'hover:bg-white hover:text-black'
           }`}
-          title="Keyboard Shortcuts (?)"
+          title={t('Keyboard Shortcuts (?)')}
         >
           <Keyboard className="w-3.5 h-3.5" />
         </button>
@@ -158,7 +159,7 @@ export const GlobalNavRail: React.FC<Props> = ({
           className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
             isDark ? 'hover:bg-[#1e222d] hover:text-white' : 'hover:bg-white hover:text-black'
           }`}
-          title="Desktop Settings"
+          title={t('Desktop Settings')}
         >
           <Settings className="w-3.5 h-3.5" />
         </button>

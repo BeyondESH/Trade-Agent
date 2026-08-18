@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SymbolInfo, AlertItem } from '../../types/trading';
 import { Bell, X, Check } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -63,7 +64,7 @@ export const CreateAlertModal: React.FC<Props> = ({
         {/* Form Body */}
         <div className="p-4 flex flex-col gap-3 text-xs">
           <div>
-            <label className="text-gray-400 font-semibold mb-1 block">Condition</label>
+            <label className="text-gray-400 font-semibold mb-1 block">{t('Condition')}</label>
             <select
               value={condition}
               onChange={(e) => setCondition(e.target.value as any)}
@@ -71,16 +72,16 @@ export const CreateAlertModal: React.FC<Props> = ({
                 isDark ? 'bg-[#131722] border-[#2a2e39] text-white' : 'bg-white border-[#e0e3eb] text-black'
               }`}
             >
-              <option value="Crossing">Crossing Price</option>
-              <option value="Crossing Up">Crossing Up</option>
-              <option value="Crossing Down">Crossing Down</option>
-              <option value="Greater Than">Greater Than</option>
-              <option value="Less Than">Less Than</option>
+              <option value="Crossing">{t('Crossing Price')}</option>
+              <option value="Crossing Up">{t('Crossing Up')}</option>
+              <option value="Crossing Down">{t('Crossing Down')}</option>
+              <option value="Greater Than">{t('Greater Than')}</option>
+              <option value="Less Than">{t('Less Than')}</option>
             </select>
           </div>
 
           <div>
-            <label className="text-gray-400 font-semibold mb-1 block">Target Price ($)</label>
+            <label className="text-gray-400 font-semibold mb-1 block">{t('Target Price ($)')}</label>
             <input
               type="number"
               step="any"
@@ -94,7 +95,7 @@ export const CreateAlertModal: React.FC<Props> = ({
           </div>
 
           <div>
-            <label className="text-gray-400 font-semibold mb-1 block">Trigger Frequency</label>
+            <label className="text-gray-400 font-semibold mb-1 block">{t('Trigger Frequency')}</label>
             <div className="flex gap-2">
               {(['Only Once', 'Every Time'] as const).map((f) => (
                 <button
@@ -116,7 +117,7 @@ export const CreateAlertModal: React.FC<Props> = ({
           </div>
 
           <div>
-            <label className="text-gray-400 font-semibold mb-1 block">Alert Message / Note</label>
+            <label className="text-gray-400 font-semibold mb-1 block">{t('Alert Message / Note')}</label>
             <input
               type="text"
               value={note}

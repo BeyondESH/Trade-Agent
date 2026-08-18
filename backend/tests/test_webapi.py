@@ -57,12 +57,20 @@ class _FakeStream:
     def __init__(self, bar=None, bars=None) -> None:  # noqa: ANN001
         self.bar = bar
         self.bars = bars or ([bar] if bar else [])
+        self.subscribed: list[tuple[str, str, str]] = []
+        self.unsubscribed: list[tuple[str, str, str]] = []
 
     def latest(self, category: str, symbol: str, timeframe: str) -> dict | None:  # noqa: ARG001
         return self.bar
 
     def recent(self, category: str, symbol: str, timeframe: str, limit: int | None = None) -> list:  # noqa: ARG001
         return self.bars[-limit:] if limit is not None else list(self.bars)
+
+    def subscribe(self, category: str, symbol: str, timeframe: str) -> None:
+        self.subscribed.append((category, symbol, timeframe))
+
+    def unsubscribe(self, category: str, symbol: str, timeframe: str) -> None:
+        self.unsubscribed.append((category, symbol, timeframe))
 
     def start(self) -> None:
         return
@@ -268,7 +276,9 @@ def test_backtest_job() -> None:
 # -- 8.7 websocket subscription protocol ---------------------------------
 def test_ws_candle_subscribe() -> None:
     with _tmp() as tmp:
-        c = _client(tmp)
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
             ws.send_json({"op": "subscribe", "args": [
                 {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
@@ -279,6 +289,58 @@ def test_ws_candle_subscribe() -> None:
             # subscription ack
             ack = ws.receive_json()
             assert ack["event"] == "subscribed"
+            assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.subscribed
+
+
+def test_ws_candle_dynamic_symbol_subscribe_and_unsubscribe() -> None:
+    """Subscribing an unconfigured symbol drives a live stream subscribe;
+    unsubscribing releases it."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "XRPUSDT", "timeframe": "1h"}]})
+            assert ws.receive_json()["channel"] == "candle"
+            assert ws.receive_json()["event"] == "subscribed"
+            assert ("USDT-FUTURES", "XRPUSDT", "1h") in stream.subscribed
+            ws.send_json({"op": "unsubscribe", "args": [
+                {"channel": "candle", "symbol": "XRPUSDT", "timeframe": "1h"}]})
+            assert ws.receive_json()["event"] == "unsubscribed"
+            assert ("USDT-FUTURES", "XRPUSDT", "1h") in stream.unsubscribed
+
+
+def test_ws_candle_snapshot_prioritizes_live_stream_when_parquet_empty() -> None:
+    """Empty parquet + live bar must still produce a last_candle frame."""
+    with _tmp() as tmp:
+        settings = Settings(data_dir=Path(tmp))  # no parquet seeded
+        bar = {"open_time": 1700000000000, "open": 1.0, "high": 2.0,
+               "low": 0.0, "close": 1.5, "volume": 1.0}
+        c = TestClient(create_app(settings, stream=_FakeStream(bar=bar), market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            msg = ws.receive_json()
+            assert msg["channel"] == "candle" and msg["action"] == "snapshot"
+            assert "error" not in msg["data"]
+            assert msg["data"]["last_candle"]["close"] == 1.5
+            assert "price" in msg["data"]
+            assert ws.receive_json()["event"] == "subscribed"
+
+
+def test_ws_candle_snapshot_error_when_no_stream_and_no_parquet() -> None:
+    """No live bar and no parquet returns an explicit no-data error frame."""
+    with _tmp() as tmp:
+        settings = Settings(data_dir=Path(tmp))  # no parquet seeded
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            msg = ws.receive_json()
+            assert msg["channel"] == "candle" and msg["action"] == "snapshot"
+            assert msg["data"] == {"error": "no data"}
+            assert ws.receive_json()["event"] == "subscribed"
 
 
 def test_ws_books_subscribe_and_unsubscribe() -> None:
@@ -428,8 +490,53 @@ def test_candles_recent_empty_when_no_stream_data() -> None:
         settings = _seed(tmp)
         app = create_app(settings, stream=_FakeStream(None))
         c = TestClient(app)
-        r = c.get("/candles/recent", params={"symbol": "ETHUSDT", "timeframe": "5m"}).json()
+        # REST seed is best-effort: with an offline upstream it stays empty.
+        import market_data.webapi as webapi
+
+        def offline_get(*_a, **_k):
+            raise RuntimeError("offline")
+
+        orig_get = webapi.httpx.get
+        webapi.httpx.get = offline_get
+        try:
+            r = c.get("/candles/recent", params={"symbol": "ETHUSDT", "timeframe": "5m"}).json()
+        finally:
+            webapi.httpx.get = orig_get
         assert r["count"] == 0 and r["candles"] == []
+
+
+def test_candles_recent_seeds_from_rest_when_stream_empty() -> None:
+    """A freshly switched symbol/timeframe seeds history from Bitget REST."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        app = create_app(settings, stream=_FakeStream(None))
+        c = TestClient(app)
+        import market_data.webapi as webapi
+
+        rows = [
+            ["1700000000000", "100", "101", "99", "100.5", "7.5", "1"],
+            ["1700003600000", "100.5", "102", "100", "101", "8", "1"],
+        ]
+
+        class _FakeResp:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"code": "00000", "data": rows}
+
+        def fake_get(_url, params=None, timeout=None):  # noqa: ANN001, ARG001
+            return _FakeResp()
+
+        orig_get = webapi.httpx.get
+        webapi.httpx.get = fake_get
+        try:
+            r = c.get("/candles/recent", params={"symbol": "XRPUSDT", "timeframe": "4h"}).json()
+        finally:
+            webapi.httpx.get = orig_get
+        assert r["count"] == 2
+        assert r["candles"][-1]["close"] == 101.0
+        assert r["candles"][-1]["open_time"] == 1700003600000
 
 
 def test_journal_endpoint() -> None:

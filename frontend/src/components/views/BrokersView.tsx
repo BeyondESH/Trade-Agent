@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrokerAccount, AccountState, Position, Order, ThemeMode } from '../../types/trading';
 import { BROKERS_CATALOG } from '../../data/marketData';
+import { t } from '../../lib/i18n';
 import {
   Briefcase,
   CheckCircle,
@@ -59,7 +60,7 @@ export const BrokersView: React.FC<Props> = ({
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Briefcase className="w-5 h-5 text-[#089981]" />
-            <span>Trading Panel & Broker Integrations</span>
+            <span>{t('Trading Panel & Broker Integrations')}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
             Connect live exchange accounts or practice risk-free with TradingView Paper Trading engine.
@@ -71,7 +72,7 @@ export const BrokersView: React.FC<Props> = ({
           isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-white border-[#e0e3eb]'
         }`}>
           <div>
-            <div className="text-[10px] text-gray-400 font-semibold uppercase">Active Paper Balance</div>
+            <div className="text-[10px] text-gray-400 font-semibold uppercase">{t('Active Paper Balance')}</div>
             <div className="font-mono font-bold text-sm text-[#089981]">
               ${account.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
@@ -83,7 +84,7 @@ export const BrokersView: React.FC<Props> = ({
             title="Reset Paper Account to $50,000"
           >
             <RotateCcw className="w-3 h-3" />
-            <span>Reset Funds</span>
+            <span>{t('Reset Funds')}</span>
           </button>
         </div>
       </div>
@@ -91,15 +92,15 @@ export const BrokersView: React.FC<Props> = ({
       {/* Active Account Overview Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-white border-[#e0e3eb]'}`}>
-          <div className="text-gray-400 text-[10px] uppercase font-semibold">Total Equity</div>
+          <div className="text-gray-400 text-[10px] uppercase font-semibold">{t('Total Equity')}</div>
           <div className="font-mono font-bold text-base text-[#2962ff] my-0.5">
             ${account.equity.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
-          <div className="text-[10px] text-gray-500">Live Margin Valuation</div>
+          <div className="text-[10px] text-gray-500">{t('Live Margin Valuation')}</div>
         </div>
 
         <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-white border-[#e0e3eb]'}`}>
-          <div className="text-gray-400 text-[10px] uppercase font-semibold">Unrealized P&L</div>
+          <div className="text-gray-400 text-[10px] uppercase font-semibold">{t('Unrealized P&L')}</div>
           <div className={`font-mono font-bold text-base my-0.5 ${account.unrealizedPnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
             {account.unrealizedPnl >= 0 ? '+' : ''}${account.unrealizedPnl.toFixed(2)}
           </div>
@@ -107,26 +108,26 @@ export const BrokersView: React.FC<Props> = ({
         </div>
 
         <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-white border-[#e0e3eb]'}`}>
-          <div className="text-gray-400 text-[10px] uppercase font-semibold">Used Margin</div>
+          <div className="text-gray-400 text-[10px] uppercase font-semibold">{t('Used Margin')}</div>
           <div className="font-mono font-bold text-base my-0.5 text-white">
             ${account.usedMargin.toLocaleString()}
           </div>
-          <div className="text-[10px] text-gray-500">Cross Leverage 10x</div>
+          <div className="text-[10px] text-gray-500">{t('Cross Leverage 10x')}</div>
         </div>
 
         <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-white border-[#e0e3eb]'}`}>
-          <div className="text-gray-400 text-[10px] uppercase font-semibold">Free Margin</div>
+          <div className="text-gray-400 text-[10px] uppercase font-semibold">{t('Free Margin')}</div>
           <div className="font-mono font-bold text-base my-0.5 text-[#089981]">
             ${account.freeMargin.toLocaleString()}
           </div>
-          <div className="text-[10px] text-gray-500">Available for Trading</div>
+          <div className="text-[10px] text-gray-500">{t('Available for Trading')}</div>
         </div>
       </div>
 
       {/* Supported Brokers Catalog Grid */}
       <h2 className="font-bold text-sm text-white mb-3 flex items-center gap-2">
         <ShieldCheck className="w-4 h-4 text-[#2962ff]" />
-        <span>Verified TradingView Broker Integrations</span>
+        <span>{t('Verified TradingView Broker Integrations')}</span>
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { SymbolInfo, ThemeMode } from '../../types/trading';
 import { Filter, Search, ChevronRight, Download, RefreshCw } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   symbols: SymbolInfo[];
@@ -41,7 +42,7 @@ export const ScreenerView: React.FC<Props> = ({ symbols, onOpenChartWithTicker, 
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Filter className="w-5 h-5 text-[#ff9800]" />
-            <span>Screener 2.0 (Multi-Asset Engine)</span>
+            <span>{t('Screener 2.0 (Multi-Asset Engine)')}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
             Filter 50,000+ global assets by technical indicators, valuation multiples, and price momentum.
@@ -56,14 +57,14 @@ export const ScreenerView: React.FC<Props> = ({ symbols, onOpenChartWithTicker, 
             }`}
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
+            <span>{t('Export CSV')}</span>
           </button>
 
           <button
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2962ff] text-white text-xs font-semibold hover:bg-[#1e53e5] shadow-xs"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Auto-Refresh (1s)</span>
+            <span>{t('Auto-Refresh (1s)')}</span>
           </button>
         </div>
       </div>
@@ -94,7 +95,7 @@ export const ScreenerView: React.FC<Props> = ({ symbols, onOpenChartWithTicker, 
               isDark ? 'bg-[#131722] border-[#2a2e39] text-white' : 'bg-gray-50 border-[#e0e3eb]'
             }`}
           >
-            <option value="All">All Categories</option>
+            <option value="All">{t('All Categories')}</option>
             {categories
               .filter((c) => c !== 'All')
               .map((c) => (
@@ -118,14 +119,14 @@ export const ScreenerView: React.FC<Props> = ({ symbols, onOpenChartWithTicker, 
           <table className="w-full text-left font-mono text-xs">
             <thead>
               <tr className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? 'border-[#2a2e39] bg-[#131722]' : 'border-[#e0e3eb] bg-gray-50'}`}>
-                <th className="py-2.5 px-3">Ticker</th>
-                <th className="py-2.5 px-3">Asset</th>
-                <th className="py-2.5 px-3">Category</th>
-                <th className="py-2.5 px-3">Price</th>
-                <th className="py-2.5 px-3">Change %</th>
+                <th className="py-2.5 px-3">{t('Ticker')}</th>
+                <th className="py-2.5 px-3">{t('Asset')}</th>
+                <th className="py-2.5 px-3">{t('Category')}</th>
+                <th className="py-2.5 px-3">{t('Price')}</th>
+                <th className="py-2.5 px-3">{t('Change %')}</th>
                 <th className="py-2.5 px-3">24h High</th>
                 <th className="py-2.5 px-3">24h Low</th>
-                <th className="py-2.5 px-3 text-right">Action</th>
+                <th className="py-2.5 px-3 text-right">{t('Action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-500/10">
@@ -161,7 +162,7 @@ export const ScreenerView: React.FC<Props> = ({ symbols, onOpenChartWithTicker, 
                         }}
                         className="px-2.5 py-1 rounded bg-[#2962ff] text-white hover:bg-[#1e53e5] font-sans text-xs font-semibold inline-flex items-center gap-1 shadow-xs"
                       >
-                        <span>Open</span>
+                        <span>{t('Open')}</span>
                         <ChevronRight className="w-3 h-3" />
                       </button>
                     </td>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { SymbolInfo, OrderBookEntry } from '../../types/trading';
 import { BarChart3 } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   symbol: SymbolInfo;
@@ -19,16 +20,16 @@ export const OrderBookPanel: React.FC<Props> = ({ symbol, orderBook, theme }) =>
       <div className={`p-2.5 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
         <div className="flex items-center gap-1.5 font-bold text-sm">
           <BarChart3 className="w-4 h-4 text-[#089981]" />
-          <span>Order Book (DOM)</span>
+          <span>订单簿 (DOM)</span>
         </div>
-        <span className="text-[10px] text-gray-500 font-mono">Precision: 0.01</span>
+        <span className="text-[10px] text-gray-500 font-mono">精度: 0.01</span>
       </div>
 
       {/* Header */}
       <div className="grid grid-cols-3 px-3 py-1 text-[10px] text-gray-500 font-semibold uppercase">
-        <div>Price ({symbol.quoteAsset})</div>
-        <div className="text-right">Size ({symbol.baseAsset})</div>
-        <div className="text-right">Total</div>
+        <div>价格 ({symbol.quoteAsset})</div>
+        <div className="text-right">数量 ({symbol.baseAsset})</div>
+        <div className="text-right">合计</div>
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col justify-between font-mono text-[11px]">
@@ -57,7 +58,7 @@ export const OrderBookPanel: React.FC<Props> = ({ symbol, orderBook, theme }) =>
           <span className={`text-sm ${symbol.change24hPercent >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
             ${symbol.price.toFixed(symbol.digits)}
           </span>
-          <span className="text-[10px] text-gray-400 font-normal">Spread: 0.02 (0.01%)</span>
+          <span className="text-[10px] text-gray-400 font-normal">价差: 0.02 (0.01%)</span>
         </div>
 
         {/* Bids (Green) */}

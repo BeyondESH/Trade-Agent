@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Settings, X, Monitor, Cpu, Volume2, Shield, Bell, Cloud } from 'lucide-react';
 import { ThemeMode } from '../../types/trading';
+import { t } from '../../lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export const DesktopSettingsModal: React.FC<Props> = ({ isOpen, onClose, theme, 
         <div className={`p-3 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
           <div className="flex items-center gap-2 font-bold text-sm">
             <Settings className="w-4 h-4 text-[#2962ff]" />
-            <span>TradingView Desktop App Settings</span>
+            <span>{t('Desktop App Settings')}</span>
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-500/20 text-gray-400">
             <X className="w-4 h-4" />
@@ -43,13 +44,13 @@ export const DesktopSettingsModal: React.FC<Props> = ({ isOpen, onClose, theme, 
           <div className={`p-3 rounded-lg border flex flex-col gap-3 ${isDark ? 'bg-[#131722]/60 border-[#2a2e39]' : 'bg-gray-50 border-[#e0e3eb]'}`}>
             <div className="font-bold text-xs text-[#2962ff] uppercase tracking-wider flex items-center gap-1.5">
               <Monitor className="w-3.5 h-3.5" />
-              <span>Display & Theme</span>
+              <span>{t('Display & Theme')}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-semibold text-white">Color Theme</div>
-                <div className="text-gray-400 text-[11px]">Choose between Elegant Dark and Clean Light</div>
+                <div className="font-semibold text-white">{t('Color Theme')}</div>
+                <div className="text-gray-400 text-[11px]">{t('Choose between Elegant Dark and Clean Light')}</div>
               </div>
               <button
                 onClick={onToggleTheme}
@@ -64,13 +65,13 @@ export const DesktopSettingsModal: React.FC<Props> = ({ isOpen, onClose, theme, 
           <div className={`p-3 rounded-lg border flex flex-col gap-3 ${isDark ? 'bg-[#131722]/60 border-[#2a2e39]' : 'bg-gray-50 border-[#e0e3eb]'}`}>
             <div className="font-bold text-xs text-[#2962ff] uppercase tracking-wider flex items-center gap-1.5">
               <Cpu className="w-3.5 h-3.5" />
-              <span>Engine & Hardware</span>
+              <span>{t('Engine & Hardware')}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-semibold text-white">Hardware GPU Acceleration</div>
-                <div className="text-gray-400 text-[11px]">Enables 120 FPS high-refresh canvas rendering</div>
+                <div className="text-gray-400 text-[11px]">{t('Enables 120 FPS high-refresh canvas rendering')}</div>
               </div>
               <input
                 type="checkbox"
@@ -83,7 +84,7 @@ export const DesktopSettingsModal: React.FC<Props> = ({ isOpen, onClose, theme, 
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-semibold text-white">Crosshair Synchronization</div>
-                <div className="text-gray-400 text-[11px]">Sync cursor position across multi-chart grids</div>
+                <div className="text-gray-400 text-[11px]">{t('Sync cursor position across multi-chart grids')}</div>
               </div>
               <input
                 type="checkbox"
@@ -98,13 +99,13 @@ export const DesktopSettingsModal: React.FC<Props> = ({ isOpen, onClose, theme, 
           <div className={`p-3 rounded-lg border flex flex-col gap-3 ${isDark ? 'bg-[#131722]/60 border-[#2a2e39]' : 'bg-gray-50 border-[#e0e3eb]'}`}>
             <div className="font-bold text-xs text-[#2962ff] uppercase tracking-wider flex items-center gap-1.5">
               <Cloud className="w-3.5 h-3.5" />
-              <span>Cloud & Storage</span>
+              <span>{t('Cloud & Storage')}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-semibold text-white">Instant Cloud Sync</div>
-                <div className="text-gray-400 text-[11px]">Autosave drawing annotations and templates to TradingView account</div>
+                <div className="text-gray-400 text-[11px]">{t('Autosave drawing annotations and templates to TradingView account')}</div>
               </div>
               <input
                 type="checkbox"
@@ -116,8 +117,8 @@ export const DesktopSettingsModal: React.FC<Props> = ({ isOpen, onClose, theme, 
 
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-semibold text-white">Audio Alerts & Execution Chimes</div>
-                <div className="text-gray-400 text-[11px]">Play audio tones on order fills and price breaches</div>
+                <div className="font-semibold text-white">{t('Audio Alerts & Execution Chimes')}</div>
+                <div className="text-gray-400 text-[11px]">{t('Play audio tones on order fills and price breaches')}</div>
               </div>
               <input
                 type="checkbox"

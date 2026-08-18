@@ -1,6 +1,7 @@
 import React from 'react';
 import { Keyboard, X } from 'lucide-react';
 import { ThemeMode } from '../../types/trading';
+import { t } from '../../lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -58,7 +59,7 @@ export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose, theme
         <div className={`p-3 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
           <div className="flex items-center gap-2 font-bold text-sm">
             <Keyboard className="w-4 h-4 text-[#2962ff]" />
-            <span>TradingView Desktop Keyboard Shortcuts</span>
+            <span>{t('TradingView Desktop Keyboard Shortcuts')}</span>
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-500/20 text-gray-400">
             <X className="w-4 h-4" />

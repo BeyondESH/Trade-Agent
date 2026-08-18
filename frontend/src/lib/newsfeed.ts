@@ -77,7 +77,15 @@ export async function fetchNewsflash(type: NewsflashType): Promise<NewsItem[]> {
   try {
     const res = await api.blockbeatsNews(type, 1, 20, "cn");
     return (res.data ?? []).map(toNewsItem);
-  } catch {
-    return [];
+  } catch (err) {
+    throw new Error(isConfigError(err) ? "未配置 BB_API_KEY,请在 backend/.env 中设置" : "新闻接口暂不可用");
   }
+}
+
+/** Distinguish a missing-API-key 400 from a transient upstream failure. */
+export function isConfigError(err: unknown): boolean {
+  const detail = (err as { detail?: unknown })?.detail;
+  if (typeof detail === "string" && detail.includes("BB_API_KEY")) return true;
+  const message = (err as { message?: unknown })?.message;
+  return typeof message === "string" && message.includes("BB_API_KEY");
 }

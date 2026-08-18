@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MessageSquare, ThumbsUp, Send, User } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -29,7 +30,7 @@ export const CommunityIdeasPanel: React.FC<Props> = ({ theme }) => {
       <div className={`p-2.5 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
         <div className="flex items-center gap-1.5 font-bold text-sm">
           <MessageSquare className="w-4 h-4 text-[#2962ff]" />
-          <span>Public Stream & Chat</span>
+          <span>{t('Public Stream & Chat')}</span>
         </div>
       </div>
 

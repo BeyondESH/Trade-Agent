@@ -1,4 +1,4 @@
-export type Timeframe = '1s' | '1m' | '5m' | '15m' | '1h' | '4h' | '1D' | '1W' | '1M';
+export type Timeframe = '1s' | '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1D' | '1W' | '1M';
 
 export type ChartType = 'candles' | 'heikin_ashi' | 'line' | 'area' | 'hollow_candles' | 'bars' | 'baseline';
 

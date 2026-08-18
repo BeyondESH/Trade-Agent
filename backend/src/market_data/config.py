@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -23,6 +23,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     # Default ingestion targets used by the scheduled job.
@@ -53,6 +54,13 @@ class Settings(BaseSettings):
     mcp_command: str = "npx"
     mcp_args: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["-y", "@bitget-ai/bitget-agent-mcp"]
+    )
+
+    # BlockBeats news/data API key. Read from `BB_API_KEY` (or `MD_BB_API_KEY`)
+    # env var / backend/.env so a user can configure it in .env directly.
+    bb_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("bb_api_key", "BB_API_KEY", "MD_BB_API_KEY"),
     )
 
     # Per-request candle page size. Bitget history-candles caps this at 100.

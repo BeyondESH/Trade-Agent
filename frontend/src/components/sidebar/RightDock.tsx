@@ -30,6 +30,7 @@ import { OrderBookPanel } from './OrderBookPanel';
 import { TradesTape } from './TradesTape';
 import { CommunityIdeasPanel } from './CommunityIdeasPanel';
 import type { Trade } from '../../hooks/useTrades';
+import { t } from '../../lib/i18n';
 
 interface Props {
   symbols: SymbolInfo[];
@@ -41,13 +42,11 @@ interface Props {
   alerts: AlertItem[];
   onRemoveAlert: (id: string) => void;
   onOpenCreateAlert: () => void;
-  news: NewsItem[];
   events: EconomicEvent[];
   orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[] };
   trades: Trade[];
   theme: 'dark' | 'light';
 }
-
 type TabType =
   | 'watchlist'
   | 'alerts'
@@ -68,7 +67,6 @@ export const RightDock: React.FC<Props> = ({
   alerts,
   onRemoveAlert,
   onOpenCreateAlert,
-  news,
   events,
   orderBook,
   trades,
@@ -88,14 +86,14 @@ export const RightDock: React.FC<Props> = ({
   };
 
   const navItems = [
-    { id: 'watchlist' as TabType, icon: Bookmark, title: 'Watchlist & Details' },
-    { id: 'alerts' as TabType, icon: Bell, title: 'Alerts' },
-    { id: 'news' as TabType, icon: Newspaper, title: 'News Headlines' },
-    { id: 'datawindow' as TabType, icon: Layers, title: 'Data Window' },
-    { id: 'hotlists' as TabType, icon: Flame, title: 'Hotlists' },
-    { id: 'calendar' as TabType, icon: Calendar, title: 'Economic Calendar' },
-    { id: 'orderbook' as TabType, icon: BarChart3, title: 'Order Book (DOM)' },
-    { id: 'ideas' as TabType, icon: MessageSquare, title: 'Public Stream & Chat' },
+    { id: 'watchlist' as TabType, icon: Bookmark, title: t('Watchlist & Details') },
+    { id: 'alerts' as TabType, icon: Bell, title: t('Alerts') },
+    { id: 'news' as TabType, icon: Newspaper, title: t('News Headlines') },
+    { id: 'datawindow' as TabType, icon: Layers, title: t('Data Window') },
+    { id: 'hotlists' as TabType, icon: Flame, title: t('Hotlists') },
+    { id: 'calendar' as TabType, icon: Calendar, title: t('Economic Calendar') },
+    { id: 'orderbook' as TabType, icon: BarChart3, title: t('Order Book (DOM)') },
+    { id: 'ideas' as TabType, icon: MessageSquare, title: t('Public Stream & Chat') },
   ];
 
   return (
@@ -130,7 +128,7 @@ export const RightDock: React.FC<Props> = ({
             />
           )}
 
-          {activeTab === 'news' && <NewsPanel news={news} theme={theme} />}
+          {activeTab === 'news' && <NewsPanel theme={theme} />}
 
           {activeTab === 'datawindow' && (
             <DataWindowPanel

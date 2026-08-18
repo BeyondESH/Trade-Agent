@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SymbolInfo, Position, Order } from '../../types/trading';
 import { X, TrendingUp, TrendingDown, DollarSign, ShieldAlert } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -101,7 +102,7 @@ export const OrderModal: React.FC<Props> = ({
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            <span>BUY / LONG</span>
+            <span>{t('BUY / LONG')}</span>
           </button>
           <button
             type="button"
@@ -115,7 +116,7 @@ export const OrderModal: React.FC<Props> = ({
             }`}
           >
             <TrendingDown className="w-4 h-4" />
-            <span>SELL / SHORT</span>
+            <span>{t('SELL / SHORT')}</span>
           </button>
         </div>
 
@@ -144,7 +145,7 @@ export const OrderModal: React.FC<Props> = ({
           {/* Limit Price */}
           {orderType === 'LIMIT' && (
             <div>
-              <label className="text-gray-400 font-semibold mb-1 block">Limit Price ($)</label>
+              <label className="text-gray-400 font-semibold mb-1 block">{t('Limit Price ($)')}</label>
               <input
                 type="number"
                 step="any"
@@ -179,7 +180,7 @@ export const OrderModal: React.FC<Props> = ({
           {/* Leverage Slider */}
           <div>
             <div className="flex justify-between text-gray-400 font-semibold mb-1">
-              <span>Leverage</span>
+              <span>{t('Leverage')}</span>
               <span className="font-mono text-[#2962ff] font-bold">{leverage}x</span>
             </div>
             <input
@@ -204,7 +205,7 @@ export const OrderModal: React.FC<Props> = ({
                   onChange={(e) => setEnableTP(e.target.checked)}
                   className="accent-[#089981]"
                 />
-                <span>Take Profit ($)</span>
+                <span>{t('Take Profit ($)')}</span>
               </label>
               {enableTP && (
                 <input
@@ -227,7 +228,7 @@ export const OrderModal: React.FC<Props> = ({
                   onChange={(e) => setEnableSL(e.target.checked)}
                   className="accent-[#f23645]"
                 />
-                <span>Stop Loss ($)</span>
+                <span>{t('Stop Loss ($)')}</span>
               </label>
               {enableSL && (
                 <input
@@ -244,15 +245,15 @@ export const OrderModal: React.FC<Props> = ({
 
             {enableTP && enableSL && (
               <div className="flex justify-between text-[11px] pt-1 text-gray-400 font-mono border-t border-gray-500/20">
-                <span>R:R Ratio: <b className="text-white">{rrRatio}</b></span>
-                <span>Est Profit: <b className="text-[#089981]">+${potentialProfit.toFixed(2)}</b></span>
+                <span>{t('R:R Ratio')}: <b className="text-white">{rrRatio}</b></span>
+                <span>{t('Est Profit')}: <b className="text-[#089981]">+${potentialProfit.toFixed(2)}</b></span>
               </div>
             )}
           </div>
 
           {/* Margin Summary */}
           <div className="flex justify-between text-[11px] text-gray-400 font-mono">
-            <span>Required Margin:</span>
+            <span>{t('Required Margin:')}</span>
             <span className="font-bold text-white">${marginRequired.toFixed(2)}</span>
           </div>
         </div>

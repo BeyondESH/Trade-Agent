@@ -1,13 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   SymbolInfo,
-  Timeframe,
-  ChartType,
-  DrawingToolType,
-  Drawing,
   IndicatorConfig,
   AlertItem,
-  NewsItem,
   EconomicEvent,
   AccountState,
   Position,
@@ -18,13 +13,14 @@ import {
   DesktopTab,
   DesktopViewMode,
 } from './types/trading';
-import { INITIAL_NEWS, INITIAL_CALENDAR } from './data/marketData';
+import { INITIAL_CALENDAR } from './data/marketData';
 import { useRealSymbols } from './hooks/useRealSymbols';
 import { useOrderBook, type BookLevel } from './hooks/useOrderBook';
 import { useTrades } from './hooks/useTrades';
 import { useCandles } from './hooks/useCandles';
 import type { OrderBookEntry } from './types/trading';
 import type { SeriesRef } from './api/types';
+import type { Period, SymbolInfo as ProSymbolInfo } from '@klinecharts/pro';
 import { periodFromTimeframe, periodToTimeframe } from './api/datafeed';
 
 const DEFAULT_SYMBOL: SymbolInfo = {
@@ -51,9 +47,7 @@ import { GlobalNavRail } from './components/desktop/GlobalNavRail';
 
 // SuperCharts Components
 import { TopNavbar } from './components/header/TopNavbar';
-import { ReplayBar } from './components/header/ReplayBar';
-import { DrawingToolbar } from './components/chart/DrawingToolbar';
-import { MultiChartGrid } from './components/chart/MultiChartGrid';
+import { NativeChart } from './components/chart/NativeChart';
 import { RightDock } from './components/sidebar/RightDock';
 import { BottomTimebar } from './components/timebar/BottomTimebar';
 import { BottomDock } from './components/bottom/BottomDock';
@@ -68,13 +62,8 @@ import { PineStudioView } from './components/views/PineStudioView';
 import { BrokersView } from './components/views/BrokersView';
 
 // Modals & Overlays
-import { SymbolSearchModal } from './components/modals/SymbolSearchModal';
-import { IndicatorsModal } from './components/modals/IndicatorsModal';
-import { ChartSettingsModal } from './components/modals/ChartSettingsModal';
 import { CreateAlertModal } from './components/modals/CreateAlertModal';
 import { OrderModal } from './components/modals/OrderModal';
-import { SnapshotModal } from './components/modals/SnapshotModal';
-import { chartCommands } from './lib/chartCommands';
 import { CommandPaletteModal } from './components/modals/CommandPaletteModal';
 import { KeyboardShortcutsModal } from './components/modals/KeyboardShortcutsModal';
 import { DesktopSettingsModal } from './components/modals/DesktopSettingsModal';
@@ -98,8 +87,7 @@ export default function App() {
   const { symbols: realSymbols, priceMap } = useRealSymbols();
   const [symbols, setSymbols] = useState<SymbolInfo[]>([]);
   const [activeSymbol, setActiveSymbol] = useState<SymbolInfo>(DEFAULT_SYMBOL);
-  const [timeframe, setTimeframe] = useState<Timeframe>('1h');
-  const [chartType, setChartType] = useState<ChartType>('candles');
+  const [timeframe, setTimeframe] = useState<string>('1h');
   const [selectedRange, setSelectedRange] = useState<string>('1D');
 
   // Chart Scale Settings
@@ -162,67 +150,12 @@ export default function App() {
   }, [activeSymbol, priceMap]);
 
   // 4. Technical Indicators
-  const [indicators, setIndicators] = useState<IndicatorConfig[]>([
-    {
-      id: 'ema20',
-      name: 'EMA 20',
-      shortName: 'EMA 20',
-      type: 'overlay',
-      visible: true,
-      color: '#2962ff',
-      params: { length: 20 },
-    },
-    {
-      id: 'ema50',
-      name: 'EMA 50',
-      shortName: 'EMA 50',
-      type: 'overlay',
-      visible: true,
-      color: '#ff9800',
-      params: { length: 50 },
-    },
-    {
-      id: 'bb',
-      name: 'Bollinger Bands (20, 2)',
-      shortName: 'BB',
-      type: 'overlay',
-      visible: false,
-      color: '#2962ff',
-      params: { length: 20, mult: 2 },
-    },
-    {
-      id: 'rsi',
-      name: 'RSI (14)',
-      shortName: 'RSI 14',
-      type: 'pane',
-      visible: true,
-      color: '#e040fb',
-      params: { length: 14 },
-    },
-    {
-      id: 'macd',
-      name: 'MACD (12, 26, 9)',
-      shortName: 'MACD',
-      type: 'pane',
-      visible: false,
-      color: '#2962ff',
-      params: { fast: 12, slow: 26, signal: 9 },
-    },
-  ]);
+  const [indicators] = useState<IndicatorConfig[]>([]);
 
-  // 5. Drawings
-  const [drawings, setDrawings] = useState<Drawing[]>([]);
-  const [activeTool, setActiveTool] = useState<DrawingToolType>('crosshair');
-  const [magnetMode, setMagnetMode] = useState<boolean>(false);
-  const [lockAll, setLockAll] = useState<boolean>(false);
-  const [hideAll, setHideAll] = useState<boolean>(false);
-
-  // 6. Theme & Layout
+  // 5. Theme
   const [theme, setTheme] = useState<ThemeMode>('dark');
-  const [activeLayout, setActiveLayout] = useState<string>('1x1');
 
   // 7. Secondary Layouts & Panels
-  const [news] = useState<NewsItem[]>(INITIAL_NEWS);
   const [events] = useState<EconomicEvent[]>(INITIAL_CALENDAR);
   const rawBook = useOrderBook(activeSymbol?.id ?? 'BTCUSDT', 'USDT-FUTURES');
   const trades = useTrades(activeSymbol?.id ?? 'BTCUSDT', 'USDT-FUTURES');
@@ -343,18 +276,8 @@ export default function App() {
     ],
   });
 
-  // 10. Replay Mode State
-  const [isReplayActive, setIsReplayActive] = useState<boolean>(false);
-  const [replayIndex, setReplayIndex] = useState<number>(200);
-  const [isReplayPlaying, setIsReplayPlaying] = useState<boolean>(false);
-  const [replaySpeed, setReplaySpeed] = useState<number>(1);
-
-  // 11. Modals State
-  const [isSymbolSearchOpen, setIsSymbolSearchOpen] = useState(false);
-  const [isIndicatorsOpen, setIsIndicatorsOpen] = useState(false);
+  // 10. Modals State
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isSnapshotOpen, setIsSnapshotOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isDesktopSettingsOpen, setIsDesktopSettingsOpen] = useState(false);
@@ -466,24 +389,6 @@ export default function App() {
     }
   };
 
-  // Replay mode uses the loaded candle series; no mock regeneration needed.
-
-  // Replay tick step
-  useEffect(() => {
-    if (!isReplayActive || !isReplayPlaying) return;
-    const timer = setInterval(() => {
-      setReplayIndex((prev) => {
-        if (prev >= candles.length - 1) {
-          setIsReplayPlaying(false);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 1000 / replaySpeed);
-
-    return () => clearInterval(timer);
-  }, [isReplayActive, isReplayPlaying, replaySpeed, candles.length]);
-
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -516,12 +421,6 @@ export default function App() {
         setIsShortcutsOpen((prev) => !prev);
       }
 
-      // Indicator Search (/)
-      if (e.key === '/' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setIsIndicatorsOpen(true);
-      }
-
       // Space -> Next Symbol in watchlist
       if (e.key === ' ' && !e.shiftKey) {
         e.preventDefault();
@@ -551,33 +450,42 @@ export default function App() {
     );
   };
 
-  const handleToggleIndicator = (id: string) => {
-    setIndicators((prev) =>
-      prev.map((ind) => {
-        const next = ind.id === id ? { ...ind, visible: !ind.visible } : ind;
-        if (ind.id === id) {
-          if (next.visible) chartCommands.createIndicator(next.name);
-          else chartCommands.removeIndicator(next.name);
-        }
-        return next;
-      })
-    );
-  };
-
-  const handleRemoveIndicator = (id: string) => {
-    setIndicators((prev) => prev.filter((ind) => ind.id !== id));
-  };
-
-  const handleAddCustomIndicator = (newInd: IndicatorConfig) => {
-    chartCommands.createIndicator(newInd.name);
-    setIndicators((prev) => {
-      const exists = prev.find((i) => i.id === newInd.id);
-      if (exists) {
-        return prev.map((i) => (i.id === newInd.id ? { ...i, visible: true } : i));
-      }
-      return [...prev, newInd];
+  // Native klinecharts-pro symbol change (from its built-in symbol search):
+  // map the pro SymbolInfo back to the shell SymbolInfo so the right dock
+  // (order book / trades / data window) follows the chart.
+  const handleNativeSymbolChange = useCallback((ps: ProSymbolInfo) => {
+    const ticker = ps.ticker;
+    setActiveSymbol((prev) => {
+      if (prev && prev.id === ticker) return prev;
+      return {
+        id: ticker,
+        ticker,
+        name: ps.name ?? ticker,
+        exchange: ps.exchange ?? ps.market ?? 'USDT-FUTURES',
+        category: 'crypto',
+        price: 0,
+        change24h: 0,
+        change24hPercent: 0,
+        high24h: 0,
+        low24h: 0,
+        volume24h: '-',
+        digits: ps.pricePrecision ?? 2,
+        baseAsset: ticker.replace(/USDT|USDC$/, ''),
+        quoteAsset: 'USDT',
+        description: '',
+      };
     });
-  };
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id === activeTabId && t.type === 'chart' ? { ...t, title: ticker, symbol: ticker } : t
+      )
+    );
+  }, [activeTabId]);
+
+  // Native period-bar change -> keep shell timeframe in sync (DataWindow etc.).
+  const handleNativePeriodChange = useCallback((p: Period) => {
+    setTimeframe(periodToTimeframe(p));
+  }, []);
 
   const handleClosePosition = (id: string) => {
     const pos = positions.find((p) => p.id === id);
@@ -770,91 +678,25 @@ export default function App() {
         <main className="flex flex-col flex-1 h-full overflow-hidden relative">
           {activeView === 'chart' && (
             <div className="flex flex-col h-full w-full overflow-hidden">
-              {/* Top Chart Header Toolbar */}
+              {/* Minimal top bar — chart controls live in the native pro chrome */}
               <TopNavbar
                 symbol={activeSymbol}
-                timeframe={timeframe}
-                onChangeTimeframe={setTimeframe}
-                chartType={chartType}
-                onChangeChartType={setChartType}
-                onOpenSymbolSearch={() => setIsSymbolSearchOpen(true)}
-                onOpenIndicatorsModal={() => setIsIndicatorsOpen(true)}
-                onOpenAlertModal={() => setIsAlertOpen(true)}
-                onOpenSettingsModal={() => setIsSettingsOpen(true)}
-                onOpenSnapshotModal={() => setIsSnapshotOpen(true)}
-                onToggleReplay={() => setIsReplayActive(!isReplayActive)}
-                isReplayActive={isReplayActive}
                 theme={theme}
                 onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onOpenAlertModal={() => setIsAlertOpen(true)}
                 onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
-                activeLayout={activeLayout}
-                onChangeLayout={setActiveLayout}
               />
-
-              {/* Replay Controller (When Active) */}
-              {isReplayActive && (
-                <ReplayBar
-                  isPlaying={isReplayPlaying}
-                  onTogglePlay={() => setIsReplayPlaying(!isReplayPlaying)}
-                  onStepForward={() => setReplayIndex((prev) => Math.min(candles.length - 1, prev + 1))}
-                  onReset={() => setReplayIndex(Math.floor(candles.length * 0.5))}
-                  speed={replaySpeed}
-                  onChangeSpeed={setReplaySpeed}
-                  onClose={() => {
-                    setIsReplayActive(false);
-                    setIsReplayPlaying(false);
-                  }}
-                  theme={theme}
-                />
-              )}
 
               {/* Chart Main Layout Area */}
               <div className="flex flex-1 w-full overflow-hidden relative">
-                {/* Left Drawing Tools Toolbar */}
-                <DrawingToolbar
-                  activeTool={activeTool}
-                  onSelectTool={(tool) => {
-                    setActiveTool(tool);
-                    chartCommands.applyTool(tool);
-                  }}
-                  magnetMode={magnetMode}
-                  onToggleMagnet={() => setMagnetMode(!magnetMode)}
-                  lockAll={lockAll}
-                  onToggleLockAll={() => setLockAll(!lockAll)}
-                  hideAll={hideAll}
-                  onToggleHideAll={() => setHideAll(!hideAll)}
-                  onClearDrawings={() => {
-                    setDrawings([]);
-                    chartCommands.clearDrawings();
-                  }}
-                  theme={theme}
-                />
-
-                {/* Central Multi-Chart Grid / Canvas */}
+                {/* Central native klinecharts-pro chart */}
                 <div className="flex flex-col flex-1 h-full overflow-hidden relative">
-                  <MultiChartGrid
-                    activeSymbol={activeSymbol}
-                    symbols={symbols}
+                  <NativeChart
+                    symbol={activeSymbol}
                     timeframe={timeframe}
-                    chartType={chartType}
-                    candles={candles}
-                    activeTool={activeTool}
-                    onToolUsed={() => setActiveTool('crosshair')}
-                    indicators={indicators}
-                    onToggleIndicator={handleToggleIndicator}
-                    onRemoveIndicator={handleRemoveIndicator}
-                    drawings={drawings}
-                    onUpdateDrawings={setDrawings}
-                    magnetMode={magnetMode}
-                    lockAll={lockAll}
-                    hideAll={hideAll}
                     theme={theme}
-                    layout={activeLayout}
-                    isReplayActive={isReplayActive}
-                    replayIndex={replayIndex}
-                    onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
-                    onOpenSymbolSearch={() => setIsSymbolSearchOpen(true)}
-                    onSelectSymbol={handleSelectSymbol}
+                    onSymbolChange={handleNativeSymbolChange}
+                    onPeriodChange={handleNativePeriodChange}
                   />
 
                   {/* Time Range Selector & Scale Badges Bar */}
@@ -876,7 +718,7 @@ export default function App() {
                   symbols={symbols}
                   activeSymbol={activeSymbol}
                   onSelectSymbol={handleSelectSymbol}
-                  onAddSymbol={() => setIsSymbolSearchOpen(true)}
+                  onAddSymbol={() => {}}
                   activeCandle={activeCandle}
                   indicators={indicators}
                   alerts={alerts}
@@ -885,7 +727,6 @@ export default function App() {
   mirrorAlertDelete(id);
 }}
                   onOpenCreateAlert={() => setIsAlertOpen(true)}
-                  news={news}
                   events={events}
                   orderBook={orderBook}
                   trades={trades}
@@ -995,29 +836,6 @@ export default function App() {
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       />
 
-      <SymbolSearchModal
-        isOpen={isSymbolSearchOpen}
-        onClose={() => setIsSymbolSearchOpen(false)}
-        symbols={symbols}
-        onSelectSymbol={handleSelectSymbol}
-        theme={theme}
-      />
-
-      <IndicatorsModal
-        isOpen={isIndicatorsOpen}
-        onClose={() => setIsIndicatorsOpen(false)}
-        indicators={indicators}
-        onToggleIndicator={handleToggleIndicator}
-        onAddCustomIndicator={handleAddCustomIndicator}
-        theme={theme}
-      />
-
-      <ChartSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        theme={theme}
-      />
-
       <CreateAlertModal
         isOpen={isAlertOpen}
         onClose={() => setIsAlertOpen(false)}
@@ -1044,13 +862,6 @@ export default function App() {
         symbol={activeSymbol}
         initialSide={orderModal.side}
         onSubmitOrder={handlePlaceOrder}
-        theme={theme}
-      />
-
-      <SnapshotModal
-        isOpen={isSnapshotOpen}
-        onClose={() => setIsSnapshotOpen(false)}
-        symbol={activeSymbol}
         theme={theme}
       />
     </div>

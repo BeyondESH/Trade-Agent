@@ -33,6 +33,7 @@ import {
   Briefcase,
   Share2,
 } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   tabs: DesktopTab[];
@@ -116,7 +117,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
             <div className="w-4 h-4 bg-[#2962ff] text-white rounded flex items-center justify-center font-black text-[10px]">
               TV
             </div>
-            <span className="font-semibold text-xs tracking-tight">TradingView</span>
+            <span className="font-semibold text-xs tracking-tight">{t('TradingView')}</span>
             <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
 
@@ -139,7 +140,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
                 }`}
               >
-                <span>New Chart Tab</span>
+                <span>{t('New Chart Tab')}</span>
                 <span className="text-[10px] text-gray-400 font-mono">⌘T</span>
               </button>
 
@@ -152,7 +153,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
                 }`}
               >
-                <span>Command Palette</span>
+                <span>{t('Command Palette')}</span>
                 <span className="text-[10px] text-gray-400 font-mono">⌘K</span>
               </button>
 
@@ -167,8 +168,8 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
                 }`}
               >
-                <span>Color Theme: {theme === 'dark' ? 'Dark' : 'Light'}</span>
-                <span className="text-[10px] text-[#2962ff] font-semibold">Toggle</span>
+                <span>{t(theme === 'dark' ? 'Color Theme: Dark' : 'Color Theme: Light')}</span>
+                <span className="text-[10px] text-[#2962ff] font-semibold">{t('Toggle')}</span>
               </button>
 
               <button
@@ -181,7 +182,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                 }`}
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>Desktop App Settings</span>
+                <span>{t('Desktop App Settings')}</span>
               </button>
 
               <button
@@ -194,13 +195,13 @@ export const DesktopTitleBar: React.FC<Props> = ({
                 }`}
               >
                 <Keyboard className="w-3.5 h-3.5" />
-                <span>Keyboard Shortcuts</span>
+                <span>{t('Keyboard Shortcuts')}</span>
               </button>
 
               <div className="my-1 border-t border-gray-500/20" />
 
               <div className="px-3 py-1 text-[10px] text-gray-400 flex items-center justify-between">
-                <span>Cloud Sync: Active</span>
+                <span>{t('Cloud Sync: Active')}</span>
                 <span className="w-2 h-2 rounded-full bg-[#089981]"></span>
               </div>
             </div>
@@ -252,7 +253,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
               className={`p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors ${
                 isNewTabMenuOpen ? 'bg-gray-500/30 text-white' : ''
               }`}
-              title="Add New Workspace Tab"
+              title={t('Add New Workspace Tab')}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -277,7 +278,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   }`}
                 >
                   <TrendingUp className="w-3.5 h-3.5 text-[#2962ff]" />
-                  <span>SuperCharts</span>
+                  <span>{t('SuperCharts')}</span>
                 </button>
 
                 <button
@@ -290,7 +291,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   }`}
                 >
                   <Monitor className="w-3.5 h-3.5 text-[#00bcd4]" />
-                  <span>Markets Overview</span>
+                  <span>{t('Markets Overview')}</span>
                 </button>
 
                 <button
@@ -303,7 +304,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   }`}
                 >
                   <Filter className="w-3.5 h-3.5 text-[#ff9800]" />
-                  <span>Screener 2.0</span>
+                  <span>{t('Screener 2.0')}</span>
                 </button>
 
                 <button
@@ -316,7 +317,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   }`}
                 >
                   <Flame className="w-3.5 h-3.5 text-[#f23645]" />
-                  <span>Market Heatmaps</span>
+                  <span>{t('Market Heatmaps')}</span>
                 </button>
 
                 <button
@@ -329,7 +330,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   }`}
                 >
                   <Users className="w-3.5 h-3.5 text-[#9c27b0]" />
-                  <span>Community Ideas</span>
+                  <span>{t('Community Ideas')}</span>
                 </button>
 
                 <button
@@ -342,7 +343,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   }`}
                 >
                   <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />
-                  <span>News & Calendar</span>
+                  <span>{t('News & Calendar')}</span>
                 </button>
 
                 <button
@@ -355,7 +356,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   }`}
                 >
                   <Code className="w-3.5 h-3.5 text-[#e91e63]" />
-                  <span>Pine Script Studio</span>
+                  <span>{t('Pine Studio')}</span>
                 </button>
 
                 <button
@@ -368,7 +369,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   }`}
                 >
                   <Briefcase className="w-3.5 h-3.5 text-[#089981]" />
-                  <span>Brokers & Trading</span>
+                  <span>{t('Brokers')}</span>
                 </button>
               </div>
             )}
@@ -388,7 +389,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
           }`}
         >
           <Search className="w-3.5 h-3.5" />
-          <span>Quick search...</span>
+          <span>快速搜索...</span>
           <kbd className="px-1.5 py-0.5 rounded bg-gray-500/20 text-[10px] font-mono">⌘K</kbd>
         </button>
 
@@ -398,7 +399,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
           title="All changes autosaved to TradingView Cloud"
         >
           <Cloud className="w-3.5 h-3.5 text-[#089981]" />
-          <span className="hidden md:inline">Saved</span>
+          <span className="hidden md:inline">{t('Autosaved')}</span>
         </div>
 
         {/* Notification Bell */}
@@ -424,14 +425,14 @@ export const DesktopTitleBar: React.FC<Props> = ({
               </div>
               <div className="flex flex-col gap-2">
                 <div className="p-2 rounded bg-[#2962ff]/10 border border-[#2962ff]/30 text-[11px]">
-                  <div className="font-bold text-[#2962ff]">Price Alert Triggered</div>
-                  <div className="text-gray-300">BTCUSDT crossed above $96,000</div>
-                  <div className="text-[9px] text-gray-500 mt-1">4 minutes ago</div>
+                  <div className="font-bold text-[#2962ff]">{t('Price Alert Triggered')}</div>
+                  <div className="text-gray-300">BTCUSDT 上穿 $96,000</div>
+                  <div className="text-[9px] text-gray-500 mt-1">4 分钟前</div>
                 </div>
                 <div className="p-2 rounded bg-gray-500/10 text-[11px]">
-                  <div className="font-bold">New Pine Script Update</div>
-                  <div className="text-gray-400">SuperTrend Dynamic Breakout v4 updated</div>
-                  <div className="text-[9px] text-gray-500 mt-1">1 hour ago</div>
+                  <div className="font-bold">{t('New Pine Script Update')}</div>
+                  <div className="text-gray-400">SuperTrend Dynamic Breakout v4 已更新</div>
+                  <div className="text-[9px] text-gray-500 mt-1">1 小时前</div>
                 </div>
               </div>
             </div>
@@ -442,7 +443,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
         <button
           onClick={onOpenShortcutsModal}
           className="p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors"
-          title="Keyboard Shortcuts (?)"
+            title={t('Keyboard Shortcuts (?)')}
         >
           <Keyboard className="w-3.5 h-3.5" />
         </button>
@@ -451,7 +452,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
         <button
           onClick={onOpenDesktopSettings}
           className="p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors"
-          title="Desktop App Settings"
+          title={t('Desktop App Settings')}
         >
           <Settings className="w-3.5 h-3.5" />
         </button>

@@ -19,6 +19,18 @@ export interface KLineChartProHandle {
   getRoot(): HTMLElement | null;
 }
 
+/** Period list aligned with backend-supported granularities. */
+export const NATIVE_PERIODS: Period[] = [
+  { multiplier: 1, timespan: "minute", text: "1m" },
+  { multiplier: 5, timespan: "minute", text: "5m" },
+  { multiplier: 15, timespan: "minute", text: "15m" },
+  { multiplier: 30, timespan: "minute", text: "30m" },
+  { multiplier: 1, timespan: "hour", text: "1h" },
+  { multiplier: 4, timespan: "hour", text: "4h" },
+  { multiplier: 12, timespan: "hour", text: "12h" },
+  { multiplier: 1, timespan: "day", text: "1d" },
+];
+
 interface Props {
   symbol: SymbolInfo;
   period: Period;
@@ -26,9 +38,6 @@ interface Props {
   datafeed: Datafeed;
   theme?: string;
   locale?: string;
-  drawingBarVisible?: boolean;
-  mainIndicators?: string[];
-  subIndicators?: string[];
   watermarkText?: string;
   onSymbolChange?: (symbol: SymbolInfo) => void;
   onPeriodChange?: (period: Period) => void;
@@ -47,15 +56,17 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         container: containerRef.current as HTMLElement,
         symbol: props.symbol,
         period: props.period,
-        periods: props.periods,
+        periods: props.periods ?? NATIVE_PERIODS,
         datafeed: props.datafeed,
         theme: props.theme ?? "dark",
+        locale: props.locale ?? "zh-CN",
+        timezone: "Asia/Shanghai",
         watermark: props.watermarkText ?? "",
-        drawingBarVisible: props.drawingBarVisible ?? true,
-        mainIndicators: props.mainIndicators ?? ["MA"],
-        subIndicators: props.subIndicators ?? ["VOL"],
-        onSymbolChange: props.onSymbolChange,
-        onPeriodChange: props.onPeriodChange,
+        drawingBarVisible: true,
+        mainIndicators: ["MA"],
+        subIndicators: ["VOL"],
+        onSymbolChange: (s) => propsRef.current.onSymbolChange?.(s),
+        onPeriodChange: (p) => propsRef.current.onPeriodChange?.(p),
         styles: {
           grid: { horizontal: { color: "#2a2e39" }, vertical: { color: "#2a2e39" } },
           candle: {
@@ -107,38 +118,46 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
       proRef.current = pro;
       props.onReady?.((pro.getChart() ?? null) as Chart | null);
       return () => {
-        // Pro class does not expose a dispose(); clear the mounted tree.
+        // Pro has no dispose(); clear the mounted tree and release the
+        // datafeed subscription so listeners don't leak.
+        props.datafeed.unsubscribe(props.symbol, props.period);
         if (containerRef.current) containerRef.current.innerHTML = "";
         proRef.current = null;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-  useImperativeHandle(ref, () => ({
-    setSymbol: (symbol) => proRef.current?.setSymbol(symbol),
-    setPeriod: (period) => proRef.current?.setPeriod(period),
-    setTheme: (theme) => proRef.current?.setTheme(theme),
-    setLocale: (locale) => proRef.current?.setLocale(locale),
-    getChart: () => (proRef.current?.getChart() ?? null) as Chart | null,
-    getRoot: () => containerRef.current,
-  }));
+    useImperativeHandle(ref, () => ({
+      setSymbol: (symbol) => proRef.current?.setSymbol(symbol),
+      setPeriod: (period) => proRef.current?.setPeriod(period),
+      setTheme: (theme) => proRef.current?.setTheme(theme),
+      setLocale: (locale) => proRef.current?.setLocale(locale),
+      getChart: () => (proRef.current?.getChart() ?? null) as Chart | null,
+      getRoot: () => containerRef.current,
+    }));
 
-  // Every cell follows global theme/locale changes (multi-layout parity).
-  useEffect(() => {
-    proRef.current?.setTheme(props.theme ?? "dark");
-  }, [props.theme]);
-  useEffect(() => {
-    if (props.locale) proRef.current?.setLocale(props.locale);
-  }, [props.locale]);
+    // Follow global theme/locale changes without remounting.
+    useEffect(() => {
+      proRef.current?.setTheme(props.theme ?? "dark");
+    }, [props.theme]);
+    useEffect(() => {
+      if (props.locale) proRef.current?.setLocale(props.locale);
+    }, [props.locale]);
 
-  // Symbol / period are driven reactively by the template toolbar state:
-  // the pro instance only (re)loads data when these change.
-  useEffect(() => {
-    proRef.current?.setSymbol(props.symbol);
-  }, [props.symbol]);
-  useEffect(() => {
-    proRef.current?.setPeriod(props.period);
-  }, [props.period]);
+    // Symbol / period are driven imperatively by the shell (watchlist,
+    // command palette) — the pro instance reloads data via the datafeed.
+    // Guard against re-applying a value the pro already holds (native search
+    // and the period bar switch themselves before onSymbolChange fires).
+    useEffect(() => {
+      const cur = proRef.current?.getSymbol();
+      if (cur && cur.ticker === props.symbol.ticker && (cur.market ?? null) === (props.symbol.market ?? null)) return;
+      proRef.current?.setSymbol(props.symbol);
+    }, [props.symbol]);
+    useEffect(() => {
+      const cur = proRef.current?.getPeriod();
+      if (cur && cur.text === props.period.text && cur.multiplier === props.period.multiplier) return;
+      proRef.current?.setPeriod(props.period);
+    }, [props.period]);
 
     return <div ref={containerRef} className="w-full h-full min-h-0" />;
   },

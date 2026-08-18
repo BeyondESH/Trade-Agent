@@ -24,3 +24,27 @@
   --tv-up: #089981;
   --tv-down: #f23645;
 }
+
+/* Unified global font stack: Chinese-first with Western fallback and
+   tabular numerals for aligned numeric columns. */
+:root {
+  --font-cn: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    "Source Han Sans SC", "Helvetica Neue", "Segoe UI", "Inter", "Arial",
+    sans-serif;
+}
+
+html,
+body,
+#tradingview-desktop-root {
+  font-family: var(--font-cn);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numeric/mono columns keep tabular alignment without breaking CJK body text. */
+.font-mono,
+.tnum,
+[data-theme] .font-mono {
+  font-family: var(--font-cn);
+  font-variant-numeric: tabular-nums;
+}

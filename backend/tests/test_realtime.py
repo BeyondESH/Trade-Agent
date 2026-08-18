@@ -224,6 +224,41 @@ def test_reconnect_resubscribes_and_resumes() -> None:
     asyncio.run(scenario())
 
 
+def test_dynamic_subscribe_adds_extra_channel() -> None:
+    s = _stream(symbols=[SYM], timeframes=["5m"])
+    assert len(s._channels()) == 1
+    s.subscribe(CAT, "XRPUSDT", "1h")
+    channels = s._channels()
+    assert len(channels) == 2
+    assert {"instType": CAT, "channel": "candle1H", "instId": "XRPUSDT"} in channels
+    # refcounted: a second subscribe does not duplicate the channel
+    s.subscribe(CAT, "XRPUSDT", "1h")
+    assert len(s._channels()) == 2
+
+
+def test_dynamic_unsubscribe_removes_channel_and_buffer() -> None:
+    s = _stream(symbols=[SYM], timeframes=["5m"])
+    s.subscribe(CAT, "XRPUSDT", "1h")
+    bar = {"open_time": 1700000000000, "open": 1.0, "high": 2.0,
+           "low": 0.0, "close": 1.5, "volume": 1.0}
+    with s._lock:
+        s._buffer[s._series_key(CAT, "XRPUSDT", "1h")] = [dict(bar)]
+    s.unsubscribe(CAT, "XRPUSDT", "1h")
+    assert len(s._channels()) == 1
+    assert s.latest(CAT, "XRPUSDT", "1h") is None
+
+
+def test_dynamic_unsubscribe_refcount_keeps_channel() -> None:
+    s = _stream(symbols=[SYM], timeframes=["5m"])
+    s.subscribe(CAT, "XRPUSDT", "1h")
+    s.subscribe(CAT, "XRPUSDT", "1h")
+    s.unsubscribe(CAT, "XRPUSDT", "1h")
+    # still one ref left -> channel survives
+    assert len(s._channels()) == 2
+    s.unsubscribe(CAT, "XRPUSDT", "1h")
+    assert len(s._channels()) == 1
+
+
 def _run_all() -> None:
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

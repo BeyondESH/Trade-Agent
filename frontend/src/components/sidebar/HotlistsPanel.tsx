@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SymbolInfo } from '../../types/trading';
 import { Flame, TrendingUp, TrendingDown, Zap } from 'lucide-react';
+import { t } from '../../lib/i18n';
 
 interface Props {
   symbols: SymbolInfo[];
@@ -23,7 +24,7 @@ export const HotlistsPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
       <div className={`p-2.5 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
         <div className="flex items-center gap-1.5 font-bold text-sm">
           <Flame className="w-4 h-4 text-[#ff9800]" />
-          <span>Market Hotlists</span>
+          <span>{t('Market Hotlists')}</span>
         </div>
       </div>
 
