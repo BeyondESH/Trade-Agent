@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import type { SymbolType, Ticker, TickerSortKey } from "../api/types";
 import { useExchangeSocket } from "./useExchangeSocket";
 
-export type CategoryTab = "all" | "SPOT" | "MARGIN" | "USDT-FUTURES" | "USDC-FUTURES" | "COIN-FUTURES";
+export type CategoryTab = "all" | "SPOT" | "USDT-FUTURES";
 
 /** Composite unique key for a symbol: `category:instId` (same instId may exist in several categories). */
 export function symbolKey(instId: string, category?: string | null): string {

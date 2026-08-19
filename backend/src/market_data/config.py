@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     )
     # Market categories served by the exchange hub (Bitget product lines).
     categories: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: ["SPOT", "MARGIN", "USDT-FUTURES", "USDC-FUTURES", "COIN-FUTURES"]
+        default_factory=lambda: ["SPOT", "USDT-FUTURES"]
     )
 
     # Storage / export root.

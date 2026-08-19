@@ -98,17 +98,29 @@ export interface Snapshot {
   error?: string;
 }
 
-export type MarketCategory = "SPOT" | "MARGIN" | "USDT-FUTURES" | "USDC-FUTURES" | "COIN-FUTURES";
+export type MarketCategory = "SPOT" | "USDT-FUTURES";
 
 export type SymbolType = "crypto" | "metal" | "stock" | "commodity";
 
-export const MARKET_CATEGORIES: MarketCategory[] = [
-  "SPOT",
-  "MARGIN",
-  "USDT-FUTURES",
-  "USDC-FUTURES",
-  "COIN-FUTURES",
-];
+export const MARKET_CATEGORIES: MarketCategory[] = ["SPOT", "USDT-FUTURES"];
+
+/** Bitget instType/品类术语 -> 中文展示标签。未知品类由 categoryLabel 兜底返回原值。 */
+export const CATEGORY_LABELS: Record<string, string> = {
+  SPOT: "现货",
+  MARGIN: "现货杠杆",
+  "USDT-FUTURES": "U本位合约",
+  "USDC-FUTURES": "USDC本位合约",
+  "COIN-FUTURES": "币本位合约",
+  "SUSDT-FUTURES": "U本位模拟合约",
+  "SUSDC-FUTURES": "USDC本位模拟合约",
+  "SCOIN-FUTURES": "币本位模拟合约",
+};
+
+/** 品类 -> 中文展示标签（未知值原样返回）。仅用于展示，不得用于路由/键。 */
+export function categoryLabel(category?: string): string {
+  if (!category) return "";
+  return CATEGORY_LABELS[category] ?? category;
+}
 
 export interface SeriesRef {
   category: string;

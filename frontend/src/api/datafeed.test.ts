@@ -80,11 +80,29 @@ describe("BitgetDatafeed.searchSymbols", () => {
     expect(btc.volumePrecision).toBe(4);
   });
 
-  it("exposes name and exchange for the native search list", async () => {
+  it("exposes name and Chinese category label for the native search list", async () => {
     const d = new BitgetDatafeed();
     const btc = (await d.searchSymbols("BTCUSDT"))[0];
     expect(btc.name).toBe("BTCUSDT");
-    expect(btc.exchange).toBe("Bitget");
+    expect(btc.exchange).toBe("U本位合约");
+  });
+
+  it("keeps cross-category symbols distinct with Chinese labels and raw market keys", async () => {
+    m.instruments.mockResolvedValueOnce({
+      instruments: [
+        { symbol: "BTCUSDT", category: "SPOT", pricePrecision: "2", quantityPrecision: "5", symbolType: "crypto", symbolStatus: "online" },
+        { symbol: "BTCUSDT", category: "USDT-FUTURES", pricePrecision: "1", quantityPrecision: "4", symbolType: "crypto", symbolStatus: "online" },
+      ],
+    });
+    // Bypass the 60s instrument cache so the once-mock above is actually used.
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.now() + 61_000);
+    const d = new BitgetDatafeed();
+    const hits = await d.searchSymbols("BTCUSDT");
+    vi.useRealTimers();
+    expect(hits).toHaveLength(2);
+    expect(hits.map((s) => s.market).sort()).toEqual(["SPOT", "USDT-FUTURES"]);
+    expect(hits.map((s) => s.exchange).sort()).toEqual(["U本位合约", "现货"]);
   });
 });
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SymbolInfo } from "../types/trading";
 import { api } from "../api/client";
 import type { Ticker } from "../api/types";
+import { categoryLabel } from "../api/types";
 import { useExchangeSocket } from "./useExchangeSocket";
 
 /** Map a backend ticker row to the template SymbolInfo shape. */
@@ -16,7 +17,7 @@ export function tickerToSymbolInfo(t: Ticker): SymbolInfo {
     id: t.instId ?? t.symbol,
     ticker: t.instId ?? t.symbol,
     name: `${t.symbol} Perpetual`,
-    exchange: (t.category ?? "USDT-FUTURES").replace("-FUTURES", ""),
+    exchange: categoryLabel(t.category),
     category: "crypto",
     price: num(t.lastPr),
     change24h: num(t.change24h),

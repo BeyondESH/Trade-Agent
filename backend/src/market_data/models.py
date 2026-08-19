@@ -13,10 +13,7 @@ OHLCV_COLUMNS: list[str] = ["open_time", "open", "high", "low", "close", "volume
 # Bitget market categories (product lines) supported by the hub.
 MARKET_CATEGORIES: list[str] = [
     "SPOT",
-    "MARGIN",
     "USDT-FUTURES",
-    "USDC-FUTURES",
-    "COIN-FUTURES",
 ]
 
 # Bitget instrument symbol types.
@@ -25,10 +22,7 @@ SYMBOL_TYPES: list[str] = ["crypto", "metal", "stock", "commodity"]
 # Category -> Bitget v2 ticker endpoint base (v3 instruments covers all).
 _CATEGORY_TICKER_API: dict[str, str] = {
     "SPOT": "https://api.bitget.com/api/v2/spot/market/tickers",
-    "MARGIN": "https://api.bitget.com/api/v2/spot/market/tickers",
     "USDT-FUTURES": "https://api.bitget.com/api/v2/mix/market/tickers",
-    "USDC-FUTURES": "https://api.bitget.com/api/v2/mix/market/tickers",
-    "COIN-FUTURES": "https://api.bitget.com/api/v2/mix/market/tickers",
 }
 
 

@@ -2,6 +2,7 @@ import type { Datafeed, DatafeedSubscribeCallback, Period, SymbolInfo } from "@k
 import type { KLineData } from "klinecharts";
 import { api } from "./client";
 import type { BackfillResponse, Instrument, SeriesRef } from "./types";
+import { categoryLabel } from "./types";
 import { bitgetWs, type BitgetWsStatus, type CandleSubHandle } from "./bitgetWs";
 import type { ConnStatus } from "./ws";
 import { candleToKLine } from "../lib/transform";
@@ -33,7 +34,7 @@ function instrumentToSymbolInfo(inst: Instrument): SymbolInfo {
     ticker: inst.symbol,
     shortName: inst.symbol,
     name: inst.symbol,
-    exchange: "Bitget",
+    exchange: categoryLabel(inst.category),
     market: inst.category ?? DEFAULT_CATEGORY,
     pricePrecision: Number(inst.pricePrecision ?? inst.pricePlace ?? 2),
     volumePrecision: Number(inst.quantityPrecision ?? inst.volumePlace ?? 4),

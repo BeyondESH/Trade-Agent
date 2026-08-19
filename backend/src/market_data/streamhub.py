@@ -9,8 +9,7 @@ by an exchange-style terminal across all Bitget product categories:
 - ``mark-price``  mark price mirror
 - ``funding-time`` funding rate mirror
 
-Each channel keeps an in-memory mirror per category (SPOT / MARGIN /
-USDT-FUTURES / USDC-FUTURES / COIN-FUTURES) that the REST snapshot endpoints
+Each channel keeps an in-memory mirror per category (SPOT / USDT-FUTURES) that the REST snapshot endpoints
 read from, and emits incremental events to WebSocket subscribers. Subscriptions
 are refcounted: the first external subscriber triggers a Bitget subscribe, the
 last unsubscribe releases the channel.
