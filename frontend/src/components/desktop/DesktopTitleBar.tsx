@@ -93,13 +93,6 @@ export const DesktopTitleBar: React.FC<Props> = ({
     >
       {/* Left: Window Controls + BeyondEther Main Menu */}
       <div className="flex items-center gap-2 h-full">
-        {/* macOS Style Window Traffic Lights */}
-        <div className="flex items-center gap-1.5 px-1.5 py-1">
-          <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] cursor-pointer hover:opacity-80 shadow-xs" title="Close Window" />
-          <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] cursor-pointer hover:opacity-80 shadow-xs" title="Minimize Window" />
-          <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] cursor-pointer hover:opacity-80 shadow-xs" title="Zoom / Maximize" />
-        </div>
-
         {/* BE Hamburger App Menu */}
         <div className="relative">
           <button
