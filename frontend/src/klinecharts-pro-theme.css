@@ -1,4 +1,4 @@
-/* TradingView theme override for the klinecharts-pro chrome.
+/* BeyondEther theme override for the klinecharts-pro chrome.
    Must be imported AFTER the vendor `klinecharts-pro.css`. */
 .klinecharts-pro,
 .klinecharts-pro[data-theme="dark"] {
@@ -44,7 +44,7 @@
   border-radius: 8px;
 }
 
-/* left drawing bar: TV density (28x28 icons in 34px slots, 52px rail) */
+/* left drawing bar: BE density (28x28 icons in 34px slots, 52px rail) */
 .klinecharts-pro-drawing-bar {
   width: 52px;
 }

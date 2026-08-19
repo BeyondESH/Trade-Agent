@@ -86,12 +86,12 @@ export const DesktopTitleBar: React.FC<Props> = ({
 
   return (
     <div
-      id="tradingview-desktop-titlebar"
+      id="beyondether-desktop-titlebar"
       className={`h-9 w-full flex items-center justify-between border-b px-2 select-none z-50 text-xs font-sans ${
         isDark ? 'bg-[#0f1118] border-[#2a2e39] text-[#d1d4dc]' : 'bg-[#e0e3eb] border-[#cbcfd9] text-[#131722]'
       }`}
     >
-      {/* Left: Window Controls + TradingView Main Menu */}
+      {/* Left: Window Controls + BeyondEther Main Menu */}
       <div className="flex items-center gap-2 h-full">
         {/* macOS Style Window Traffic Lights */}
         <div className="flex items-center gap-1.5 px-1.5 py-1">
@@ -100,7 +100,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
           <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] cursor-pointer hover:opacity-80 shadow-xs" title="Zoom / Maximize" />
         </div>
 
-        {/* TV Hamburger App Menu */}
+        {/* BE Hamburger App Menu */}
         <div className="relative">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -109,9 +109,9 @@ export const DesktopTitleBar: React.FC<Props> = ({
             }`}
           >
             <div className="w-4 h-4 bg-[#2962ff] text-white rounded flex items-center justify-center font-black text-[10px]">
-              TV
+              BE
             </div>
-            <span className="font-semibold text-xs tracking-tight">{t('TradingView')}</span>
+            <span className="font-semibold text-xs tracking-tight">{t('BeyondEther')}</span>
             <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
 
@@ -122,7 +122,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
               }`}
             >
               <div className="px-3 py-1.5 border-b border-gray-500/20 text-[11px] font-semibold text-gray-400">
-                TradingView Desktop v2.8.4 Pro
+                BeyondEther Desktop Pro
               </div>
 
               <button
@@ -364,7 +364,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
         {/* Cloud Auto-Save Status */}
         <div
           className="flex items-center gap-1 text-[11px] text-gray-400 px-1 cursor-pointer"
-          title="All changes autosaved to TradingView Cloud"
+          title="All changes autosaved to BeyondEther Cloud"
         >
           <Cloud className="w-3.5 h-3.5 text-[#089981]" />
           <span className="hidden md:inline">{t('Autosaved')}</span>
@@ -431,7 +431,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
           title="Trader Profile (Pro Plan Active)"
         >
           <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#2962ff] to-[#00bcd4] flex items-center justify-center text-white font-bold text-[10px]">
-            TV
+            BE
           </div>
           <span className="font-semibold text-[11px] hidden sm:inline">Pro+</span>
         </div>

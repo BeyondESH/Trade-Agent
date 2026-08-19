@@ -1,6 +1,6 @@
 export const zh = {
   // Desktop title bar
-  "TradingView": "交易终端",
+  "BeyondEther": "BeyondEther",
   "New Chart Tab": "新建图表标签",
   "Command Palette": "命令面板",
   "Color Theme: Dark": "颜色主题:深色",
@@ -121,7 +121,7 @@ export const zh = {
   "Amount": "数量",
   "Filled": "已成交",
   "Broker": "券商",
-  "TradingView Simulated Paper Broker": "TradingView 模拟纸面券商",
+  "BeyondEther Simulated Paper Broker": "BeyondEther 模拟纸面券商",
   "Account Currency": "账户货币",
   "Max Leverage": "最大杠杆",
   "Execution Latency": "成交延迟",
@@ -198,7 +198,7 @@ export const zh = {
   "Cross Leverage 10x": "全仓杠杆 10x",
   "Free Margin": "可用保证金",
   "Available for Trading": "可用于交易",
-  "Verified TradingView Broker Integrations": "已验证的交易券商集成",
+  "Verified BeyondEther Broker Integrations": "已验证的交易券商集成",
 
   // Modals
   "Chart Snapshot & Export": "图表截图与导出",
@@ -227,7 +227,7 @@ export const zh = {
   "Sync cursor position across multi-chart grids": "在多图表网格间同步光标位置",
   "Cloud & Storage": "云端与存储",
   "Instant Cloud Sync": "即时云同步",
-  "Autosave drawing annotations and templates to TradingView account": "将绘图标注与模板自动保存到交易账户",
+  "Autosave drawing annotations and templates to BeyondEther account": "将绘图标注与模板自动保存到 BeyondEther 账户",
   "Audio Alerts & Execution Chimes": "声音提醒与成交提示音",
   "Play audio tones on order fills and price breaches": "订单成交与价格触及阈值时播放提示音",
   "Condition": "条件",
@@ -239,7 +239,7 @@ export const zh = {
   "Target Price ($)": "目标价 ($)",
   "Trigger Frequency": "触发频率",
   "Alert Message / Note": "提醒消息 / 备注",
-  "TradingView Desktop Keyboard Shortcuts": "交易终端键盘快捷键",
+  "BeyondEther Desktop Keyboard Shortcuts": "BeyondEther 键盘快捷键",
   "Candlestick Colors": "K线颜色",
   "Up Body (Bullish)": "阳线实体 (看涨)",
   "Down Body (Bearish)": "阴线实体 (看跌)",

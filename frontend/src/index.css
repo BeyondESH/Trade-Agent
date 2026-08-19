@@ -6,7 +6,7 @@
 @import "@fontsource-variable/google-sans-flex/wght.css";
 @import "@fontsource-variable/noto-sans-sc";
 
-/* TradingView palette CSS variables consumed by klinecharts-pro-theme.css and
+/* BeyondEther palette CSS variables consumed by klinecharts-pro-theme.css and
    other chart chrome overrides. */
 :root,
 [data-theme="dark"] {

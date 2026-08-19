@@ -233,12 +233,12 @@ export const COMMUNITY_IDEAS_DATA: CommunityIdea[] = [
 // Retained (unused) for a future broker/paper-trading account UI (do not delete).
 export const BROKERS_CATALOG: BrokerAccount[] = [
   {
-    id: 'paper-tv',
-    name: 'TradingView Paper Trading',
-    logo: 'TV',
+    id: 'paper-be',
+    name: 'BeyondEther Paper Trading',
+    logo: 'BE',
     status: 'connected',
     type: 'Paper Simulated Execution',
-    description: 'Practice real-time trading with zero financial risk directly within TradingView charts.',
+    description: 'Practice real-time trading with zero financial risk directly within BeyondEther charts.',
     supportedAssets: ['Crypto', 'Stocks', 'Forex', 'Futures', 'Indices'],
     features: ['Instant 0ms Fill', 'Custom Balance Reset', 'Live Leveraged Margin', 'No Verification Needed'],
   },

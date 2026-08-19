@@ -213,7 +213,7 @@ export const TradingPanel: React.FC<Props> = ({
           <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 font-sans">
             <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
               <div className="text-gray-500 text-[10px]">{t('Broker')}</div>
-              <div className="font-bold text-sm text-[#2962ff]">{t('TradingView Simulated Paper Broker')}</div>
+              <div className="font-bold text-sm text-[#2962ff]">{t('BeyondEther Simulated Paper Broker')}</div>
             </div>
             <div className={`p-3 rounded-lg border ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
               <div className="text-gray-500 text-[10px]">{t('Account Currency')}</div>

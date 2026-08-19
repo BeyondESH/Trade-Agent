@@ -700,7 +700,7 @@ export default function App() {
         theme === 'dark' ? 'bg-[#131722] text-[#d1d4dc]' : 'bg-[#f0f3fa] text-[#131722]'
       }`}
     >
-      {/* 1. TradingView Desktop Top TitleBar & Multi-Tab Manager */}
+      {/* 1. BeyondEther Desktop Top TitleBar & Multi-Tab Manager */}
       <DesktopTitleBar
         tabs={tabs}
         activeTabId={activeTabId}

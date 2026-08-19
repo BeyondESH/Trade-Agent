@@ -105,7 +105,7 @@ export const DesktopSettingsModal: React.FC<Props> = ({ isOpen, onClose, theme, 
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-semibold text-white">Instant Cloud Sync</div>
-                <div className="text-gray-400 text-[11px]">{t('Autosave drawing annotations and templates to TradingView account')}</div>
+                <div className="text-gray-400 text-[11px]">{t('Autosave drawing annotations and templates to BeyondEther account')}</div>
               </div>
               <input
                 type="checkbox"
