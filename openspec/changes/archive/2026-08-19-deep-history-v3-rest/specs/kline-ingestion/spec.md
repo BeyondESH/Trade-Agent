@@ -1,8 +1,5 @@
-# kline-ingestion Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change market-data-foundation. Update Purpose after archive.
-## Requirements
 ### Requirement: 按参数拉取 K 线
 
 系统 SHALL 支持按「品类 + 币种 + 时间级别 + 时间段(起止)」通过 MCP 拉取 K 线,并支持所有 MCP 支持的品类/币种。返回数据 MUST 归一为统一 OHLCV 模型,时间戳以 UTC 存储。系统 SHALL 支持面向图表的按需深度回灌：对全部受支持**且提供历史查询**的时间级别，能从已存最早 bar 继续向更早方向分页回溯拉取，并落库供 `/candles` 连续返回，直至交易所无更早历史。深度回灌的 REST 通道 MUST 使用 v3 history-candles 端点（可回溯至交易所真实最早历史）；仅当 v3 不可用时回退到受近端窗口深度限制的通道，且该通道返回的空页 MUST NOT 被判定为已到交易所最早历史。仅实时级别(交易所不提供历史查询的级别)MUST NOT 参与历史拉取、落库与深度回灌。
@@ -35,25 +32,3 @@ TBD - created by archiving change market-data-foundation. Update Purpose after a
 - **WHEN** 请求的级别为仅实时级别
 - **THEN** 系统 MUST NOT 发起历史拉取或深度回灌
 - **AND** MUST NOT 将该级别数据落库
-
-### Requirement: 增量拉取与缺口校验
-
-系统 SHALL 支持增量拉取:拉取前查询已存最新时间,仅补缺口。系统 MUST 按时间级别步长检测缺失 bar。步长 SHALL 对时间级别原生全集中所有提供历史查询的级别均可解析。仅实时级别不参与增量拉取与缺口校验。
-
-#### Scenario: 增量补齐
-
-- **WHEN** 本地已存部分历史,再次触发拉取
-- **THEN** 系统 SHALL 只拉取缺失区间
-- **AND** 不重复拉取已存数据
-
-#### Scenario: 检测缺口
-
-- **WHEN** 已存数据中存在按步长应有却缺失的 bar
-- **THEN** 系统 SHALL 标记该缺口并可触发补拉
-
-#### Scenario: 新增级别步长可解析
-
-- **WHEN** 对周级、月级或新增的小时/天级级别执行缺口校验
-- **THEN** 系统 SHALL 成功解析其步长
-- **AND** MUST NOT 因级别未登记而抛出未支持异常
-

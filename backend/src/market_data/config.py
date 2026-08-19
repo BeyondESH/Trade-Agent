@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # Scheduler.
     schedule_interval_seconds: int = 300
 
+    # BlockBeats data cache: daily snapshots are fetched once per day and
+    # served from local disk. `blockbeats_refresh_hour/minute` set the cron
+    # time (default 12:00) for the daily refresh job.
+    blockbeats_refresh_hour: int = 12
+    blockbeats_refresh_minute: int = 0
+
     # Bitget public WebSocket (real-time klines, no auth required).
     ws_public_url: str = "wss://ws.bitget.com/v2/ws/public"
     ws_heartbeat_seconds: int = 30
@@ -66,6 +72,18 @@ class Settings(BaseSettings):
     # Per-request candle page size. Bitget history-candles caps this at 100.
     candle_page_limit: int = 100
 
+    # Page size for the v2 REST deep-backfill path. Larger pages cover more
+    # candles per request for low timeframes (the v2 endpoint caps at 1000).
+    rest_candle_page_limit: int = 500
+
+    # Page size for the v3 history-candles deep-backfill path. The v3 endpoint
+    # caps each request at 100 rows and spans at most 90 calendar days.
+    v3_candle_page_limit: int = 100
+
+    # Pause between v2 REST backfill pages (seconds) to respect exchange rate
+    # limits. Set to 0 to disable.
+    backfill_page_delay: float = 0.05
+
     log_level: str = "INFO"
 
     @field_validator("symbols", "timeframes", "mcp_args", "categories", mode="before")
@@ -79,6 +97,10 @@ class Settings(BaseSettings):
     @property
     def parquet_dir(self) -> Path:
         return self.data_dir / "parquet"
+
+    @property
+    def blockbeats_cache_dir(self) -> Path:
+        return self.data_dir / "blockbeats_cache"
 
     @property
     def excel_dir(self) -> Path:

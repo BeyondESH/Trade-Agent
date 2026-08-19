@@ -14,6 +14,7 @@ import threading
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import asdict
+from datetime import datetime, timezone
 from typing import Any, Callable
 
 import httpx
@@ -21,7 +22,7 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocke
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from market_data import blockbeats, dlquant, indicators, levels
+from market_data import blockbeats, blockbeats_cache, dlquant, indicators, levels
 from market_data.agent import build_agent_context
 from market_data.alertstore import AlertStore
 from market_data.appconfig import ConfigStore
@@ -84,7 +85,9 @@ class BackfillBody(BaseModel):
     symbol: str
     timeframe: str
     before: int
-    max_pages: int = 3
+    # 10 pages × ~90 days/page ≈ 900 days (1d) or ~1000 bars per call, enough
+    # to cover the frontend's 500-bar backward request window in one round trip.
+    max_pages: int = 10
 
 
 class ChartConfigBody(BaseModel):
@@ -129,6 +132,7 @@ def create_app(
     stream: BitgetWsStream | None = None,
     market: MarketStream | None = None,
     backfill_client_factory: Callable[[], Any] | None = None,
+    backfill_rest_fetcher: Callable[[str, str, str, int, int], list] | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     stream = stream or BitgetWsStream(
@@ -148,6 +152,31 @@ def create_app(
 
     @asynccontextmanager
     async def _lifespan(_app: FastAPI):
+        # BlockBeats daily data cache: warm it up on startup (best-effort) so
+        # the first frontend requests don't hit the upstream, then schedule a
+        # daily refresh at 12:00 local time.
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+
+        cache_scheduler = BackgroundScheduler()
+        # Warm up only on a first ever run (empty cache). Restarts reuse the
+        # existing snapshots; the daily cron job handles refreshes at 12:00.
+        if not blockbeats_cache.has_cache():
+            try:
+                blockbeats_cache.refresh_all()
+            except Exception as exc:  # noqa: BLE001 - warm-up is best-effort
+                logger.warning("BlockBeats cache warm-up failed: %s", exc)
+        cache_scheduler.add_job(
+            blockbeats_cache.refresh_all,
+            CronTrigger(hour=settings.blockbeats_refresh_hour, minute=settings.blockbeats_refresh_minute),
+            id="blockbeats_cache_refresh",
+            max_instances=1,
+            coalesce=True,
+        )
+        try:
+            cache_scheduler.start()
+        except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
+            logger.warning("BlockBeats cache scheduler start failed: %s", exc)
         try:
             stream.start()
         except Exception as exc:  # noqa: BLE001 - stream is best-effort
@@ -161,6 +190,7 @@ def create_app(
         finally:
             await stream.stop()
             await market.stop()
+            cache_scheduler.shutdown(wait=False)
 
     app = FastAPI(title="AI Trading API", version="0.1.0", lifespan=_lifespan)
 
@@ -191,18 +221,33 @@ def create_app(
     def _series(category: str, symbol: str, timeframe: str) -> Series:
         return Series(category, symbol, timeframe)
 
-    def _read(category, symbol, timeframe, start=None, end=None):  # noqa: ANN001
-        return store.read(_series(category, symbol, timeframe), start, end)
+    def _read(category, symbol, timeframe, start=None, end=None, limit=None):  # noqa: ANN001
+        return store.read(_series(category, symbol, timeframe), start, end, limit)
 
     def _seed_candles_from_rest(category, symbol, timeframe, limit=200) -> list[dict]:  # noqa: ANN001
         """Fetch recent klines from the Bitget public REST API (no auth).
 
         Used when a series has no live-stream buffer yet (e.g. a freshly
         switched symbol/timeframe), so history is available immediately.
+        Realtime-only levels (e.g. `1s`) have no REST history and are skipped.
         """
-        from market_data.models import timeframe_to_granularity
+        from market_data.models import (
+            is_realtime_only_timeframe,
+            timeframe_to_granularity,
+            timeframe_to_spot_granularity,
+        )
 
-        granularity = timeframe_to_granularity(timeframe)
+        # Realtime-only levels (e.g. `1s`) have no REST history; never seed them.
+        if is_realtime_only_timeframe(timeframe):
+            return []
+        try:
+            if category == "SPOT":
+                granularity = timeframe_to_spot_granularity(timeframe)
+            else:
+                granularity = timeframe_to_granularity(timeframe)
+        except ValueError:
+            # Level has no granularity mapping -> nothing to seed.
+            return []
         product_type = category if "FUTURES" in category else None
         params: dict = {"symbol": symbol, "granularity": granularity, "limit": min(limit, 200)}
         if product_type:
@@ -236,8 +281,8 @@ def create_app(
     @app.get("/candles")
     def candles(symbol: str, timeframe: str, category: str = "USDT-FUTURES",
                 start: int | None = None, end: int | None = None, limit: int = 500) -> dict:
-        df = _read(category, symbol, timeframe, start, end)
-        rows = df.tail(limit).to_dict(orient="records")
+        df = _read(category, symbol, timeframe, start, end, limit)
+        rows = df.to_dict(orient="records")
         return {"series": f"{category}/{symbol}/{timeframe}", "count": len(rows), "candles": rows}
 
     @app.get("/candles/recent")
@@ -266,9 +311,29 @@ def create_app(
             with backfill_locks_guard:
                 series_lock = backfill_locks.setdefault(key, threading.Lock())
             with series_lock, backfill_sem:
-                with client_factory() as client:
-                    ingestor = KlineIngestor(client, store, page_limit=settings.candle_page_limit)
-                    return ingestor.backfill_before(series, body.before, max_pages=body.max_pages)
+                # Deep history via the public v3 REST history-candles endpoint
+                # (full history, no near-window depth cap); fall back to the
+                # MCP bridge on persistent failures so existing capability
+                # does not degrade.
+                rest_fetcher = backfill_rest_fetcher or KlineIngestor._fetch_v3_history_page
+                ingestor = KlineIngestor(None, store, page_limit=settings.v3_candle_page_limit)
+                try:
+                    return ingestor.backfill_before_rest(
+                        series,
+                        body.before,
+                        fetch_page=rest_fetcher,
+                        max_pages=body.max_pages,
+                        page_delay=settings.backfill_page_delay,
+                        parallel=True,
+                        page_limit=settings.v3_candle_page_limit,
+                    )
+                except Exception as exc:  # noqa: BLE001 - REST failure -> MCP fallback
+                    logger.warning(
+                        "REST backfill failed for %s, falling back to MCP: %s", key, exc
+                    )
+                    with client_factory() as client:
+                        ingestor = KlineIngestor(client, store, page_limit=settings.candle_page_limit)
+                        return ingestor.backfill_before(series, body.before, max_pages=body.max_pages)
 
         try:
             appended, earliest_reached = await asyncio.to_thread(_run)
@@ -366,13 +431,37 @@ def create_app(
             raise HTTPException(status_code=502, detail=f"blockbeats upstream error: {exc}") from exc
 
     @app.get("/blockbeats/data/{endpoint}")
-    def blockbeats_data(endpoint: str, network: str | None = None) -> dict:
+    def blockbeats_data(endpoint: str, network: str | None = None, type: str | None = None) -> dict:
+        # Cache key resolution: for type-bearing endpoints (us10y/dxy) the
+        # pre-cached granularity is 1M; top10_netflow is keyed by `network`.
+        # Unknown endpoints raise (400) below via fetch_data's whitelist.
+        cache_type = type or (blockbeats_cache.DEFAULT_TYPE if endpoint in blockbeats_cache.TYPE_END_POINTS else None)
         try:
-            return blockbeats.fetch_data(endpoint, network=network) if network else blockbeats.fetch_data(endpoint)
+            cached = blockbeats_cache.load_cache(endpoint, network=network, type=cache_type)
+            if cached is not None:
+                return {
+                    "status": 0,
+                    "data": cached.get("data"),
+                    "from_cache": True,
+                    "fetched_at": cached.get("fetched_at"),
+                }
+            # Cache miss -> live proxy. Forward ONLY the params the caller
+            # explicitly provided; the proxy fills no defaults (upstream has
+            # its own, e.g. type=1M).
+            params = {k: v for k, v in {"network": network, "type": type}.items() if v is not None}
+            body = blockbeats.fetch_data(endpoint, **params)
+            return {"status": 0, "data": body.get("data"), "from_cache": False}
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=502, detail=f"blockbeats upstream error: {exc}") from exc
+
+    @app.post("/blockbeats/data/refresh")
+    def blockbeats_data_refresh() -> dict:
+        try:
+            return {"refreshed_at": datetime.now(timezone.utc).isoformat(), "results": blockbeats_cache.refresh_all()}
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=f"blockbeats cache refresh failed: {exc}") from exc
 
     # -- background jobs (backtest / pull) --------------------------------
     def _run_backtest(job_id: str, category: str, symbol: str, timeframe: str) -> None:

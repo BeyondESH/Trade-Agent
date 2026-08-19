@@ -15,12 +15,18 @@ import pandas as pd
 from fastapi.testclient import TestClient
 
 from market_data.config import Settings
+from market_data.ingestion import V2RestError
 from market_data.models import Series
 from market_data.store import ParquetStore
 from market_data.webapi import create_app
 
 BASE = 1_700_000_000_000
 STEP = 300_000
+
+
+def _raise_rest(*_args, **_kwargs):  # noqa: ANN001, ANN002, ANN003
+    """Force the v2 REST backfill path to fail so tests exercise the MCP path."""
+    raise V2RestError("offline rest")
 
 
 def _seed(tmp) -> Settings:  # noqa: ANN001
@@ -787,6 +793,33 @@ def test_candles_recent_seeds_from_rest_when_stream_empty() -> None:
         assert r["candles"][-1]["open_time"] == 1700003600000
 
 
+def test_candles_recent_realtime_only_does_not_seed_history() -> None:
+    """For a realtime-only level (`1s`) an empty buffer returns an empty list
+    without seeding from REST, and still subscribes the live stream."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        app = create_app(settings, stream=_FakeStream(None))
+        c = TestClient(app)
+        import market_data.webapi as webapi
+
+        called = []
+
+        def fake_get(_url, params=None, timeout=None):  # noqa: ANN001, ARG001
+            called.append(params)
+            return {"code": "00000", "data": []}
+
+        orig_get = webapi.httpx.get
+        webapi.httpx.get = fake_get
+        try:
+            r = c.get("/candles/recent", params={"symbol": "BTCUSDT", "timeframe": "1s"}).json()
+        finally:
+            webapi.httpx.get = orig_get
+        assert r["count"] == 0
+        assert r["candles"] == []
+        # REST must never be poked for the realtime-only level.
+        assert called == []
+
+
 def test_journal_endpoint() -> None:
     from market_data.memory import TradeJournal, TradeRecord
 
@@ -835,7 +868,8 @@ def test_backfill_appends_older_history_and_candles_continue() -> None:
         settings.candle_page_limit = 3
         older = [[BASE - (i + 1) * STEP, 1.0, 2.0, 0.5, 1.5, 1.0] for i in range(5)]
         fake = _FakeMcpClient([older])
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake))
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
+                                  backfill_rest_fetcher=_raise_rest))
         r = c.post("/candles/backfill", json={
             "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
             "before": BASE, "max_pages": 3,
@@ -857,7 +891,8 @@ def test_backfill_terminates_when_exchange_has_nothing_older() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
         fake = _FakeMcpClient([])
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake))
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
+                                  backfill_rest_fetcher=_raise_rest))
         body = c.post("/candles/backfill", json={
             "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
             "before": BASE,
@@ -875,7 +910,8 @@ def test_backfill_rate_limit_retry_keeps_progress() -> None:
         page1 = [[BASE - 2 * STEP, 1, 2, 0, 1, 1], [BASE - 3 * STEP, 1, 2, 0, 1, 1]]
         page2 = [[BASE - 5 * STEP, 1, 2, 0, 1, 1]]
         fake = _FakeMcpClient([page1, page2], fail_rate_limits=1)
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake))
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
+                                  backfill_rest_fetcher=_raise_rest))
 
         original_sleep = ingestion_mod.time.sleep
         sleeps: list[float] = []
@@ -906,7 +942,8 @@ def test_backfill_rejects_invalid_max_pages() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
         fake = _FakeMcpClient([])
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake))
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
+                                  backfill_rest_fetcher=_raise_rest))
         for bad in (0, 21):
             r = c.post("/candles/backfill", json={
                 "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
@@ -914,6 +951,45 @@ def test_backfill_rejects_invalid_max_pages() -> None:
             })
             assert r.status_code == 422
         assert fake.calls == []  # never hit the upstream
+
+
+def test_backfill_rest_path_appends_when_rest_fetcher_succeeds() -> None:
+    """The /candles/backfill endpoint prefers the v2 REST fetcher."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        settings.candle_page_limit = 3
+
+        def rest_fetcher(category, symbol, granularity, end_ms, limit):  # noqa: ANN001, ARG001
+            return [[BASE - (i + 1) * STEP, 1.0, 2.0, 0.5, 1.5, 1.0] for i in range(5)]
+
+        c = TestClient(create_app(settings, backfill_rest_fetcher=rest_fetcher))
+        r = c.post("/candles/backfill", json={
+            "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
+            "before": BASE, "max_pages": 3,
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["appended"] == 5
+        assert body["earliest_reached"] is True  # page shorter than page limit
+
+
+def test_backfill_falls_back_to_mcp_when_rest_fails() -> None:
+    """Persistent v2 REST failure degrades to the MCP bridge, not an error."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        settings.candle_page_limit = 3
+        older = [[BASE - (i + 1) * STEP, 1.0, 2.0, 0.5, 1.5, 1.0] for i in range(5)]
+        fake = _FakeMcpClient([older])
+        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
+                                  backfill_rest_fetcher=_raise_rest))
+        r = c.post("/candles/backfill", json={
+            "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
+            "before": BASE, "max_pages": 3,
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["appended"] == 5
+        assert body["earliest_reached"] is True
 
 
 def test_alerts_crud_and_persistence() -> None:
