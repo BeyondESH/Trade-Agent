@@ -190,8 +190,8 @@ export const api = {
       }>;
     }>(`/blockbeats/newsflash/${encodeURIComponent(type)}${qs({ page, size, lang })}`),
 
-  blockbeatsData: (endpoint: string, network?: string) =>
+  blockbeatsData: (endpoint: string, opts?: { network?: string; type?: string }) =>
     request<{ status: number; data: unknown }>(
-      `/blockbeats/data/${encodeURIComponent(endpoint)}${qs({ network })}`,
+      `/blockbeats/data/${encodeURIComponent(endpoint)}${qs({ network: opts?.network, type: opts?.type })}`,
     ),
 };

@@ -32,17 +32,18 @@ NEWSFLASH_TYPES = (
     "stock",
 )
 
-# /v1/data/{endpoint} — the 11 data endpoints.
+# /v1/data/{endpoint} — the 11 data endpoints, named to match the upstream
+# API doc (`api-pro.theblockbeats.info/v1/data/*`).
 DATA_ENDPOINTS = (
     "btc_etf",
-    "daily_volume",
+    "daily_tx",
     "ibit_fbtc",
-    "stablecoin_mcap",
-    "exchange_assets",
-    "treasury_10y",
+    "stablecoin_marketcap",
+    "compliant_total",
+    "us10y",
     "dxy",
     "bitfinex_long",
-    "contract_platforms",
+    "contract",
     "bottom_top_indicator",
     "top10_netflow",
 )

@@ -89,7 +89,7 @@ describe("data fetching", () => {
       data: { solana: [{ symbol: "WIF", netflow: 1234 }] },
     });
     const rows = await fetchNetflow("solana");
-    expect(api.blockbeatsData).toHaveBeenCalledWith("top10_netflow", "solana");
+    expect(api.blockbeatsData).toHaveBeenCalledWith("top10_netflow", { network: "solana" });
     expect(rows).toEqual([{ symbol: "WIF", netflow: 1234 }]);
   });
 

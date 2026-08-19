@@ -1,8 +1,5 @@
-# blockbeats-data Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change frontend-tv-rebuild. Update Purpose after archive.
-## Requirements
 ### Requirement: BlockBeats 数据代理
 系统 SHALL 通过后端 `GET /api/blockbeats/data/{endpoint}` 代理 BlockBeats 数据类接口（共 11 个），端点标识 SHALL 与上游 API 文档保持一致：`btc_etf`（比特币现货 ETF 总流入）、`daily_tx`（每日交易量）、`ibit_fbtc`（iBit/fBTC 净流入）、`stablecoin_marketcap`（稳定币市值）、`compliant_total`（合规交易所总资产）、`us10y`（10 年期美债收益率）、`dxy`（DXY 美元指数）、`bitfinex_long`（Bitfinex 杠杆多头持仓）、`contract`（主流合约平台数据）、`bottom_top_indicator`（抄底逃顶指标）、`top10_netflow`（链上净流入前十币种）。key 同样取自 `backend/.env` 的 `BB_API_KEY`，仅后端持有。
 
@@ -42,32 +39,3 @@ TBD - created by archiving change frontend-tv-rebuild. Update Purpose after arch
 #### Scenario: 先前失效的端点恢复取数
 - **WHEN** Market Pulse 加载每日交易量、稳定币市值、合规交易所总资产、10 年期美债收益率、主流合约平台数据
 - **THEN** SHALL 使用 `daily_tx`、`stablecoin_marketcap`、`compliant_total`、`us10y`、`contract` 标识请求并展示真实数值
-
-### Requirement: Heatmap 接入 top10_netflow
-系统 SHALL 将 Heatmap 视图的加密区块改为真实数据:按 network 参数(如 solana/ethereum)请求 `/api/blockbeats/data/top10_netflow`,用净流入数值驱动方块大小与颜色,并提供 network 切换控件;其余区块(如股票)继续使用 mock。
-
-#### Scenario: 链上净流入热力图
-- **WHEN** 用户打开 Heatmap 并选择某 network
-- **THEN** SHALL 渲染该网络下净流入前十币种的方块,颜色/大小对应净流入正负与大小
-
-#### Scenario: Network 切换
-- **WHEN** 用户在 Heatmap 切换 network(solana → ethereum)
-- **THEN** SHALL 重新请求对应网络的 `top10_netflow` 并刷新方块
-
-### Requirement: 服务端数据缓存
-系统 SHALL 为 BlockBeats data 端点提供服务端缓存：后端 SHALL 定时从 BlockBeats data 端点抓取数据并持久化到本地缓存，前端请求 `GET /blockbeats/data/{endpoint}` 时 SHALL 优先返回本地缓存数据；仅当缓存未命中时才回退实时转发上游。该机制对前端透明，`/api/blockbeats/*` 消费方无需改动。
-
-#### Scenario: 缓存命中直接返回
-- **WHEN** `GET /blockbeats/data/btc_etf` 且本地存在对应缓存
-- **THEN** 后端 SHALL 直接返回缓存中的 `data`，不请求上游
-- **AND** 响应 SHALL 携带 `from_cache: true` 与 `fetched_at` 时间戳
-
-#### Scenario: 缓存未命中回退实时
-- **WHEN** `GET /blockbeats/data/{endpoint}` 且本地无对应缓存（如未预热的参数组合）
-- **THEN** 后端 SHALL 实时转发上游请求并返回数据
-- **AND** 响应 SHALL 携带 `from_cache: false`
-
-#### Scenario: 前端消费方不受影响
-- **WHEN** 前端通过 `/api/blockbeats/*` 请求数据（无论命中缓存与否）
-- **THEN** 响应的 `data` 结构与从前一致，前端无需解析新增字段
-

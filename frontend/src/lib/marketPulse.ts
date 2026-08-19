@@ -3,14 +3,14 @@ import { api } from "../api/client";
 /** The 11 BlockBeats data endpoints, labeled for the Data Window "Market Pulse". */
 export const MARKET_PULSE_ENDPOINTS = [
   { endpoint: "btc_etf", label: "BTC Spot ETF Net Flow" },
-  { endpoint: "daily_volume", label: "Daily Trading Volume" },
+  { endpoint: "daily_tx", label: "Daily Trading Volume" },
   { endpoint: "ibit_fbtc", label: "iBit / fBTC Net Flow" },
-  { endpoint: "stablecoin_mcap", label: "Stablecoin Market Cap" },
-  { endpoint: "exchange_assets", label: "CEX Total Assets" },
-  { endpoint: "treasury_10y", label: "US 10Y Treasury Yield" },
+  { endpoint: "stablecoin_marketcap", label: "Stablecoin Market Cap" },
+  { endpoint: "compliant_total", label: "CEX Total Assets" },
+  { endpoint: "us10y", label: "US 10Y Treasury Yield" },
   { endpoint: "dxy", label: "US Dollar Index (DXY)" },
   { endpoint: "bitfinex_long", label: "Bitfinex Leveraged Long" },
-  { endpoint: "contract_platforms", label: "Futures Platforms" },
+  { endpoint: "contract", label: "Futures Platforms" },
   { endpoint: "bottom_top_indicator", label: "Bottom/Top Indicator" },
 ] as const;
 
@@ -151,7 +151,7 @@ export function parseNetflow(raw: unknown): NetflowRow[] {
 /** Fetch top10_netflow for a network. */
 export async function fetchNetflow(network: string): Promise<NetflowRow[]> {
   try {
-    const res = await api.blockbeatsData("top10_netflow", network);
+    const res = await api.blockbeatsData("top10_netflow", { network });
     return parseNetflow(res?.data);
   } catch {
     return [];

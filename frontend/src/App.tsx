@@ -795,9 +795,6 @@ export default function App() {
 
           {activeView === 'markets' && (
             <MarketsView
-              symbols={symbols}
-              onSelectSymbol={handleSelectSymbol}
-              onOpenChartWithSymbol={handleOpenChartWithSymbol}
               theme={theme}
             />
           )}
