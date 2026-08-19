@@ -1,6 +1,8 @@
 import { Candle, BacktestResult } from '../types/trading';
 import { calculateEMA, calculateRSI } from './indicators';
 
+// Sample Pine script snippets, consumed solely by the removed pine editor view.
+// Retained (unused) for a future strategy editor UI (do not delete).
 export const SAMPLE_PINE_SCRIPTS = [
   {
     name: 'RSI Momentum Pullback Strategy',

@@ -229,6 +229,8 @@ export const COMMUNITY_IDEAS_DATA: CommunityIdea[] = [
   },
 ];
 
+// Broker catalog was consumed solely by the brokers view, which was removed.
+// Retained (unused) for a future broker/paper-trading account UI (do not delete).
 export const BROKERS_CATALOG: BrokerAccount[] = [
   {
     id: 'paper-tv',

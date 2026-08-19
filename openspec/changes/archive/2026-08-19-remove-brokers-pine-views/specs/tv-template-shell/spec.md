@@ -1,8 +1,7 @@
-# tv-template-shell Specification
+# tv-template-shell Specification (delta)
 
-## Purpose
-TBD - created by archiving change frontend-tv-rebuild. Update Purpose after archive.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: UI 外壳基于 tradingview-pro 模板
 系统 SHALL 以 `frontend/vendor/tradingview-pro` 模板为唯一 UI 来源搭建前端外壳,包括桌面标题栏、全局导航栏、顶部图表工具栏、绘图工具栏、多图表网格、右侧停靠栏、底部停靠栏、时间栏、6 个全视图与约 10 个弹窗;模板依赖(React 19、Vite 6、Tailwind 4)SHALL 升格进 `frontend/` 根,旧前端 UI 组件全部删除。
 
@@ -29,11 +28,3 @@ TBD - created by archiving change frontend-tv-rebuild. Update Purpose after arch
 - **WHEN** 查看左侧全局导航栏、标题栏「新建标签」菜单与 ⌘K 命令面板
 - **THEN** SHALL NOT 出现 Pine Studio 或 Brokers 任何入口
 - **AND** 视图类型 SHALL NOT 包含 `'pine'` 与 `'brokers'`,不存在可路由到这两个视图的状态
-
-### Requirement: 非 UI 数据层保留
-系统 SHALL 保留并复用旧前端中非 UI 的数据层与图表同步层:`api/{client,bitgetWs,datafeed,types,transform}.ts`、`lib/{chartSyncBus,chartSyncActions,cellChartSetup,chartChromeBridge,drawingPersistence}.ts`、`KLineChartProView.tsx` 包装器与 `klinecharts-pro-theme.css`。
-
-#### Scenario: 数据层复用
-- **WHEN** 构建新前端
-- **THEN** SHALL 能通过 `api/` 模块调用后端 REST 与 WS,且不依赖任何已删除的旧 UI 组件
-

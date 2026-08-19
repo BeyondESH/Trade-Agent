@@ -57,8 +57,6 @@ import { ScreenerView } from './components/views/ScreenerView';
 import { HeatmapsView } from './components/views/HeatmapsView';
 import { CommunityIdeasView } from './components/views/CommunityIdeasView';
 import { NewsCalendarView } from './components/views/NewsCalendarView';
-import { PineStudioView } from './components/views/PineStudioView';
-import { BrokersView } from './components/views/BrokersView';
 
 // Modals & Overlays
 import { CreateAlertModal } from './components/modals/CreateAlertModal';
@@ -337,8 +335,6 @@ export default function App() {
     else if (type === 'heatmaps') title = 'Heatmaps';
     else if (type === 'community') title = 'Community';
     else if (type === 'news') title = 'News';
-    else if (type === 'pine') title = 'Pine Studio';
-    else if (type === 'brokers') title = 'Brokers';
 
     const newTab: DesktopTab = {
       id: newId,
@@ -589,6 +585,8 @@ export default function App() {
       });
   };
 
+  // Resets the simulated paper account to its initial state. Its only caller was the
+  // brokers view, which was removed; retained for a future paper-trading UI (do not delete).
   const handleResetPaperAccount = () => {
     setAccount({
       balance: 50000,
@@ -602,6 +600,10 @@ export default function App() {
     setOrders([]);
   };
 
+  // Backend strategy backtest trigger (POST /backtest + GET /jobs/{job_id} polling).
+  // Pine Studio & bottom-dock Pine editor views were removed; this function currently
+  // has NO callers but is retained as the backend backtest entry point for a future
+  // strategy configuration UI (do not delete).
   const handleRunStrategy = (_scriptCode: string, scriptName: string) => {
     const symbol = activeSymbol.id || 'BTCUSDT';
     const series: SeriesRef = { category: 'USDT-FUTURES', symbol, timeframe: '1h' };
@@ -646,17 +648,6 @@ export default function App() {
       .catch(() => {
         /* backend backtest unavailable; leave last result unchanged */
       });
-  };
-
-  const handleApplyScriptFromStudio = (scriptCode: string, scriptName: string) => {
-    handleRunStrategy(scriptCode, scriptName);
-    // Switch to chart tab to view results
-    const chartTab = tabs.find((t) => t.type === 'chart');
-    if (chartTab) {
-      setActiveTabId(chartTab.id);
-    } else {
-      handleNewTab('chart');
-    }
   };
 
   const activeCandle = candles[candles.length - 1] || null;
@@ -786,7 +777,6 @@ export default function App() {
                 onCancelOrder={handleCancelOrder}
                 onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
                 backtestResult={backtestResult}
-                onRunStrategy={handleRunStrategy}
                 onOpenChange={setBottomOpen}
                 theme={theme}
               />
@@ -824,24 +814,6 @@ export default function App() {
           {activeView === 'news' && (
             <NewsCalendarView
               onOpenChartWithTicker={handleOpenChartWithTicker}
-              theme={theme}
-            />
-          )}
-
-          {activeView === 'pine' && (
-            <PineStudioView
-              onApplyScriptToChart={handleApplyScriptFromStudio}
-              theme={theme}
-            />
-          )}
-
-          {activeView === 'brokers' && (
-            <BrokersView
-              account={account}
-              positions={positions}
-              orders={orders}
-              onResetPaperAccount={handleResetPaperAccount}
-              onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
               theme={theme}
             />
           )}

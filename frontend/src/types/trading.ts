@@ -10,9 +10,7 @@ export type DesktopViewMode =
   | 'heatmaps'
   | 'markets'
   | 'community'
-  | 'news'
-  | 'pine'
-  | 'brokers';
+  | 'news';
 
 export interface DesktopTab {
   id: string;
@@ -265,6 +263,8 @@ export interface CommunityIdea {
   tags: string[];
 }
 
+// Broker account descriptor, used with BROKERS_CATALOG. The brokers view consuming
+// this type was removed; the type is retained (unused) for a future broker UI (do not delete).
 export interface BrokerAccount {
   id: string;
   name: string;

@@ -8,8 +8,6 @@ import {
   Flame,
   Users,
   Newspaper,
-  Code,
-  Briefcase,
   Sun,
   Moon,
   Search,
@@ -76,16 +74,6 @@ export const GlobalNavRail: React.FC<Props> = ({
       id: 'news',
       label: t('News'),
       icon: <Newspaper className="w-4 h-4" />,
-    },
-    {
-      id: 'pine',
-      label: t('Pine Studio'),
-      icon: <Code className="w-4 h-4" />,
-    },
-    {
-      id: 'brokers',
-      label: t('Brokers'),
-      icon: <Briefcase className="w-4 h-4" />,
     },
   ];
 

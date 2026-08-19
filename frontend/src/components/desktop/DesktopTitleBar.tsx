@@ -29,8 +29,6 @@ import {
   Filter,
   Users,
   Newspaper,
-  Code,
-  Briefcase,
   Share2,
 } from 'lucide-react';
 import { t } from '../../lib/i18n';
@@ -81,10 +79,6 @@ export const DesktopTitleBar: React.FC<Props> = ({
         return <Users className="w-3.5 h-3.5 text-[#9c27b0]" />;
       case 'news':
         return <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />;
-      case 'pine':
-        return <Code className="w-3.5 h-3.5 text-[#e91e63]" />;
-      case 'brokers':
-        return <Briefcase className="w-3.5 h-3.5 text-[#089981]" />;
       default:
         return <Layout className="w-3.5 h-3.5 text-[#2962ff]" />;
     }
@@ -344,32 +338,6 @@ export const DesktopTitleBar: React.FC<Props> = ({
                 >
                   <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />
                   <span>{t('News & Calendar')}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onNewTab('pine');
-                    setIsNewTabMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Code className="w-3.5 h-3.5 text-[#e91e63]" />
-                  <span>{t('Pine Studio')}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onNewTab('brokers');
-                    setIsNewTabMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Briefcase className="w-3.5 h-3.5 text-[#089981]" />
-                  <span>{t('Brokers')}</span>
                 </button>
               </div>
             )}

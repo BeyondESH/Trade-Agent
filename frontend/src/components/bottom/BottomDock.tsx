@@ -7,7 +7,6 @@ import {
   BacktestResult,
 } from '../../types/trading';
 import {
-  FileCode,
   LineChart,
   DollarSign,
   Filter,
@@ -17,7 +16,6 @@ import {
   Maximize2,
   Minimize2,
 } from 'lucide-react';
-import { PineEditor } from './PineEditor';
 import { StrategyTester } from './StrategyTester';
 import { TradingPanel } from './TradingPanel';
 import { ScreenerPanel } from './ScreenerPanel';
@@ -34,12 +32,11 @@ interface Props {
   onCancelOrder: (id: string) => void;
   onOpenOrderModal: (side: 'BUY' | 'SELL') => void;
   backtestResult: BacktestResult;
-  onRunStrategy: (scriptCode: string, scriptName: string) => void;
   onOpenChange?: (open: boolean) => void;
   theme: 'dark' | 'light';
 }
 
-type BottomTab = 'screener' | 'pine' | 'strategy' | 'trading' | 'notes';
+type BottomTab = 'screener' | 'strategy' | 'trading' | 'notes';
 
 export const BottomDock: React.FC<Props> = ({
   symbol,
@@ -52,7 +49,6 @@ export const BottomDock: React.FC<Props> = ({
   onCancelOrder,
   onOpenOrderModal,
   backtestResult,
-  onRunStrategy,
   onOpenChange,
   theme,
 }) => {
@@ -77,7 +73,6 @@ export const BottomDock: React.FC<Props> = ({
 
   const tabs = [
     { id: 'screener' as BottomTab, label: 'Stock / Crypto Screener', icon: Filter },
-    { id: 'pine' as BottomTab, label: 'Pine Editor', icon: FileCode },
     { id: 'strategy' as BottomTab, label: 'Strategy Tester', icon: LineChart },
     { id: 'trading' as BottomTab, label: `Trading Panel (${positions.length})`, icon: DollarSign },
     { id: 'notes' as BottomTab, label: 'Text Notes', icon: BookOpen },
@@ -152,10 +147,6 @@ export const BottomDock: React.FC<Props> = ({
             isMaximized ? 'min-h-[420px]' : 'min-h-[230px]'
           }`}
         >
-          {activeTab === 'pine' && (
-            <PineEditor onRunStrategy={onRunStrategy} theme={theme} />
-          )}
-
           {activeTab === 'strategy' && (
             <StrategyTester result={backtestResult} theme={theme} />
           )}
