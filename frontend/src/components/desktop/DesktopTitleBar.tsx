@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   DesktopTab,
   DesktopViewMode,
@@ -64,6 +64,17 @@ export const DesktopTitleBar: React.FC<Props> = ({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const isDark = theme === 'dark';
 
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+
+  // Keep the active tab visible when the tab bar overflows: new tabs are
+  // appended to the right and hidden scrollbars leave no manual entry point.
+  useEffect(() => {
+    const container = tabsScrollRef.current;
+    if (!container) return;
+    const active = container.querySelector(`[data-tab-id="${activeTabId}"]`);
+    if (active) active.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }, [activeTabId]);
+
   const getTabIcon = (type: DesktopViewMode | 'dashboard') => {
     switch (type) {
       case 'chart':
@@ -93,7 +104,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
       }`}
     >
       {/* Left: Window Controls + BeyondEther Main Menu */}
-      <div className="flex items-center gap-2 h-full">
+      <div className="flex items-center gap-2 h-full flex-1 min-w-0">
         {/* BE Hamburger App Menu */}
         <div className="relative">
           <button
@@ -197,12 +208,13 @@ export const DesktopTitleBar: React.FC<Props> = ({
         </div>
 
         {/* Multi-Tab Bar Container */}
-        <div className="flex items-center h-full gap-1 overflow-x-auto no-scrollbar max-w-[620px]">
+        <div ref={tabsScrollRef} className="flex items-center h-full gap-1 overflow-x-auto no-scrollbar flex-1 min-w-0">
           {tabs.map((tab) => {
             const isActive = tab.id === activeTabId;
             return (
               <div
                 key={tab.id}
+                data-tab-id={tab.id}
                 onClick={() => onSelectTab(tab.id)}
                 className={`group flex items-center gap-1.5 px-3 h-[28px] rounded-t-md cursor-pointer border-t border-x transition-all duration-100 select-none ${
                   isActive
