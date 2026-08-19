@@ -64,8 +64,31 @@ import { OrderModal } from './components/modals/OrderModal';
 import { CommandPaletteModal } from './components/modals/CommandPaletteModal';
 import { KeyboardShortcutsModal } from './components/modals/KeyboardShortcutsModal';
 import { DesktopSettingsModal } from './components/modals/DesktopSettingsModal';
-import { syncAlertsFromServer, mirrorAlertCreate, mirrorAlertDelete, type Alert } from './lib/alertsStore';
+import {
+  syncAlertsFromServer,
+  mirrorAlertCreate,
+  mirrorAlertDelete,
+  removeAlert,
+  subscribeAlerts,
+  upsertAlert,
+  loadAlerts,
+  type Alert,
+} from './lib/alertsStore';
 import { api } from './api/client';
+
+/** Map a store Alert to the sidebar AlertItem shape. */
+function alertToItem(a: Alert): AlertItem {
+  return {
+    id: a.id,
+    symbol: a.symbol,
+    condition: a.condition === 'below' ? 'Less Than' : 'Greater Than',
+    targetPrice: a.threshold,
+    createdAt: new Date(a.createdAt).toISOString().slice(0, 16),
+    triggered: a.triggered,
+    note: '',
+    frequency: 'Every Time',
+  };
+}
 
 export default function App() {
   // 1. Desktop Multi-Tab System
@@ -190,26 +213,22 @@ export default function App() {
       spread: rawBook.spread,
     };
   }, [rawBook]);
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [alerts, setAlerts] = useState<AlertItem[]>(() => loadAlerts().map(alertToItem));
 
-  // Pull server alerts on mount (cross-device); failures keep local empty.
+  // Pull server alerts on mount (cross-device); failures keep local state.
   useEffect(() => {
     syncAlertsFromServer().then((server) => {
       if (server && server.length > 0) {
-        setAlerts(
-          server.map((a) => ({
-            id: a.id,
-            symbol: a.symbol,
-            condition: a.condition === 'below' ? 'Less Than' : 'Greater Than',
-            targetPrice: a.threshold,
-            createdAt: new Date(a.createdAt).toISOString().slice(0, 16),
-            triggered: a.triggered,
-            note: '',
-            frequency: 'Every Time',
-          })),
-        );
+        setAlerts(server.map(alertToItem));
       }
     });
+  }, []);
+
+  // Keep the sidebar in sync with the price-line store (chart edits, drags,
+  // right-click reference lines all flow through alertsStore).
+  useEffect(() => {
+    const off = subscribeAlerts((list) => setAlerts(list.map(alertToItem)));
+    return off;
   }, []);
 
   // 8. Simulated Paper Trading State
@@ -298,6 +317,12 @@ export default function App() {
 
   // 10. Modals State
   const [isAlertOpen, setIsAlertOpen] = useState(false);
+  // Price prefilled into the create-alert modal by the chart right-click menu.
+  const [alertPrefillPrice, setAlertPrefillPrice] = useState<number | null>(null);
+  const handleCreateAlertAt = (price: number) => {
+    setAlertPrefillPrice(price);
+    setIsAlertOpen(true);
+  };
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isDesktopSettingsOpen, setIsDesktopSettingsOpen] = useState(false);
@@ -728,6 +753,7 @@ export default function App() {
                     theme={theme}
                     onSymbolChange={handleNativeSymbolChange}
                     onPeriodChange={handleNativePeriodChange}
+                    onCreateAlertAt={handleCreateAlertAt}
                   />
 
                   {/* Time Range Selector & Scale Badges Bar */}
@@ -755,6 +781,7 @@ export default function App() {
                   alerts={alerts}
                   onRemoveAlert={(id) => {
   setAlerts((prev) => prev.filter((a) => a.id !== id));
+  removeAlert(id);
   mirrorAlertDelete(id);
 }}
                   onOpenCreateAlert={() => setIsAlertOpen(true)}
@@ -848,8 +875,12 @@ export default function App() {
 
       <CreateAlertModal
         isOpen={isAlertOpen}
-        onClose={() => setIsAlertOpen(false)}
+        onClose={() => {
+  setIsAlertOpen(false);
+  setAlertPrefillPrice(null);
+}}
         symbol={activeSymbol}
+        initialPrice={alertPrefillPrice ?? undefined}
         onAddAlert={(newAlt) => {
   setAlerts((prev) => [newAlt, ...prev]);
   const mapped: Alert = {
@@ -861,6 +892,7 @@ export default function App() {
     triggered: false,
     createdAt: Date.now(),
   };
+  upsertAlert(mapped);
   mirrorAlertCreate(mapped);
 }}
         theme={theme}

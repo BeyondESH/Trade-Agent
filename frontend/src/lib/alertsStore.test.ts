@@ -1,15 +1,23 @@
 // @vitest-environment jsdom
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import {
+  ALERT_LINE_COLOR,
+  REFERENCE_LINE_COLOR_DARK,
+  REFERENCE_LINE_COLOR_LIGHT,
   createAlert,
   evalAlert,
   loadAlerts,
+  loadAlertsForSymbol,
   mirrorAlertCreate,
   mirrorAlertDelete,
   mirrorAlertUpdate,
+  priceLineColor,
+  removeAlert,
   saveAlerts,
   subscribeAlerts,
   syncAlertsFromServer,
+  updateAlert,
+  upsertAlert,
 } from "./alertsStore";
 
 const m = vi.hoisted(() => ({
@@ -72,6 +80,91 @@ describe("alertsStore", () => {
     off();
     saveAlerts([]);
     expect(spy).toHaveBeenCalledTimes(1); // unsubscribed
+  });
+});
+
+describe("priceLineColor", () => {
+  const themeAlert = (enabled: boolean, color?: string) => ({ enabled, color });
+
+  it("draws enabled alerts in the uniform alert yellow", () => {
+    expect(priceLineColor(themeAlert(true), "dark")).toBe(ALERT_LINE_COLOR);
+    expect(priceLineColor(themeAlert(true), "light")).toBe(ALERT_LINE_COLOR);
+  });
+
+  it("draws reference lines in the theme-neutral gray", () => {
+    expect(priceLineColor(themeAlert(false), "dark")).toBe(REFERENCE_LINE_COLOR_DARK);
+    expect(priceLineColor(themeAlert(false), "light")).toBe(REFERENCE_LINE_COLOR_LIGHT);
+  });
+
+  it("lets a persisted custom color win over the semantic default", () => {
+    expect(priceLineColor(themeAlert(true, "#123456"), "dark")).toBe("#123456");
+    expect(priceLineColor(themeAlert(false, "#abcdef"), "light")).toBe("#abcdef");
+  });
+});
+
+describe("price-line entity helpers", () => {
+  it("filters entities by symbol", () => {
+    saveAlerts([
+      createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: true }),
+      createAlert({ symbol: "ETHUSDT", condition: "below", threshold: 2, enabled: false }),
+    ]);
+    const btc = loadAlertsForSymbol("BTCUSDT");
+    expect(btc).toHaveLength(1);
+    expect(btc[0].symbol).toBe("BTCUSDT");
+  });
+
+  it("persists and reloads a custom color", () => {
+    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: false, color: "#abcdef" });
+    saveAlerts([a]);
+    expect(loadAlerts()[0].color).toBe("#abcdef");
+  });
+
+  it("upsertAlert inserts new and replaces existing by id", () => {
+    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: false });
+    upsertAlert(a);
+    expect(loadAlerts()).toHaveLength(1);
+    upsertAlert({ ...a, threshold: 99, color: "#123456" });
+    expect(loadAlerts()).toHaveLength(1);
+    expect(loadAlerts()[0].threshold).toBe(99);
+    expect(loadAlerts()[0].color).toBe("#123456");
+  });
+
+  it("updateAlert patches threshold/color and notifies subscribers", () => {
+    const spy = vi.fn();
+    const off = subscribeAlerts(spy);
+    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 100, enabled: true });
+    saveAlerts([a]);
+    spy.mockClear();
+    updateAlert(a.id, { threshold: 105, color: "#ff0000" });
+    expect(loadAlerts()[0].threshold).toBe(105);
+    expect(loadAlerts()[0].color).toBe("#ff0000");
+    expect(spy).toHaveBeenCalledTimes(1);
+    updateAlert("missing-id", { threshold: 1 });
+    expect(loadAlerts()).toHaveLength(1);
+    off();
+  });
+
+  it("removeAlert deletes the entity and notifies subscribers", () => {
+    const spy = vi.fn();
+    const off = subscribeAlerts(spy);
+    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 100, enabled: false });
+    saveAlerts([a]);
+    spy.mockClear();
+    removeAlert(a.id);
+    expect(loadAlerts()).toHaveLength(0);
+    expect(spy).toHaveBeenCalledTimes(1);
+    off();
+  });
+
+  it("round-trips color through the server sync parser", async () => {
+    m.alerts.mockResolvedValue({
+      alerts: [
+        { id: "s1", symbol: "ETHUSDT", condition: "below", threshold: 2500, enabled: false, triggered: false, createdAt: 1, color: "#abc123" },
+      ],
+    });
+    const merged = await syncAlertsFromServer();
+    expect(merged?.[0].color).toBe("#abc123");
+    expect(loadAlerts()[0].color).toBe("#abc123");
   });
 });
 

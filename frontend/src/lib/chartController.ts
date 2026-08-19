@@ -1,4 +1,7 @@
-import type { Chart, KLineData, OverlayCreate } from "klinecharts";
+import type { Chart, DomPosition, KLineData, OverlayCreate } from "klinecharts";
+import { priceLineToOverlay } from "./transform";
+import { priceLineColor, type Alert } from "./alertsStore";
+import type { ThemeMode } from "../types/trading";
 
 export type IndicatorSpec = { name: string; pane: "candle" | "sub" };
 
@@ -95,4 +98,113 @@ export class AutoLayerController {
     this.widget?.removeOverlay({ id });
     this.overlayIds.delete(id);
   }
+}
+
+// --- price-line overlay sync (unified reference/alert lines) --------------------
+// The alertsStore is the single source of truth; overlays are a transient
+// projection rebuilt whenever the store, symbol, theme, or chart changes.
+
+export const PRICE_LINE_GROUP_ID = "manual-price-lines";
+
+export interface PriceLineToDraw {
+  alertId: string;
+  price: number;
+  color: string;
+  title?: string;
+}
+
+export interface PriceLineSyncEvents {
+  onClick?: (alertId: string) => void;
+  onDragEnd?: (alertId: string, price: number) => void;
+}
+
+/** Drop every price-line overlay and redraw the given lines (idempotent). */
+export function syncPriceLineOverlays(
+  widget: Chart | null,
+  lines: PriceLineToDraw[],
+  events?: PriceLineSyncEvents,
+): void {
+  if (!widget) return;
+  widget.removeOverlay({ groupId: PRICE_LINE_GROUP_ID });
+  for (const line of lines) {
+    const create = priceLineToOverlay({
+      price: line.price,
+      color: line.color,
+      title: line.title,
+      alertId: line.alertId,
+    });
+    create.groupId = PRICE_LINE_GROUP_ID;
+    if (events) {
+      create.onClick = () => {
+        events.onClick?.(line.alertId);
+        return true;
+      };
+      create.onPressedMoveEnd = (ev) => {
+        const value = ev.overlay?.points?.[0]?.value;
+        if (typeof value === "number" && Number.isFinite(value)) {
+          events.onDragEnd?.(line.alertId, value);
+        }
+        return true;
+      };
+    }
+    widget.createOverlay(create);
+  }
+}
+
+/** Map the current symbol's entities (reference + alert lines) to overlay configs. */
+export function alertLinesToDraw(
+  alerts: Alert[],
+  symbol: string,
+  theme: ThemeMode,
+): PriceLineToDraw[] {
+  return alerts
+    .filter((a) => a.symbol === symbol)
+    .map((a) => ({
+      alertId: a.id,
+      price: a.threshold,
+      color: priceLineColor(a, theme),
+      title: a.enabled
+        ? `${a.condition === "above" ? "≥" : "≤"} ${a.threshold}`
+        : String(a.threshold),
+    }));
+}
+
+// --- pixel <-> price helpers (chart context menu) -------------------------------
+
+/** Convert a client (screen) position into a price on the candle pane, or null. */
+export function pixelToPrice(
+  chart: Chart | null,
+  clientX: number,
+  clientY: number,
+): number | null {
+  if (!chart) return null;
+  const root = chart.getDom();
+  if (!root) return null;
+  const rect = root.getBoundingClientRect();
+  const point = chart.convertFromPixel(
+    [{ x: clientX - rect.left, y: clientY - rect.top }],
+    { paneId: "candle_pane", absolute: true },
+  );
+  const p = Array.isArray(point) ? point[0] : point;
+  const value = p?.value;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** True when the client position falls inside a pane's main drawing area. */
+export function isInsidePane(
+  chart: Chart | null,
+  paneId: string,
+  clientX: number,
+  clientY: number,
+): boolean {
+  if (!chart) return false;
+  const dom = chart.getDom(paneId, "main" as DomPosition);
+  if (!dom) return false;
+  const rect = dom.getBoundingClientRect();
+  return (
+    clientX >= rect.left &&
+    clientX <= rect.right &&
+    clientY >= rect.top &&
+    clientY <= rect.bottom
+  );
 }

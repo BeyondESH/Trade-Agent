@@ -1,5 +1,6 @@
 export type AlertCondition = "above" | "below";
 import { api } from "../api/client";
+import type { ThemeMode } from "../types/trading";
 
 export interface Alert {
   id: string;
@@ -9,6 +10,28 @@ export interface Alert {
   enabled: boolean;
   triggered: boolean;
   createdAt: number;
+  /** Custom line color override; falls back to the semantic default when absent. */
+  color?: string;
+}
+
+// --- price-line color semantics -------------------------------------------------
+// A line is an Alert: enabled entities draw as yellow alert lines, disabled ones
+// as neutral reference lines (color only distinguishes semantics, not condition).
+
+export const ALERT_LINE_COLOR = "#ff9800";
+export const REFERENCE_LINE_COLOR_DARK = "#787b86";
+export const REFERENCE_LINE_COLOR_LIGHT = "#5d606b";
+
+export function priceLineColor(
+  alert: Pick<Alert, "enabled" | "color">,
+  theme: ThemeMode,
+): string {
+  if (alert.color) return alert.color;
+  return alert.enabled
+    ? ALERT_LINE_COLOR
+    : theme === "dark"
+      ? REFERENCE_LINE_COLOR_DARK
+      : REFERENCE_LINE_COLOR_LIGHT;
 }
 
 const STORAGE_KEY = "raibro.alerts";
@@ -83,7 +106,38 @@ function asAlert(r: unknown): Alert | null {
     enabled: !!o.enabled,
     triggered: !!o.triggered,
     createdAt: Number(o.createdAt) || Date.now(),
+    color: typeof o.color === "string" && o.color ? o.color : undefined,
   };
+}
+
+// --- line entity helpers (chart layer consumes these) ---------------------------
+
+/** Price-line entities belonging to one symbol (reference + alert lines). */
+export function loadAlertsForSymbol(symbol: string): Alert[] {
+  return loadAlerts().filter((a) => a.symbol === symbol);
+}
+
+/** Insert or replace an entity by id, persist locally, and notify listeners. */
+export function upsertAlert(alert: Alert): void {
+  const rest = loadAlerts().filter((a) => a.id !== alert.id);
+  saveAlerts([alert, ...rest]);
+}
+
+/** Apply a partial patch to an entity, persist, and notify listeners. */
+export function updateAlert(
+  id: string,
+  patch: Partial<Omit<Alert, "id" | "symbol" | "createdAt">>,
+): void {
+  const list = loadAlerts();
+  const idx = list.findIndex((a) => a.id === id);
+  if (idx < 0) return;
+  list[idx] = { ...list[idx], ...patch, id: list[idx].id };
+  saveAlerts(list);
+}
+
+/** Remove an entity, persist, and notify listeners. */
+export function removeAlert(id: string): void {
+  saveAlerts(loadAlerts().filter((a) => a.id !== id));
 }
 
 /**

@@ -104,6 +104,7 @@ class AlertBody(BaseModel):
     enabled: bool = True
     triggered: bool = False
     createdAt: int | None = None
+    color: str | None = None
 
 
 class AlertPatchBody(BaseModel):
@@ -112,6 +113,7 @@ class AlertPatchBody(BaseModel):
     threshold: float | None = None
     enabled: bool | None = None
     triggered: bool | None = None
+    color: str | None = None
 
 
 # -- helpers ---------------------------------------------------------------

@@ -47,6 +47,17 @@ describe("priceLineToOverlay", () => {
     const o = priceLineToOverlay({ price: 100, kind: "support", color: "#26a69a", title: "s" });
     expect(o.name).toBe("priceLine");
     expect(o.points).toEqual([{ value: 100 }]);
+    expect(o.styles?.line?.color).toBe("#26a69a");
+  });
+
+  it("carries the alertId in extendData when provided", () => {
+    const o = priceLineToOverlay({ price: 100, color: "#ff9800", alertId: "alt-1" });
+    expect(o.extendData).toMatchObject({ alertId: "alt-1", title: undefined });
+  });
+
+  it("omits alertId from extendData when absent", () => {
+    const o = priceLineToOverlay({ price: 100, color: "#ff9800" });
+    expect(o.extendData).not.toHaveProperty("alertId");
   });
 });
 

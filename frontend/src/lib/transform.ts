@@ -44,8 +44,10 @@ export function candleToKLine(c: Candle): {
 export interface PriceLineConfig {
   price: number;
   color: string;
-  title: string;
-  kind: "support" | "resistance";
+  title?: string;
+  kind?: "support" | "resistance";
+  /** Links the overlay back to its alert entity (chart right-click lines). */
+  alertId?: string;
 }
 
 export function levelsToPriceLines(levels: Level[]): PriceLineConfig[] {
@@ -62,7 +64,10 @@ export function priceLineToOverlay(line: PriceLineConfig): OverlayCreate {
     name: "priceLine",
     points: [{ value: line.price }],
     styles: { line: { color: line.color } },
-    extendData: { title: line.title },
+    extendData: {
+      title: line.title,
+      ...(line.alertId !== undefined ? { alertId: line.alertId } : {}),
+    },
   };
 }
 

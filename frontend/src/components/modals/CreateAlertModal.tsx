@@ -9,6 +9,8 @@ interface Props {
   symbol: SymbolInfo;
   onAddAlert: (alert: AlertItem) => void;
   theme: 'dark' | 'light';
+  /** Prefill the target price (e.g. from the chart right-click menu). */
+  initialPrice?: number;
 }
 
 export const CreateAlertModal: React.FC<Props> = ({
@@ -17,9 +19,10 @@ export const CreateAlertModal: React.FC<Props> = ({
   symbol,
   onAddAlert,
   theme,
+  initialPrice,
 }) => {
   const [condition, setCondition] = useState<'Crossing' | 'Crossing Up' | 'Crossing Down' | 'Greater Than' | 'Less Than'>('Crossing');
-  const [targetPrice, setTargetPrice] = useState<number>(Number(symbol.price.toFixed(symbol.digits)));
+  const [targetPrice, setTargetPrice] = useState<number>(initialPrice ?? Number(symbol.price.toFixed(symbol.digits)));
   const [frequency, setFrequency] = useState<'Only Once' | 'Every Time'>('Only Once');
   const [note, setNote] = useState('');
   const isDark = theme === 'dark';

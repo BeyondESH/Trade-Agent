@@ -1037,6 +1037,37 @@ def test_alerts_persist_across_app_restart() -> None:
         assert len(alerts) == 1 and alerts[0]["symbol"] == "ETHUSDT"
 
 
+def test_alerts_round_trip_reference_line_with_color() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        c = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        # a reference line is an enabled:false alert with an optional custom color
+        r = c.post(
+            "/alerts",
+            json={
+                "symbol": "BTCUSDT",
+                "condition": "above",
+                "threshold": 90000,
+                "enabled": False,
+                "color": "#123456",
+            },
+        )
+        assert r.status_code == 200
+        created = r.json()["alert"]
+        assert created["enabled"] is False
+        assert created["color"] == "#123456"
+        # list round-trips color back
+        listed = c.get("/alerts").json()["alerts"]
+        assert listed[0]["color"] == "#123456"
+        # patch keeps color, and can update it
+        r = c.put(f"/alerts/{created['id']}", json={"threshold": 92000, "color": "#abcdef"})
+        assert r.status_code == 200
+        assert r.json()["alert"]["color"] == "#abcdef"
+        # unsetting color is allowed (None patch is ignored)
+        c.put(f"/alerts/{created['id']}", json={"color": None})
+        assert c.get("/alerts").json()["alerts"][0]["color"] == "#abcdef"
+
+
 def _run_all() -> None:
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

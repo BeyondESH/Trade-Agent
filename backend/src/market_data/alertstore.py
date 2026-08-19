@@ -62,6 +62,8 @@ class AlertStore:
             "triggered": bool(data.get("triggered", False)),
             "createdAt": int(data.get("createdAt") or time.time() * 1000),
         }
+        if data.get("color"):
+            alert["color"] = str(data["color"])
         with self._lock:
             alerts = self._load()
             alerts.insert(0, alert)
@@ -81,7 +83,7 @@ class AlertStore:
                     patch["threshold"] = float(patch["threshold"])
                 except (TypeError, ValueError) as exc:
                     raise ValueError("alert.threshold must be a number") from exc
-            for key in ("symbol", "condition", "threshold", "enabled", "triggered"):
+            for key in ("symbol", "condition", "threshold", "enabled", "triggered", "color"):
                 if key in patch and patch[key] is not None:
                     target[key] = patch[key]
             self._save(alerts)
