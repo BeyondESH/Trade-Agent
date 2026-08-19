@@ -1,21 +1,4 @@
-# terminal-layout Specification
-
-## Purpose
-TBD - created by archiving change frontend-okx-theme. Update Purpose after archive.
-## Requirements
-### Requirement: 状态栏
-
-系统 SHALL 在 28px 状态栏展示:时区选择、交易所时钟、数据延迟标识(实时/延迟 badge)、快照、全屏、布局比例,字号 11px;原 TickerBar 的行情信息 SHALL 并入状态栏或右栏,不再以顶部走马灯形式占位。
-
-#### Scenario: 状态栏信息展示
-
-- **WHEN** 加载完成且有实时数据
-- **THEN** 状态栏 SHALL 显示时区、时钟与"实时"状态;数据延迟时 SHALL 显示黄色延迟 badge
-
-#### Scenario: 全屏与布局比例
-
-- **WHEN** 点击全屏按钮或调整面板宽度
-- **THEN** SHALL 切换浏览器全屏,并显示当前布局比例(如 100%)
+## MODIFIED Requirements
 
 ### Requirement: TV 布局壳(单图)
 
@@ -53,4 +36,3 @@ TBD - created by archiving change frontend-okx-theme. Update Purpose after archi
 #### Scenario: 嵌套滚动链
 - **WHEN** 滚轮位于右侧面板内部长列表且该列表已滚动到底
 - **THEN** 滚轮事件 SHALL 冒泡至工作区继续纵向滚动,SHALL NOT 卡死在面板内部
-

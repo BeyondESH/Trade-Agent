@@ -37,7 +37,7 @@ export const AlertsPanel: React.FC<Props> = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
         {alerts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-gray-500 gap-2 text-center p-4">
             <Bell className="w-8 h-8 opacity-30" />

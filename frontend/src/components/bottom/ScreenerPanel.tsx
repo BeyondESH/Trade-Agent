@@ -61,7 +61,7 @@ export const ScreenerPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
       </div>
 
       {/* Screener Table */}
-      <div className="flex-1 overflow-y-auto p-2 font-mono text-[11px] no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-2 font-mono text-[11px]">
         <table className="w-full text-left">
           <thead>
             <tr className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>

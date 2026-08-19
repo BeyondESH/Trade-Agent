@@ -205,7 +205,7 @@ export const PineStudioView: React.FC<Props> = ({ onApplyScriptToChart, theme })
               <Terminal className="w-3.5 h-3.5 text-[#2962ff]" />
               <span>{t('Compilation Console & Strategy Debugger')}</span>
             </div>
-            <div className="flex-1 p-2.5 font-mono text-[11px] overflow-y-auto no-scrollbar flex flex-col gap-1 text-gray-300">
+            <div className="flex-1 p-2.5 font-mono text-[11px] overflow-y-auto flex flex-col gap-1 text-gray-300">
               {consoleLog.map((log, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-gray-500">&gt;</span>

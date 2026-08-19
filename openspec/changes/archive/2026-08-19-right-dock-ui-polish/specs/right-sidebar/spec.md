@@ -1,34 +1,4 @@
-# right-sidebar Specification
-
-## Purpose
-TBD - created by archiving change tradingview-ui-shell. Update Purpose after archive.
-## Requirements
-### Requirement: Watchlist 自选列表
-
-系统 SHALL 在 Watchlist tab 呈现三列右对齐表格（Symbol / Last / Chg%），涨跌用文字色而非背景色，行 hover 底色 `#2a2e39`，选中行左侧 2px 蓝条；支持按分类 tab（现货/合约等）与关键字过滤，选中后联动图表。
-
-#### Scenario: 列表渲染与联动
-
-- **WHEN** 加载 ticker 列表并点击某行
-- **THEN** SHALL 显示 Symbol/Last/Chg% 三列（涨绿跌红），点击行后图表与顶栏 SHALL 切换到该品种并高亮该行
-
-### Requirement: 订单簿 DOM 面板
-
-系统 SHALL 在 DOM/OrderBook tab 呈现盘口深度、最近成交与资金费率/标记价格；盘口深度 SHALL 用背景色条（涨绿跌红，非文字色）表示，列右对齐且 `tabular-nums`。
-
-#### Scenario: 盘口渲染
-
-- **WHEN** 打开 DOM tab 且有实时盘口
-- **THEN** SHALL 展示卖盘/买盘深度条、最近成交与资金费率，数字等宽对齐
-
-### Requirement: Data Window
-
-系统 SHALL 提供 Data Window tab（当前 K 线的 O/H/L/C/V 数据表）；该数据 SHALL 随十字线悬停与最新 K 线更新。
-
-#### Scenario: 数据窗口
-
-- **WHEN** 打开 Data Window tab
-- **THEN** SHALL 展示当前品种与周期下的 OHLCV 数值表，随最新 K 线更新
+## ADDED Requirements
 
 ### Requirement: 图标条面板与新闻入口
 
@@ -112,3 +82,10 @@ TBD - created by archiving change tradingview-ui-shell. Update Purpose after arc
 - **WHEN** 新闻列表内容超出面板高度
 - **THEN** 该列表 SHALL 使用主题化隐式滚动条，静置时滑块不可见、hover 时渐显
 
+## REMOVED Requirements
+
+### Requirement: 图标条与面板
+
+**Reason**: 该需求同时承载了图标条面板行为与其内部的"无 News 入口"约束。其中"News tab 被移除（范围外，无数据源）"这一约束已与实现偏离——右侧栏已内置 News tab，并通过 `api.blockbeatsNews` 接入 BlockBeats 快讯数据源，数据源前提不再成立；本次变更进一步优化了该面板的分类栏与列表排版。由于 "无 News 入口" 是图标条需求下的一个场景（OpenSpec 无法单独移除场景），故整体移除本需求，并以新增的"图标条面板与新闻入口"需求承载更新后的全部行为。
+
+**Migration**: 图标条的行为（44px 常驻图标条、选中蓝色竖条、折叠/展开、宽度拖拽）与 News 入口行为统一定义于新增需求"图标条面板与新闻入口"中；市场头条的分类栏与列表排版由新增的"市场头条分类栏"与"市场头条新闻列表排版"两项需求定义。

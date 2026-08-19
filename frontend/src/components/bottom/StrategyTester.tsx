@@ -81,7 +81,7 @@ export const StrategyTester: React.FC<Props> = ({ result, theme }) => {
       </div>
 
       {/* Main Content Body */}
-      <div className="flex-1 overflow-y-auto p-3 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3">
         {tab === 'overview' ? (
           <div className="flex flex-col gap-4">
             {/* Strategy Title & Description */}

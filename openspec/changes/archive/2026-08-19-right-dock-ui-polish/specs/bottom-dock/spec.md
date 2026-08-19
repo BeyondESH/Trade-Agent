@@ -1,8 +1,5 @@
-# bottom-dock Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change tradingview-ui-shell. Update Purpose after archive.
-## Requirements
 ### Requirement: 底部抽屉与 Tab
 
 系统 SHALL 在底部提供 30px tab 栏（交易面板 / 筛选器 / 策略回测 / Pine 编辑 / 文本备注等）；Tab 无背景，选中项文字变白 + 底部 2px 蓝色下划线；点击 tab SHALL 展开抽屉显示对应内容并可再次点击折叠，抽屉 SHALL 提供常规与最大化两档目标高度供用户调整抽屉高度。展开时抽屉 SHALL 以其目标高度完整呈现内容，当内容超出目标高度时 SHALL 由工作区整体纵向滚动继续揭示完整内容，MUST NOT 强制内容仅在抽屉内二次滚动。展开时中心图表区 SHALL 保留确定的最小高度（等于折叠态下的图表可用高度）以保证图表容器可正确测量尺寸，抽屉与图表 SHALL NOT 相互重叠。折叠态 SHALL 无任何工作区滚动。
@@ -36,41 +33,3 @@ TBD - created by archiving change tradingview-ui-shell. Update Purpose after arc
 
 - **WHEN** 抽屉已处于展开态且用户手动滚动工作区，或在展开态下切换 tab
 - **THEN** 系统 SHALL NOT 再次强制滚动定位，用户的滚动位置 SHALL 被保留
-
-### Requirement: 回测面板
-
-系统 SHALL 在回测 tab 接入 `POST /backtest` 与 `GET /jobs/{job_id}`：配置策略/参数 → 提交回测 → 轮询结果 → 展示收益与指标表格；运行中 SHALL 显示加载态，失败 SHALL 显示错误信息。
-
-#### Scenario: 回测提交与结果
-
-- **WHEN** 配置参数并提交回测
-- **THEN** SHALL 创建任务并轮询，完成后展示结果表格；失败时 SHALL 显示错误而非白屏
-
-### Requirement: 筛选器面板
-
-系统 SHALL 在筛选器 tab 复用 MarketList 全屏能力（分类 tab、搜索、排序、虚拟滚动），并提供基于 Bitget 已有维度的"基本面"列：资金费率、标记价、24h 振幅（(high24h-low24h)/low24h 作为波动率代理）、24h 成交量/成交额，各列可排序；数据 SHALL 全部取自行情 hub 已有字段，MUST NOT 引入外部基本面数据源。选中品种 SHALL 联动图表。
-
-#### Scenario: 基本面列展示与排序
-
-- **WHEN** 打开筛选器并按资金费率或振幅列排序
-- **THEN** SHALL 展示资金费率/标记价/24h 振幅/量额列并按所选列排序
-
-#### Scenario: 筛选与联动
-
-- **WHEN** 在筛选器中筛选并点击某品种
-- **THEN** SHALL 展示筛选结果并按 `category:instId` 联动切换图表品种
-
-#### Scenario: 仅用 Bitget 维度
-
-- **WHEN** 渲染基本面列
-- **THEN** 每列数值 SHALL 来自 hub 已有字段（fundingRate/markPrice/high24h/low24h/成交量额），SHALL NOT 依赖外部数据源
-
-### Requirement: 交易面板
-
-系统 SHALL 在交易面板 tab 展示 `GET /portfolio` 持仓/账户摘要与 `POST /order` 下单表单（沿用现有接口，不改后端）；下单结果与持仓 SHALL 刷新展示，空持仓 SHALL 显示空态。
-
-#### Scenario: 持仓与下单
-
-- **WHEN** 打开交易面板并提交订单
-- **THEN** SHALL 展示账户摘要与持仓列表，下单后 SHALL 刷新持仓；无持仓时显示空态
-

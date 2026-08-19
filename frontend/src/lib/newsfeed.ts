@@ -89,3 +89,65 @@ export function isConfigError(err: unknown): boolean {
   const message = (err as { message?: unknown })?.message;
   return typeof message === "string" && message.includes("BB_API_KEY");
 }
+
+const pad2 = (n: number): string => String(n).padStart(2, "0");
+
+/** Format an ISO timestamp as a compact "MM-DD HH:mm" (UTC) for the display layer. */
+function formatClock(iso: string): string {
+  const d = new Date(iso);
+  const hh = pad2(d.getUTCHours());
+  const mm = pad2(d.getUTCMinutes());
+  return `${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())} ${hh}:${mm}`;
+}
+
+/** Day key for grouping (UTC date string) used by both grouping and labels. */
+function utcDayKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    d.getUTCDate(),
+  ).padStart(2, "0")}`;
+}
+
+/** Display-layer relative time for news. Does NOT change NewsItem.time's contract. */
+export function formatRelativeTime(iso: string, now: number = Date.now()): string {
+  const d = new Date(iso).getTime();
+  if (Number.isNaN(d)) return iso;
+  const diff = now - d;
+  const minute = 60_000;
+  const hour = 60 * minute;
+  if (diff < minute) return "刚刚";
+  if (diff < hour) return `${Math.floor(diff / minute)} 分钟前`;
+  if (diff < 24 * hour) return `${Math.floor(diff / hour)} 小时前`;
+  return formatClock(iso);
+}
+
+/** Date-group label for news: 今天 / 昨天 / MM-DD. */
+export function formatDateGroup(iso: string, now: number = Date.now()): string {
+  const d = new Date(iso);
+  const todayKey = utcDayKey(new Date(now));
+  const dayKey = utcDayKey(d);
+  if (dayKey === todayKey) return "今天";
+  const yesterday = new Date(now - 24 * 3_600_000);
+  if (dayKey === utcDayKey(yesterday)) return "昨天";
+  return `${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
+/** A news group keyed by its display label, preserving insertion order. */
+export interface NewsGroup {
+  label: string;
+  items: NewsItem[];
+}
+
+/** Group news by date (today / yesterday / MM-DD), preserving original order within a group. */
+export function groupNewsByDate(items: NewsItem[], now: number = Date.now()): NewsGroup[] {
+  const groups = new Map<string, NewsGroup>();
+  for (const item of items) {
+    const label = formatDateGroup(item.time, now);
+    const existing = groups.get(label);
+    if (existing) {
+      existing.items.push(item);
+    } else {
+      groups.set(label, { label, items: [item] });
+    }
+  }
+  return [...groups.values()];
+}

@@ -72,7 +72,7 @@ export const WatchlistPanel: React.FC<Props> = ({
       </div>
 
       {/* Symbol List Table */}
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-500/10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto divide-y divide-gray-500/10">
         {filteredSymbols.map((s) => {
           const isSelected = s.id === activeSymbol.id;
           const isUp = s.change24hPercent >= 0;

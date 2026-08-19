@@ -74,7 +74,7 @@ export const DataWindowPanel: React.FC<Props> = ({
         <span className="text-[10px] text-gray-500 font-mono">{symbol.ticker}</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3 font-mono text-xs no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3 font-mono text-xs">
         {/* Current Bar Info */}
         <div className={`p-2.5 rounded-lg border flex flex-col gap-1.5 ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
           <div className="font-sans font-bold text-[11px] text-gray-400 uppercase tracking-wider mb-1">

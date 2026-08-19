@@ -18,6 +18,8 @@
   --tv-muted: #787b86;
   --tv-up: #089981;
   --tv-down: #f23645;
+  --tv-scrollbar-thumb: #2a2e39;
+  --tv-scrollbar-thumb-hover: #787b86;
 }
 
 [data-theme="light"] {
@@ -29,6 +31,8 @@
   --tv-muted: #787b86;
   --tv-up: #089981;
   --tv-down: #f23645;
+  --tv-scrollbar-thumb: #c5c9d4;
+  --tv-scrollbar-thumb-hover: #787b86;
 }
 
 /* Single source of truth for the global font stack: Western (Latin/digits/
@@ -56,4 +60,61 @@ body,
 [data-theme] .font-mono {
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
+}
+
+/* Themed implicit scrollbars. Tracks stay width-fixed (8px) so nothing reflows
+   on show/hide; the thumb fades in via background-color transparency when the
+   container is hovered or itself hovered. Colors bind to --tv-* tokens so the
+   dark/light theme is honored without per-theme rules. */
+
+/* -webkit (Chromium / Electron) */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+*:hover::-webkit-scrollbar-thumb,
+*:focus::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--tv-scrollbar-thumb);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--tv-scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Standard property twin-setting as a forward-compatible fallback. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tv-scrollbar-thumb) transparent;
+}
+
+/* Reduced motion: no fade transition, thumb directly visible. */
+@media (prefers-reduced-motion: reduce) {
+  *::-webkit-scrollbar-thumb {
+    transition: none;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

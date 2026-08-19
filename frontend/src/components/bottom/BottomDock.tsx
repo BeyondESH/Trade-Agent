@@ -35,6 +35,7 @@ interface Props {
   onOpenOrderModal: (side: 'BUY' | 'SELL') => void;
   backtestResult: BacktestResult;
   onRunStrategy: (scriptCode: string, scriptName: string) => void;
+  onOpenChange?: (open: boolean) => void;
   theme: 'dark' | 'light';
 }
 
@@ -52,6 +53,7 @@ export const BottomDock: React.FC<Props> = ({
   onOpenOrderModal,
   backtestResult,
   onRunStrategy,
+  onOpenChange,
   theme,
 }) => {
   const [activeTab, setActiveTab] = useState<BottomTab>('trading');
@@ -59,12 +61,17 @@ export const BottomDock: React.FC<Props> = ({
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const isDark = theme === 'dark';
 
+  const setOpen = (open: boolean) => {
+    setIsOpen(open);
+    onOpenChange?.(open);
+  };
+
   const toggleTab = (tab: BottomTab) => {
     if (activeTab === tab && isOpen) {
-      setIsOpen(false);
+      setOpen(false);
     } else {
       setActiveTab(tab);
-      setIsOpen(true);
+      setOpen(true);
     }
   };
 
@@ -127,7 +134,7 @@ export const BottomDock: React.FC<Props> = ({
           )}
 
           <button
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => setOpen(!isOpen)}
             className={`p-1 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white`}
             title={isOpen ? 'Collapse Panel' : 'Expand Panel'}
           >
@@ -136,11 +143,13 @@ export const BottomDock: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Expanded Content Drawer */}
+      {/* Expanded Content Drawer — height is content-driven so tall panels
+          reveal fully via the workspace scroll; isMaximized sets a minimum
+          target height for short content. No inner clipping. */}
       {isOpen && (
         <div
-          className={`w-full overflow-hidden transition-all ${
-            isMaximized ? 'h-[420px]' : 'h-[230px]'
+          className={`w-full transition-all ${
+            isMaximized ? 'min-h-[420px]' : 'min-h-[230px]'
           }`}
         >
           {activeTab === 'pine' && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   SymbolInfo,
   IndicatorConfig,
@@ -661,6 +661,22 @@ export default function App() {
 
   const activeCandle = candles[candles.length - 1] || null;
 
+  // Bottom dock open state — when open, the chart workspace becomes a vertical
+  // scroll container so tall bottom panels reveal fully (right-dock-ui-polish).
+  const [bottomOpen, setBottomOpen] = useState<boolean>(false);
+  const chartWorkspaceRef = useRef<HTMLDivElement>(null);
+  const wasBottomOpenRef = useRef(false);
+
+  // Auto-scroll to the bottom module the first time the drawer opens, so the
+  // newly revealed content is immediately visible. Only fires on the false→true
+  // transition — subsequent tab/maximize switches or manual scrolls are honored.
+  useEffect(() => {
+    if (bottomOpen && !wasBottomOpenRef.current && chartWorkspaceRef.current) {
+      chartWorkspaceRef.current.scrollTop = chartWorkspaceRef.current.scrollHeight;
+    }
+    wasBottomOpenRef.current = bottomOpen;
+  }, [bottomOpen]);
+
   return (
     <div
       id="tradingview-desktop-root"
@@ -701,9 +717,18 @@ export default function App() {
         {/* Dynamic Workspace Router */}
         <main className="flex flex-col flex-1 h-full overflow-hidden relative">
           {activeView === 'chart' && (
-            <div className="flex flex-col h-full w-full overflow-hidden">
+            <div
+              ref={chartWorkspaceRef}
+              className={`flex flex-col h-full w-full ${
+                bottomOpen ? 'overflow-y-auto overflow-x-hidden' : 'overflow-hidden'
+              }`}
+            >
               {/* Chart Main Layout Area */}
-              <div className="flex flex-1 w-full overflow-hidden relative">
+              <div
+                className={`flex w-full overflow-hidden relative transition-all ${
+                  bottomOpen ? 'min-h-full flex-none' : 'flex-1'
+                }`}
+              >
                 {/* Central native klinecharts-pro chart */}
                 <div className="flex flex-col flex-1 h-full overflow-hidden relative">
                   <NativeChart
@@ -762,6 +787,7 @@ export default function App() {
                 onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
                 backtestResult={backtestResult}
                 onRunStrategy={handleRunStrategy}
+                onOpenChange={setBottomOpen}
                 theme={theme}
               />
             </div>

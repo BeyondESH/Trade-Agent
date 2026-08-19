@@ -20,7 +20,7 @@ export const CalendarPanel: React.FC<Props> = ({ events, theme }) => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-500/10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto divide-y divide-gray-500/10">
         {events.map((ev) => (
           <div
             key={ev.id}

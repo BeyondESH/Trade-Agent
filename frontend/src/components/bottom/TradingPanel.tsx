@@ -108,7 +108,7 @@ export const TradingPanel: React.FC<Props> = ({
       </div>
 
       {/* Tables Content */}
-      <div className="flex-1 overflow-y-auto p-2 no-scrollbar font-mono text-[11px]">
+      <div className="flex-1 overflow-y-auto p-2 font-mono text-[11px]">
         {activeTab === 'positions' && (
           positions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-gray-500 font-sans">

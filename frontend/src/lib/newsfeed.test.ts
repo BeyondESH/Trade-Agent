@@ -1,5 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { htmlToText, parseBlockbeatsTime, toNewsItem, NEWSFLASH_TYPES, fetchNewsflash } from "./newsfeed";
+import {
+  htmlToText,
+  parseBlockbeatsTime,
+  toNewsItem,
+  NEWSFLASH_TYPES,
+  fetchNewsflash,
+  formatRelativeTime,
+  formatDateGroup,
+  groupNewsByDate,
+} from "./newsfeed";
 import { api } from "../api/client";
 
 vi.mock("../api/client", () => ({
@@ -51,6 +60,66 @@ describe("newsfeed utils", () => {
       "ai",
       "stock",
     ]);
+  });
+});
+
+describe("newsfeed time formatting", () => {
+  const now = Date.UTC(2026, 0, 29, 15, 0, 0); // 2026-01-29 15:00:00 UTC
+
+  it("formats fresh news as 刚刚", () => {
+    expect(formatRelativeTime("2026-01-29T14:59:40.000Z", now)).toBe("刚刚");
+  });
+
+  it("formats sub-hour news as N 分钟前", () => {
+    expect(formatRelativeTime("2026-01-29T14:50:00.000Z", now)).toBe("10 分钟前");
+  });
+
+  it("treats exactly 60 minutes as 1 小时前", () => {
+    expect(formatRelativeTime("2026-01-29T14:00:00.000Z", now)).toBe("1 小时前");
+  });
+
+  it("falls back to MM-DD HH:mm beyond 24h", () => {
+    expect(formatRelativeTime("2026-01-28T15:00:00.000Z", now)).toBe("01-28 15:00");
+  });
+
+  it("falls back to the raw input when the timestamp is invalid", () => {
+    expect(formatRelativeTime("not-a-date", now)).toBe("not-a-date");
+  });
+
+  it("labels today, yesterday and older dates", () => {
+    expect(formatDateGroup("2026-01-29T10:00:00.000Z", now)).toBe("今天");
+    expect(formatDateGroup("2026-01-28T10:00:00.000Z", now)).toBe("昨天");
+    expect(formatDateGroup("2026-01-01T10:00:00.000Z", now)).toBe("01-01");
+  });
+
+  it("handles cross-year yesterday (previous year on Jan 1)", () => {
+    const nye = Date.UTC(2026, 0, 1, 10, 0, 0);
+    expect(formatDateGroup("2025-12-31T12:00:00.000Z", nye)).toBe("昨天");
+  });
+
+  it("groups news by date preserving order", () => {
+    const mk = (id: string, time: string) => ({
+      id,
+      title: `t${id}`,
+      source: "BlockBeats",
+      time,
+      category: "Crypto" as const,
+      sentiment: "neutral" as const,
+      summary: "",
+      relatedSymbols: [],
+    });
+    const groups = groupNewsByDate(
+      [
+        mk("a", "2026-01-28T09:00:00.000Z"),
+        mk("b", "2026-01-29T11:00:00.000Z"),
+        mk("c", "2026-01-29T12:00:00.000Z"),
+        mk("d", "2026-01-01T00:00:00.000Z"),
+      ],
+      now,
+    );
+    expect(groups.map((g) => g.label)).toEqual(["昨天", "今天", "01-01"]);
+    expect(groups[0].items.map((i) => i.id)).toEqual(["a"]);
+    expect(groups[1].items.map((i) => i.id)).toEqual(["b", "c"]);
   });
 });
 

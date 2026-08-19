@@ -34,7 +34,7 @@ export const CommunityIdeasPanel: React.FC<Props> = ({ theme }) => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
         {messages.map((m) => (
           <div
             key={m.id}

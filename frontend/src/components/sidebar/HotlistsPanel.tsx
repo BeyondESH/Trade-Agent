@@ -52,7 +52,7 @@ export const HotlistsPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-500/10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto divide-y divide-gray-500/10">
         {sortedList.map((s) => {
           const isUp = s.change24hPercent >= 0;
           return (
@@ -65,7 +65,7 @@ export const HotlistsPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
             >
               <div>
                 <div className="font-bold text-xs">{s.ticker}</div>
-                <div className="text-[10px] text-gray-400">{s.name}</div>
+                <div className="text-[10px] text-gray-400">{s.exchange}</div>
               </div>
               <div className="text-right font-mono">
                 <div className="font-bold text-xs">${s.price.toFixed(s.digits)}</div>
