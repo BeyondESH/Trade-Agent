@@ -38,7 +38,7 @@ interface Props {
   activeTabId: string;
   onSelectTab: (id: string) => void;
   onCloseTab: (id: string) => void;
-  onNewTab: (type: DesktopViewMode) => void;
+  onNewTab: (type: DesktopViewMode | 'dashboard') => void;
   onPinTab: (id: string) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
@@ -61,11 +61,10 @@ export const DesktopTitleBar: React.FC<Props> = ({
   onOpenShortcutsModal,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isNewTabMenuOpen, setIsNewTabMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const isDark = theme === 'dark';
 
-  const getTabIcon = (type: DesktopViewMode) => {
+  const getTabIcon = (type: DesktopViewMode | 'dashboard') => {
     switch (type) {
       case 'chart':
         return <TrendingUp className="w-3.5 h-3.5 text-[#2962ff]" />;
@@ -79,6 +78,8 @@ export const DesktopTitleBar: React.FC<Props> = ({
         return <Users className="w-3.5 h-3.5 text-[#9c27b0]" />;
       case 'news':
         return <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />;
+      case 'dashboard':
+        return <Layout className="w-3.5 h-3.5 text-[#2962ff]" />;
       default:
         return <Layout className="w-3.5 h-3.5 text-[#2962ff]" />;
     }
@@ -233,108 +234,14 @@ export const DesktopTitleBar: React.FC<Props> = ({
             );
           })}
 
-          {/* "+" New Tab Button with Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setIsNewTabMenuOpen(!isNewTabMenuOpen)}
-              className={`p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors ${
-                isNewTabMenuOpen ? 'bg-gray-500/30 text-white' : ''
-              }`}
-              title={t('Add New Workspace Tab')}
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-
-            {isNewTabMenuOpen && (
-              <div
-                className={`absolute top-full left-0 mt-1 w-48 rounded-lg shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
-                  isDark ? 'bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]' : 'bg-white border-[#e0e3eb] text-[#131722]'
-                }`}
-              >
-                <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Open Workspace
-                </div>
-
-                <button
-                  onClick={() => {
-                    onNewTab('chart');
-                    setIsNewTabMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <TrendingUp className="w-3.5 h-3.5 text-[#2962ff]" />
-                  <span>{t('SuperCharts')}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onNewTab('markets');
-                    setIsNewTabMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Monitor className="w-3.5 h-3.5 text-[#00bcd4]" />
-                  <span>{t('Markets Overview')}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onNewTab('screener');
-                    setIsNewTabMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Filter className="w-3.5 h-3.5 text-[#ff9800]" />
-                  <span>{t('Screener 2.0')}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onNewTab('heatmaps');
-                    setIsNewTabMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Flame className="w-3.5 h-3.5 text-[#f23645]" />
-                  <span>{t('Market Heatmaps')}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onNewTab('community');
-                    setIsNewTabMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5 text-[#9c27b0]" />
-                  <span>{t('Community Ideas')}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onNewTab('news');
-                    setIsNewTabMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                    isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />
-                  <span>{t('News & Calendar')}</span>
-                </button>
-              </div>
-            )}
-          </div>
+          {/* "+" New Tab Button -> Dashboard */}
+          <button
+            onClick={() => onNewTab('dashboard')}
+            className={`p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors`}
+            title={t('Add New Workspace Tab')}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 

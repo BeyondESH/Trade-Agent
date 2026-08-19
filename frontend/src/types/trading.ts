@@ -15,7 +15,7 @@ export type DesktopViewMode =
 export interface DesktopTab {
   id: string;
   title: string;
-  type: DesktopViewMode;
+  type: DesktopViewMode | 'dashboard';
   symbol?: string;
   symbolId?: string;
   timeframe?: Timeframe;

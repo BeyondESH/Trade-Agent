@@ -273,6 +273,14 @@ export const zh = {
   "24h High/Low": "24小时最高/最低",
 
   // Views
+  "Workspace Dashboard": "工作区仪表盘",
+  "Select an interface to open": "选择一个界面以打开",
+  "Interactive candlestick chart with technical indicators, order book and trading tools.": "带技术指标、订单簿与交易工具的交互式 K 线图。",
+  "Real-time crypto, macro and on-chain market indicators at a glance.": "实时查看加密货币、宏观与链上市场指标。",
+  "Filter and sort symbols across crypto, stocks and forex by live quotes.": "按实时行情筛选和排序加密货币、股票与外汇报价。",
+  "Treemap visualization of relative market cap and sector performance.": "以热力图呈现相对市值与板块表现。",
+  "Public stream, ideas and chat from the trading community.": "交易社区的公共流、观点与聊天。",
+  "Real-time crypto news and economic calendar events.": "实时加密货币快讯与财经日历事件。",
   "BlockBeats News & Economic Calendar": "BlockBeats 快讯与财经日历",
   "Real-time crypto newsflash (BlockBeats), central bank decisions, and earnings releases.": "实时加密快讯 (BlockBeats)、央行决策与财报发布。",
   "Market News Wire": "市场快讯",

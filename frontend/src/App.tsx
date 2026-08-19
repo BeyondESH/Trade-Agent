@@ -52,6 +52,7 @@ import { BottomTimebar } from './components/timebar/BottomTimebar';
 import { BottomDock } from './components/bottom/BottomDock';
 
 // Dedicated Desktop Full Views
+import { DashboardView } from './components/views/DashboardView';
 import { MarketsView } from './components/views/MarketsView';
 import { ScreenerView } from './components/views/ScreenerView';
 import { HeatmapsView } from './components/views/HeatmapsView';
@@ -101,7 +102,8 @@ export default function App() {
 
   // Active workspace derived from active tab
   const currentTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
-  const activeView: DesktopViewMode = currentTab?.type || 'chart';
+  const isDashboard = currentTab?.type === 'dashboard';
+  const activeView: DesktopViewMode = currentTab && currentTab.type !== 'dashboard' ? currentTab.type : 'chart';
 
   // 2. Symbol & Market State
   const { symbols: realSymbols, priceMap } = useRealSymbols();
@@ -351,7 +353,7 @@ export default function App() {
     }
   };
 
-  const handleNewTab = (type: DesktopViewMode, symbolTicker?: string) => {
+  const handleNewTab = (type: DesktopViewMode | 'dashboard', symbolTicker?: string) => {
     const newId = `tab-${Date.now()}`;
     let title = 'SuperCharts';
     if (type === 'chart') title = symbolTicker || activeSymbol.ticker;
@@ -360,6 +362,7 @@ export default function App() {
     else if (type === 'heatmaps') title = 'Heatmaps';
     else if (type === 'community') title = 'Community';
     else if (type === 'news') title = 'News';
+    else if (type === 'dashboard') title = 'Dashboard';
 
     const newTab: DesktopTab = {
       id: newId,
@@ -371,6 +374,35 @@ export default function App() {
 
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newId);
+  };
+
+  // Promotes the currently-active tab (typically a freshly-created dashboard tab)
+  // into a concrete view type in place — same tab id, title/type updated, and the
+  // tab stays active so the workspace router immediately shows the chosen view.
+  const handlePromoteTab = (type: DesktopViewMode) => {
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id === activeTabId
+          ? {
+              ...t,
+              type,
+              title:
+                type === 'chart'
+                  ? t.symbol || activeSymbol.ticker
+                  : type === 'markets'
+                  ? 'Markets'
+                  : type === 'screener'
+                  ? 'Screener'
+                  : type === 'heatmaps'
+                  ? 'Heatmaps'
+                  : type === 'community'
+                  ? 'Community'
+                  : 'News',
+              symbol: type === 'chart' ? t.symbol || activeSymbol.ticker : undefined,
+            }
+          : t
+      )
+    );
   };
 
   const handleSelectGlobalRailView = (view: DesktopViewMode) => {
@@ -732,7 +764,14 @@ export default function App() {
 
         {/* Dynamic Workspace Router */}
         <main className="flex flex-col flex-1 h-full overflow-hidden relative">
-          {activeView === 'chart' && (
+          {isDashboard && (
+            <DashboardView
+              theme={theme}
+              onOpen={(type) => handlePromoteTab(type)}
+            />
+          )}
+
+          {!isDashboard && activeView === 'chart' && (
             <div
               ref={chartWorkspaceRef}
               className={`flex flex-col h-full w-full ${
