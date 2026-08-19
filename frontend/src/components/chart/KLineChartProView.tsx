@@ -9,6 +9,7 @@ import {
 } from "@klinecharts/pro";
 import "../../../vendor/klinecharts-pro/dist/klinecharts-pro.css";
 import "../../klinecharts-pro-theme.css";
+import { FONT_FAMILY_STACK } from "../../lib/fonts";
 
 export interface KLineChartProHandle {
   setSymbol(symbol: SymbolInfo): void;
@@ -115,12 +116,12 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
                 downColor: "#f23645",
                 noChangeColor: "#787b86",
                 line: { show: true, style: "dashed" as import("klinecharts").LineType, dashedValue: [4, 4] },
-                text: { show: true, color: "#d1d4dc", size: 11 },
+                text: { show: true, color: "#d1d4dc", size: 11, family: FONT_FAMILY_STACK },
               },
             },
           },
-          xAxis: { size: 28, tickText: { size: 11 }, axisLine: { color: "#2a2e39" } },
-          yAxis: { size: "auto", tickText: { size: 11 }, axisLine: { color: "#2a2e39" } },
+          xAxis: { size: 28, tickText: { size: 11, family: FONT_FAMILY_STACK }, axisLine: { color: "#2a2e39" } },
+          yAxis: { size: "auto", tickText: { size: 11, family: FONT_FAMILY_STACK }, axisLine: { color: "#2a2e39" } },
           crosshair: {
             horizontal: {
               line: { color: "#9598a1", style: "dashed" as import("klinecharts").LineType, dashedValue: [4, 4] },
@@ -130,6 +131,7 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
                 borderColor: "#2a2e39",
                 color: "#d1d4dc",
                 size: 11,
+                family: FONT_FAMILY_STACK,
               },
             },
             vertical: {
@@ -140,6 +142,7 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
                 borderColor: "#2a2e39",
                 color: "#d1d4dc",
                 size: 11,
+                family: FONT_FAMILY_STACK,
               },
             },
           },
@@ -148,6 +151,17 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
       proRef.current = pro;
       mountedRef.current = true;
       props.onReady?.((pro.getChart() ?? null) as Chart | null);
+
+      // Canvas text figures are rasterized once at draw time and do not
+      // re-resolve after a webfont finishes downloading the way DOM text does
+      // (font-display: swap). Wait for self-hosted fonts to be ready, then
+      // force a relayout+redraw so axis/crosshair/price labels render with the
+      // final Google Sans Flex / Noto Sans SC instead of the fallback glyphs.
+      if (typeof document !== "undefined" && "fonts" in document) {
+        document.fonts.ready
+          .then(() => pro.getChart()?.resize())
+          .catch(() => undefined);
+      }
       return () => {
         // Schedule the real disposal a tick later: React StrictMode (dev)
         // immediately remounts the component after cleanup, in which case the

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Self-hosted webfonts (OFL-1.1): Google Sans Flex for Latin/Latin-ext,
+   Noto Sans SC (Source Han Sans) for CJK. Each @font-face carries its own
+   unicode-range, so the browser per-glyph falls GFlex -> Noto -> system. */
+@import "@fontsource-variable/google-sans-flex/wght.css";
+@import "@fontsource-variable/noto-sans-sc";
+
 /* TradingView palette CSS variables consumed by klinecharts-pro-theme.css and
    other chart chrome overrides. */
 :root,
@@ -25,18 +31,21 @@
   --tv-down: #f23645;
 }
 
-/* Unified global font stack: Chinese-first with Western fallback and
-   tabular numerals for aligned numeric columns. */
-:root {
-  --font-cn: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
-    "Source Han Sans SC", "Helvetica Neue", "Segoe UI", "Inter", "Arial",
-    sans-serif;
+/* Single source of truth for the global font stack: Western (Latin/digits/
+   punctuation) -> Google Sans Flex, CJK -> Noto Sans SC, then system fallback.
+   "Google Sans Flex Variable" MUST precede "Noto Sans SC Variable" so Latin
+   never falls onto Noto's Latin subset; CJK falls back to Noto because GFlex
+   claims no CJK unicode-range (except a lone U+4E00 in its nushu subset). */
+@theme {
+  --font-sans: "Google Sans Flex Variable", "Noto Sans SC Variable",
+    "PingFang SC", "Microsoft YaHei", "Helvetica Neue", "Segoe UI", "Inter",
+    Arial, sans-serif;
 }
 
 html,
 body,
 #tradingview-desktop-root {
-  font-family: var(--font-cn);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -45,6 +54,6 @@ body,
 .font-mono,
 .tnum,
 [data-theme] .font-mono {
-  font-family: var(--font-cn);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
