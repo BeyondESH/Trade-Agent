@@ -113,8 +113,7 @@ export const NewsPanel: React.FC<Props> = ({ theme }) => {
                   isDark ? 'hover:bg-[#1e222d]' : 'hover:bg-gray-50'
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] text-gray-400">
-                  <span className="font-semibold text-[#2962ff]">{item.source}</span>
+                <div className="flex items-center justify-end text-[10px] text-gray-400">
                   <span className="flex items-center gap-1">
                     <Clock className="w-2.5 h-2.5" />
                     {formatRelativeTime(item.time)}

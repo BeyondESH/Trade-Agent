@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { EconomicEvent, ThemeMode } from '../../types/trading';
 import { INITIAL_CALENDAR } from '../../data/marketData';
-import { NEWSFLASH_TYPES, fetchNewsflash, type NewsflashType } from '../../lib/newsfeed';
+import { NEWSFLASH_TYPES, fetchNewsflashPage, type NewsflashType } from '../../lib/newsfeed';
 import type { NewsItem } from '../../types/trading';
 import { t } from '../../lib/i18n';
 import {
@@ -18,32 +18,76 @@ interface Props {
   theme: ThemeMode;
 }
 
+const PAGE_SIZE = 20;
+const SCROLL_THRESHOLD = 120;
+
 export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme }) => {
   const [activeTab, setActiveTab] = useState<'news' | 'calendar'>('news');
   const [newsType, setNewsType] = useState<NewsflashType>('all');
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [calendarImpact, setCalendarImpact] = useState<'all' | 'high' | 'medium'>('all');
   const isDark = theme === 'dark';
 
+  // Request sequence guard: a category switch invalidates in-flight responses.
+  const loadSeq = useRef(0);
+  const pageRef = useRef(1);
+  const typeRef = useRef<NewsflashType>(newsType);
+  typeRef.current = newsType;
+
   const load = useCallback(async (type: NewsflashType) => {
+    const seq = ++loadSeq.current;
+    typeRef.current = type;
+    pageRef.current = 1;
     setLoading(true);
     setError(null);
+    setNews([]);
+    setHasMore(true);
     try {
-      const rows = await fetchNewsflash(type);
-      setNews(rows);
+      const page = await fetchNewsflashPage(type, 1, PAGE_SIZE);
+      if (seq !== loadSeq.current) return;
+      setNews(page.items);
+      setHasMore(page.hasMore);
     } catch (e) {
+      if (seq !== loadSeq.current) return;
       setError(String(e));
-      setNews([]);
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    const next = pageRef.current + 1;
+    setLoadingMore(true);
+    try {
+      const page = await fetchNewsflashPage(typeRef.current, next, PAGE_SIZE);
+      setNews((prev) => {
+        const seen = new Set(prev.map((n) => n.id));
+        return [...prev, ...page.items.filter((n) => !seen.has(n.id))];
+      });
+      pageRef.current = next;
+      setHasMore(page.hasMore);
+    } catch {
+      // Keep the current list; hasMore stays true so scrolling retries.
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loading, loadingMore, hasMore]);
 
   useEffect(() => {
     void load(newsType);
   }, [newsType, load]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_THRESHOLD) {
+      void loadMore();
+    }
+  };
 
   const filteredCalendar = INITIAL_CALENDAR.filter(
     (c) => calendarImpact === 'all' || c.impact === calendarImpact
@@ -55,16 +99,17 @@ export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme
       className={`flex-1 h-full overflow-y-auto p-4 select-none font-sans flex flex-col ${
         isDark ? 'bg-[#131722] text-[#d1d4dc]' : 'bg-[#f0f3fa] text-[#131722]'
       }`}
+      onScroll={handleScroll}
     >
       {/* Top Header */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Newspaper className="w-5 h-5 text-[#4caf50]" />
-            <span>{t('BlockBeats News & Economic Calendar')}</span>
+            <span>{t('News & Economic Calendar')}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
-            {t('Real-time crypto newsflash (BlockBeats), central bank decisions, and earnings releases.')}
+            {t('Real-time crypto newsflash, central bank decisions, and earnings releases.')}
           </p>
         </div>
 
@@ -137,10 +182,7 @@ export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs text-[#2962ff]">{n.source}</span>
-                    <span className="text-gray-500 text-[10px]">• {n.time}</span>
-                  </div>
+                  <span className="text-gray-500 text-[10px]">{n.time}</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-500/20 text-gray-400">
                     {newsType}
                   </span>
@@ -168,6 +210,11 @@ export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme
               </div>
             ))}
           </div>
+
+          {loadingMore && <div className="text-xs text-gray-400 text-center py-2">加载中...</div>}
+          {!hasMore && news.length > 0 && (
+            <div className="text-xs text-gray-400 text-center py-2">已加载全部</div>
+          )}
         </div>
       ) : (
         /* Economic Calendar View (BlockBeats has no calendar API; stays mock) */

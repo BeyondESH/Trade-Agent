@@ -5,6 +5,7 @@ import {
   toNewsItem,
   NEWSFLASH_TYPES,
   fetchNewsflash,
+  fetchNewsflashPage,
   formatRelativeTime,
   formatDateGroup,
   groupNewsByDate,
@@ -155,5 +156,52 @@ describe("fetchNewsflash", () => {
   it("throws a generic message on other upstream errors", async () => {
     vi.mocked(api.blockbeatsNews).mockRejectedValue(new Error("upstream"));
     await expect(fetchNewsflash("ai")).rejects.toThrow("新闻接口暂不可用");
+  });
+});
+
+describe("fetchNewsflashPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("passes page/size through and reports a full page as hasMore", async () => {
+    const rows = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      title: `t${i}`,
+      content: "",
+      create_time: "2026-01-29 14:32:37",
+    }));
+    vi.mocked(api.blockbeatsNews).mockResolvedValue({ status: 0, page: 3, data: rows });
+    const page = await fetchNewsflashPage("24h", 3, 20);
+    expect(api.blockbeatsNews).toHaveBeenCalledWith("24h", 3, 20, "cn");
+    expect(page.page).toBe(3);
+    expect(page.items).toHaveLength(20);
+    expect(page.hasMore).toBe(true);
+  });
+
+  it("reports the last page as no-more when rows are fewer than size", async () => {
+    vi.mocked(api.blockbeatsNews).mockResolvedValue({
+      status: 0,
+      page: 5,
+      data: [
+        { id: 1, title: "t", content: "", create_time: "2026-01-29 14:32:37" },
+        { id: 2, title: "t", content: "", create_time: "2026-01-29 14:32:37" },
+      ],
+    });
+    const page = await fetchNewsflashPage("important", 5, 20);
+    expect(page.items).toHaveLength(2);
+    expect(page.hasMore).toBe(false);
+  });
+
+  it("reports no-more on an empty page", async () => {
+    vi.mocked(api.blockbeatsNews).mockResolvedValue({ status: 0, page: 6, data: [] });
+    const page = await fetchNewsflashPage("first", 6, 20);
+    expect(page.items).toEqual([]);
+    expect(page.hasMore).toBe(false);
+  });
+
+  it("reuses the same config/upstream error handling", async () => {
+    vi.mocked(api.blockbeatsNews).mockRejectedValue(new Error("upstream"));
+    await expect(fetchNewsflashPage("onchain", 2, 20)).rejects.toThrow("新闻接口暂不可用");
   });
 });

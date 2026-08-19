@@ -310,7 +310,7 @@ export const MarketsView: React.FC<Props> = ({ theme }) => {
             <span>{t("Global Markets Overview")}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
-            {t("Real-time crypto, macro, and on-chain indicators from BlockBeats.")}
+            {t("Real-time crypto, macro, and on-chain indicators.")}
           </p>
         </div>
       </div>

@@ -130,7 +130,7 @@ export const DataWindowPanel: React.FC<Props> = ({
         <div className={`p-2.5 rounded-lg border flex flex-col gap-1.5 ${isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'}`}>
           <div className="font-sans font-bold text-[11px] text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <Activity className="w-3 h-3 text-[#2962ff]" />
-            Market Pulse (BlockBeats)
+            Market Pulse
           </div>
           {pulseLoading && <div className="text-gray-500 font-sans py-1">Loading...</div>}
           {!pulseLoading && pulse.length === 0 && (

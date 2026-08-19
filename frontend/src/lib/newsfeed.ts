@@ -72,11 +72,31 @@ export function toNewsItem(row: {
   };
 }
 
-/** Fetch a BlockBeats newsflash category. */
+/** Fetch a BlockBeats newsflash category (first page only; see fetchNewsflashPage). */
 export async function fetchNewsflash(type: NewsflashType): Promise<NewsItem[]> {
+  return (await fetchNewsflashPage(type, 1, 20)).items;
+}
+
+export interface NewsflashPage {
+  items: NewsItem[];
+  page: number;
+  hasMore: boolean;
+}
+
+/** Fetch one page of a newsflash category; hasMore is a full-page approximation. */
+export async function fetchNewsflashPage(
+  type: NewsflashType,
+  page: number = 1,
+  size: number = 20,
+): Promise<NewsflashPage> {
   try {
-    const res = await api.blockbeatsNews(type, 1, 20, "cn");
-    return (res.data ?? []).map(toNewsItem);
+    const res = await api.blockbeatsNews(type, page, size, "cn");
+    const rows = res.data ?? [];
+    return {
+      items: rows.map(toNewsItem),
+      page,
+      hasMore: rows.length >= size,
+    };
   } catch (err) {
     throw new Error(isConfigError(err) ? "未配置 BB_API_KEY,请在 backend/.env 中设置" : "新闻接口暂不可用");
   }
