@@ -1,8 +1,5 @@
-# klinecharts-pro-integration Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by syncing change react-klinecharts-pro.
-## Requirements
 ### Requirement: Pro 图表终端集成
 系统 SHALL 基于 @klinecharts/pro(clone 至项目 vendor 本地)渲染交易所式图表终端,采用其**原生开箱 UI**:Pro 内置的绘图工具条、周期条、指标管理、标的搜索、时区/设置/截图弹窗 SHALL 全部启用可见,由 Pro 自身作为图表操作的唯一 chrome;应用层 SHALL 仅保留品种/周期双向联动胶水与 datafeed 数据接入,不再提供自建指挥层(`chartCommands`/`chartChromeBridge` 已移除)。其中周期条 SHALL 由固定(pin)机制驱动:常驻栏渲染用户已固定的时间级别,并提供扩展按钮打开全集弹窗;该改造 SHALL 在 vendor 周期条内实现,MUST NOT 由应用层隐藏周期条后自建替代。默认 `locale:'zh-CN'`,UI 中文显示。图表实例 SHALL 遵循单例守卫生命周期:组件多次挂载(含 StrictMode 双挂载)SHALL 复用同一实例,卸载 SHALL 彻底释放订阅与挂载标记,实时更新 SHALL 始终绑定到用户可见的唯一实例。
 
@@ -64,34 +61,7 @@ TBD - created by syncing change react-klinecharts-pro.
 - **WHEN** 当前周期为秒级时格式化时间轴与十字光标标签
 - **THEN** SHALL 显示到秒精度
 
-### Requirement: 自动层叠加
-系统 SHALL 通过暴露的 klinecharts 实例叠加 S/R/结构/SMC 程序化 overlay,并支持图层开关。
-
-#### Scenario: 叠加自动层
-- **WHEN** analyze/structure 数据就绪
-- **THEN** SHALL 在图表上叠加 S/R 价格线、结构线段/箱体、SMC 图层
-
-#### Scenario: 开关图层
-- **WHEN** 用户切换某自动层开关
-- **THEN** SHALL 对应 overlay 隐藏/显示而不影响其他图层
-
-### Requirement: 图表实例生命周期管理
-系统 SHALL 将 pro 图表实例的创建纳入统一生命周期管理:创建时机、挂载标记、卸载清理 SHALL 集中处理,确保 StrictMode/重挂载场景下行为一致。
-
-#### Scenario: 生命周期集中管理
-- **WHEN** 图表包装器经历挂载/卸载
-- **THEN** 实例创建与清理 SHALL 由同一生命周期逻辑负责,无散落的新建/清理代码
-
-### Requirement: vendor 加载竞态防护
-系统 SHALL 修复 klinecharts-pro 内部 symbol/period 加载的竞态:加载 effect 对 symbol/period 的依赖读取 SHALL 位于加载锁判断之前(保持 Solid 依赖追踪);加载完成回调 SHALL 对比当前目标与本次加载目标,不一致时主动触发重载。改动 SHALL 集中在一个 vendor effect 中,不扩散。
-
-#### Scenario: 依赖读取在锁判断前
-- **WHEN** 加载进行中 effect 提前返回
-- **THEN** symbol/period 依赖 SHALL 仍被读取并追踪,后续切换 SHALL 触发 effect
-
-#### Scenario: 完成后目标对比重载
-- **WHEN** 加载完成且当前 symbol/period 与本次加载目标不同
-- **THEN** SHALL 以当前目标重新触发加载,呈现最新选择
+## ADDED Requirements
 
 ### Requirement: 周期条时间级别来源
 周期条呈现的时间级别集合 SHALL 来自交易所原生全集,MUST NOT 包含前端合成或交易所不支持的级别。周期对象的时间跨度 SHALL 与其时间级别语义一致(秒/分/时/天/周/月)。
@@ -105,4 +75,3 @@ TBD - created by syncing change react-klinecharts-pro.
 - **WHEN** 用户选择周级或月级
 - **THEN** 传递给图表的周期对象 SHALL 使用对应的周/月时间跨度
 - **AND** MUST NOT 退化为分钟跨度
-

@@ -1,8 +1,5 @@
-# market-endpoints Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change web-api. Update Purpose after archive.
-## Requirements
 ### Requirement: 行情与分析端点
 
 系统 SHALL 提供读取 K 线、技术分析(指标末值 + Top-N 支撑/压力)、市场结构(趋势线/箱体/订单块)与 S/R 候选的端点,数据来自本地存储。K 线端点 SHALL 接受时间级别原生全集中的任一级别作为参数。端点 SHALL 将月级与分钟级视为不同级别,MUST NOT 因大小写归一化而将二者混淆。
@@ -40,16 +37,6 @@ TBD - created by archiving change web-api. Update Purpose after archive.
 - **THEN** 系统 SHALL 返回明确的未支持提示
 - **AND** MUST NOT 静默返回其他级别的数据
 
-### Requirement: 回测与拉取后台任务
-
-系统 SHALL 将回测与数据拉取作为后台任务处理,返回 job id 并可查询进度/结果。
-
-#### Scenario: 提交回测
-
-- **WHEN** 提交某 series 的回测
-- **THEN** 系统 SHALL 返回 job id
-- **AND** 该 job 可查询到运行中或完成的状态与指标
-
 ### Requirement: 实时缓存 K 线端点
 
 系统 SHALL 提供读取实时流缓存 K 线的端点 `GET /candles/recent`，返回与 `/candles` 相同的数据形状。对仅实时级别,该端点 MUST NOT 尝试通过交易所历史接口补种数据。
@@ -65,4 +52,3 @@ TBD - created by archiving change web-api. Update Purpose after archive.
 - **THEN** 系统 SHALL 返回空列表
 - **AND** MUST NOT 调用交易所历史接口补种
 - **AND** SHALL 建立该 series 的实时订阅
-

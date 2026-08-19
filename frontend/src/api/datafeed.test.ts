@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BitgetDatafeed, periodToTimeframe } from "./datafeed";
+import { BitgetDatafeed, normalizeBackwardList, periodFromTimeframe, periodToTimeframe } from "./datafeed";
 import type { Period, SymbolInfo } from "@klinecharts/pro";
 
 const m = vi.hoisted(() => ({
@@ -37,6 +37,13 @@ beforeEach(() => {
   m.instruments.mockResolvedValue({ instruments: INSTRUMENTS });
   m.wsSubscribe.mockReturnValue({ close: vi.fn() });
   m.wsOnStatus.mockReturnValue(() => {});
+  // Deterministic per-test defaults; individual tests override with
+  // mockResolvedValueOnce/mockResolvedValue. Without these bases, leftover
+  // implementations from a previous test leak through once the once-queue of
+  // the current test is exhausted.
+  m.candles.mockResolvedValue({ candles: [], count: 0 });
+  m.candlesRecent.mockResolvedValue({ candles: [], count: 0 });
+  m.backfill.mockResolvedValue({ series: "s", appended: 0, earliest_reached: false });
 });
 
 describe("periodToTimeframe", () => {
@@ -46,6 +53,42 @@ describe("periodToTimeframe", () => {
     expect(periodToTimeframe({ multiplier: 4, timespan: "hour", text: "4H" })).toBe("4h");
     expect(periodToTimeframe({ multiplier: 12, timespan: "hour", text: "12H" })).toBe("12h");
     expect(periodToTimeframe({ multiplier: 1, timespan: "day", text: "1D" })).toBe("1d");
+  });
+
+  it("maps second/week/month periods to distinct-timeframe identifiers", () => {
+    expect(periodToTimeframe({ multiplier: 1, timespan: "second", text: "1s" })).toBe("1s");
+    expect(periodToTimeframe({ multiplier: 1, timespan: "week", text: "1W" })).toBe("1w");
+    // month `1mo` never collides with minute `1m`
+    expect(periodToTimeframe({ multiplier: 1, timespan: "month", text: "1M" })).toBe("1mo");
+    expect(periodToTimeframe({ multiplier: 1, timespan: "month", text: "1M" })).not.toBe("1m");
+  });
+});
+
+describe("periodFromTimeframe", () => {
+  it("parses the full native set round-trip", () => {
+    const native = ["1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d", "3d", "1w", "1mo"];
+    for (const tf of native) {
+      expect(periodToTimeframe(periodFromTimeframe(tf))).toBe(tf);
+    }
+  });
+
+  it("never collapses month onto minute", () => {
+    const month = periodFromTimeframe("1mo");
+    expect(month.timespan).toBe("month");
+    const minute = periodFromTimeframe("1m");
+    expect(minute.timespan).toBe("minute");
+    expect(periodToTimeframe(month)).not.toBe(periodToTimeframe(minute));
+  });
+
+  it("is case-insensitive for known levels", () => {
+    expect(periodToTimeframe(periodFromTimeframe("1H"))).toBe("1h");
+    expect(periodToTimeframe(periodFromTimeframe("1MO"))).toBe("1mo");
+  });
+
+  it("throws on unknown periods instead of silently falling back", () => {
+    expect(() => periodFromTimeframe("99x")).toThrow();
+    expect(() => periodFromTimeframe("15s")).toThrow();
+    expect(() => periodFromTimeframe("6M")).toThrow();
   });
 });
 
@@ -107,6 +150,20 @@ describe("BitgetDatafeed.searchSymbols", () => {
 });
 
 describe("BitgetDatafeed history", () => {
+  it("short-circuits realtime-only periods without poking any history endpoint", async () => {
+    const d = new BitgetDatafeed();
+    const bars = await d.getHistoryKLineData(
+      SYMBOL,
+      { multiplier: 1, timespan: "second", text: "1s" },
+      0,
+      2000,
+    );
+    expect(bars).toEqual([]);
+    expect(m.candles).not.toHaveBeenCalled();
+    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(m.backfill).not.toHaveBeenCalled();
+  });
+
   it("loads history with fallback to recent", async () => {
     m.candles.mockResolvedValue({ candles: [], count: 0 });
     m.candlesRecent.mockResolvedValue({
@@ -246,5 +303,105 @@ describe("BitgetDatafeed backfill", () => {
     d.prefetchDeeper(SYMBOL, PERIOD);
     await new Promise((r) => setTimeout(r, 10));
     expect(m.backfill).toHaveBeenCalledTimes(1);
+  });
+
+  it("backward load with empty store triggers on-demand backfill to `to` and serves refetched range", async () => {
+    m.candles
+      .mockResolvedValueOnce({ candles: [candle(1000)], count: 1 })
+      .mockResolvedValueOnce({ candles: [], count: 0 })
+      .mockResolvedValueOnce({ candles: [candle(400), candle(500)], count: 2 });
+    m.backfill.mockResolvedValue({ series: "s", appended: 2, earliest_reached: false });
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 400, 1000);
+    expect(m.backfill).toHaveBeenCalledTimes(1);
+    expect(m.backfill.mock.calls[0][1]).toBe(1000);
+    expect(bars.map((b) => b.timestamp)).toEqual([400, 500]);
+    expect(m.candlesRecent).not.toHaveBeenCalled();
+  });
+
+  it("backward load with empty store and failed backfill returns [] without recent fallback", async () => {
+    m.candles
+      .mockResolvedValueOnce({ candles: [candle(1000)], count: 1 })
+      .mockResolvedValueOnce({ candles: [], count: 0 });
+    m.backfill.mockRejectedValue(new Error("boom"));
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 400, 1000);
+    expect(m.backfill).toHaveBeenCalledTimes(1);
+    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(bars).toEqual([]);
+  });
+
+  it("backward load with empty store stops backfilling once earliest_reached", async () => {
+    m.candles
+      .mockResolvedValueOnce({ candles: [candle(1000)], count: 1 })
+      .mockResolvedValueOnce({ candles: [], count: 0 })
+      .mockResolvedValueOnce({ candles: [], count: 0 });
+    m.backfill.mockResolvedValue({ series: "s", appended: 0, earliest_reached: true });
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 400, 1000);
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 200, 900);
+    expect(m.backfill).toHaveBeenCalledTimes(1);
+    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(bars).toEqual([]);
+  });
+
+  it("backward load with empty store returns [] when refetch after backfill is still empty", async () => {
+    m.candles
+      .mockResolvedValueOnce({ candles: [candle(1000)], count: 1 })
+      .mockResolvedValueOnce({ candles: [], count: 0 })
+      .mockResolvedValueOnce({ candles: [], count: 0 });
+    m.backfill.mockResolvedValue({ series: "s", appended: 0, earliest_reached: false });
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 400, 1000);
+    expect(m.backfill).toHaveBeenCalledTimes(1);
+    expect(bars).toEqual([]);
+    expect(m.candlesRecent).not.toHaveBeenCalled();
+  });
+
+  it("initial load with empty store still falls back to recent candles (regression guard)", async () => {
+    m.candles.mockResolvedValue({ candles: [], count: 0 });
+    m.candlesRecent.mockResolvedValue({ candles: [candle(1000)], count: 1 });
+    const d = new BitgetDatafeed();
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    expect(m.candlesRecent).toHaveBeenCalledTimes(1);
+    expect(bars[0].timestamp).toBe(1000);
+  });
+
+  it("backward load never returns bars newer than the requested range", async () => {
+    m.candles
+      .mockResolvedValueOnce({ candles: [candle(1000)], count: 1 })
+      .mockResolvedValueOnce({ candles: [], count: 0 })
+      .mockResolvedValueOnce({ candles: [candle(300), candle(500), candle(900)], count: 3 });
+    m.backfill.mockResolvedValue({ series: "s", appended: 3, earliest_reached: false });
+    const d = new BitgetDatafeed();
+    await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 200, 500);
+    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(bars.map((b) => b.timestamp)).toEqual([300, 500]);
+  });
+});
+
+describe("normalizeBackwardList", () => {
+  it("sorts ascending and drops duplicate timestamps", () => {
+    const bars = [
+      { timestamp: 500, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+      { timestamp: 500, open: 3, high: 4, low: 0, close: 3, volume: 1 },
+      { timestamp: 100, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+    ];
+    const out = normalizeBackwardList(bars);
+    expect(out.map((b) => b.timestamp)).toEqual([100, 500]);
+  });
+
+  it("drops bars newer than maxTimestamp", () => {
+    const bars = [
+      { timestamp: 500, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+      { timestamp: 300, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+    ];
+    const out = normalizeBackwardList(bars, 400);
+    expect(out.map((b) => b.timestamp)).toEqual([300]);
   });
 });

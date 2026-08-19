@@ -65,6 +65,45 @@ def test_channels_use_bitget_interval_tokens() -> None:
     assert channels == {"candle1m", "candle1H", "candle4H", "candle12H", "candle1D"}
 
 
+def test_channels_for_second_week_month() -> None:
+    s = _stream(timeframes=["1s", "1w", "1mo"])
+    channels = {ch["channel"] for ch in s._channels()}
+    assert "candle1s" in channels
+    assert "candle1W" in channels
+    assert "candle1M" in channels
+
+
+def test_month_frame_routes_to_mo_not_minute() -> None:
+    s = _stream(symbols=[SYM], timeframes=[])
+    mo_listener: list[dict] = []
+    m_listener: list[dict] = []
+    s.add_listener(CAT, SYM, "1mo", mo_listener.append)
+    s.add_listener(CAT, SYM, "1m", m_listener.append)
+    frame = json.dumps(
+        {"action": "update", "arg": {"instType": CAT, "channel": "candle1M", "instId": SYM},
+         "data": [["1700000000000", "100", "101", "99", "123.4", "7.5"]]}
+    )
+    asyncio.run(s._handle_frame(_FakeWs(), frame))
+    assert len(mo_listener) == 1 and mo_listener[0]["close"] == 123.4
+    assert m_listener == []
+    assert s.latest(CAT, SYM, "1m") is None
+
+
+def test_second_frame_routes_to_second() -> None:
+    s = _stream(symbols=[SYM], timeframes=[])
+    sec_listener: list[dict] = []
+    m_listener: list[dict] = []
+    s.add_listener(CAT, SYM, "1s", sec_listener.append)
+    s.add_listener(CAT, SYM, "1m", m_listener.append)
+    frame = json.dumps(
+        {"action": "update", "arg": {"instType": CAT, "channel": "candle1s", "instId": SYM},
+         "data": [["1700000000000", "100", "101", "99", "88.8", "7.5"]]}
+    )
+    asyncio.run(s._handle_frame(_FakeWs(), frame))
+    assert len(sec_listener) == 1 and sec_listener[0]["close"] == 88.8
+    assert m_listener == []
+
+
 def test_latest_empty_before_frames() -> None:
     s = _stream()
     assert s.latest(CAT, SYM, "5m") is None

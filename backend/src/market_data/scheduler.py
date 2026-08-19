@@ -36,8 +36,11 @@ def run_incremental_pull(ingestor: KlineIngestor, settings: Settings) -> None:
         for timeframe in settings.timeframes:
             series = Series(settings.category, symbol, timeframe)
             try:
-                from market_data.models import timeframe_step_ms
+                from market_data.models import is_realtime_only_timeframe, timeframe_step_ms
 
+                # Realtime-only levels have no history to persist.
+                if is_realtime_only_timeframe(timeframe):
+                    continue
                 start_ms = end_ms - timeframe_step_ms(timeframe) * lookback_ms
                 added = ingestor.ingest_incremental(series, start_ms, end_ms)
                 logger.info("Incremental pull %s: +%d rows.", series.relative_path(), added)

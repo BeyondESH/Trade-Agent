@@ -92,4 +92,138 @@
     border-left: solid 1px var(--klinecharts-pro-border-color);
     margin-left: 8px;
   }
+  .period.expand {
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+}
+
+.@{prefix-cls}-period-body {
+  display: flex;
+  flex-direction: column;
+  height: 320px;
+  max-height: 70vh;
+}
+
+.@{prefix-cls}-period-body {
+  display: flex;
+  flex-direction: column;
+  height: 340px;
+  max-height: 70vh;
+}
+
+.@{prefix-cls}-period-section-title {
+  font-size: 12px;
+  color: var(--klinecharts-pro-text-color);
+  opacity: 0.8;
+}
+
+// 区域一:全部周期,点击切换,可拖拽
+.@{prefix-cls}-period-all {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  .period-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    .period-group-title {
+      font-size: 12px;
+      color: var(--klinecharts-pro-text-color);
+      opacity: 0.7;
+    }
+    .period-group-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+  }
+}
+
+// 拖拽源 pill
+.@{prefix-cls}-period-all .period-pill,
+.@{prefix-cls}-period-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  &:hover {
+    background-color: var(--klinecharts-pro-hover-background-color);
+  }
+  &.pinned {
+    border: solid 1px var(--klinecharts-pro-primary-color);
+    color: var(--klinecharts-pro-primary-color);
+  }
+  &.selected {
+    background-color: var(--klinecharts-pro-selected-color)!important;
+    color: var(--klinecharts-pro-primary-color);
+  }
+  .period-realtime {
+    font-size: 10px;
+    padding: 0 3px;
+    border-radius: 2px;
+    border: solid 1px var(--klinecharts-pro-border-color);
+    opacity: 0.8;
+  }
+}
+
+// 区域二:动态拖放区,保存为外部 pin 周期
+.@{prefix-cls}-period-pin {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px dashed var(--klinecharts-pro-border-color);
+  border-radius: 4px;
+  max-height: 30vh;
+  overflow-y: auto;
+  &.drop-active {
+    border-color: var(--klinecharts-pro-primary-color);
+    background-color: var(--klinecharts-pro-selected-color);
+  }
+  .period-section-title {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    .period-pin-hint {
+      font-size: 11px;
+      opacity: 0.6;
+    }
+  }
+  .pin-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    .period-pin-empty {
+      font-size: 12px;
+      opacity: 0.5;
+    }
+    .pin-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      border: solid 1px var(--klinecharts-pro-primary-color);
+      color: var(--klinecharts-pro-primary-color);
+      background-color: var(--klinecharts-pro-selected-color);
+      &:hover {
+        background-color: var(--klinecharts-pro-hover-background-color);
+      }
+      .pin-dot {
+        font-size: 12px;
+      }
+    }
+  }
 }

@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-08-19
+goal: Support all Bitget-native K-line intervals via an expandable period panel
+  with user-pinnable levels

@@ -23,7 +23,7 @@ from typing import Any
 from websockets.asyncio.client import ClientConnection, connect
 
 from market_data.ingestion import KlineIngestor
-from market_data.models import timeframe_to_granularity
+from market_data.models import granularity_to_timeframe, timeframe_to_granularity
 
 logger = logging.getLogger(__name__)
 
@@ -286,8 +286,17 @@ class BitgetWsStream:
         inst_type = arg.get("instType")
         inst_id = arg.get("instId")
         channel = arg.get("channel") or ""
-        timeframe = channel[6:].lower() if channel.startswith("candle") else ""
-        if not (inst_type and inst_id and timeframe):
+        # Reverse-map the WS channel token back to a stable internal timeframe
+        # key. Token-driven (not blind lowercasing) so the month channel
+        # `candle1M` resolves to `1mo` rather than collapsing onto the minute
+        # series `1m`.
+        if not channel.startswith("candle"):
+            return
+        try:
+            timeframe = granularity_to_timeframe(channel[len("candle"):])
+        except ValueError:
+            return
+        if not (inst_type and inst_id):
             return
         rows = msg.get("data") or []
         key = self._series_key(inst_type, inst_id, timeframe)

@@ -14,59 +14,67 @@ const distPath = path.resolve(
  * chart stuck on the previous symbol) lives inside the vendor's SolidJS
  * createEffect that loads history + subscribes:
  *
- *   1. The effect must read symbol/period BEFORE the `a` loading lock check,
- *      so Solid tracks those signals even while a previous load is in flight
+ *   1. The effect must read symbol/period BEFORE the loading-lock check, so
+ *      Solid tracks those signals even while a previous load is in flight
  *      (otherwise a `setSymbol` during loading is never re-triggered).
  *   2. After a load completes it must compare the current selection against
  *      the one it just loaded and force a reload (last-request-wins).
  *
- * These guards fail if a vendor upgrade re-introduces the original bug.
+ * Assertions target stable string literals that survive minification, not the
+ * minifier's chosen identifier names, so they survive innocent rebuilds and
+ * still fail if a vendor change re-introduces the original bug.
  */
 describe("vendored klinecharts-pro symbol-switch race fix", () => {
   const src = fs.readFileSync(distPath, "utf8");
 
+  // `applyNewData` appears exactly once inside the loading effect. Anchor on it
+  // (a stable string literal) and step back to the getHistoryKLineData call
+  // that feeds it. Minifier variable names are ignored on purpose.
+  const applyIdx = src.indexOf("applyNewData(");
+  const allDataIdx = src.lastIndexOf("> 0");
+  const loadAt = src.indexOf("getHistoryKLineData(", applyIdx - 400);
+  const before = () => src.slice(Math.max(0, loadAt - 700), loadAt);
+  const after = () => src.slice(loadAt, loadAt + 1300);
+
+  it("bundle contains the datafeed load path", () => {
+    expect(applyIdx).toBeGreaterThan(-1);
+    expect(allDataIdx).toBeGreaterThan(-1);
+    expect(loadAt).toBeGreaterThan(-1);
+  });
+
   it("reads symbol/period before the loading-guard return", () => {
-    // Original buggy shape: `if (!a) { ...; const f = d(), v = L(); ... }`
-    // Fixed shape: `const f = d(), v = L(); if (!a) { ... }`
-    const loadIdx = src.indexOf("n == null || n.applyNewData(X, X.length > 0)");
-    expect(loadIdx).toBeGreaterThan(-1);
-    const effectHead = src.slice(loadIdx - 900, loadIdx);
-    const reads = effectHead.lastIndexOf("const f = d(), v = L();");
-    const guard = effectHead.lastIndexOf("if (!a) {");
-    expect(reads).toBeGreaterThan(-1);
-    expect(guard).toBeGreaterThan(-1);
-    // the read must appear BEFORE the guard (fixed), not after (buggy)
-    expect(reads).toBeLessThan(guard);
+    // Just before the load, the effect reads both selection signals as a tuple
+    // (e.g. `const g = c(), _ = $();` before `return a ? h : (... load ...)`).
+    // This is what makes Solid track them even mid-load.
+    const head = before();
+    expect(head).toMatch(
+      /const [a-zA-Z_$][\w$]* = [a-zA-Z_$][\w$]*\(\),\s*[a-zA-Z_$][\w$]* = [a-zA-Z_$][\w$]*\(\);\s*return [a-zA-Z_$][\w$]* \? /,
+    );
   });
 
   it("reloads when the selection changed during the load (last-request-wins)", () => {
-    const loadIdx = src.indexOf("n == null || n.applyNewData(X, X.length > 0)");
-    const afterLoad = src.slice(loadIdx, loadIdx + 600);
-    expect(afterLoad).toContain("a = !1, k(!1)");
-    // after clearing the lock the fixed code compares current vs loaded target
-    expect(afterLoad).toMatch(/const cf = d\(\), cv = L\(\);/);
-    expect(afterLoad).toMatch(/cf\.ticker !== f\.ticker/);
-    // and forces a reload via the symbol setter (p) with a fresh object
-    expect(afterLoad).toMatch(/p\(\{ \.\.\.cf \}\)/);
+    // After applyNewData/subscribe it re-reads the selection and, if the symbol
+    // ticker or period text changed, recreates the object to force a reload.
+    const tail = after();
+    expect(tail).toMatch(/\.ticker !== .*\.ticker/);
+    expect(tail).toMatch(/\.text !== .*/);
+    expect(tail).toMatch(/\{\s*\.\.\./);
   });
 
   it("preserves the subscribe/updateData wiring", () => {
-    const loadIdx = src.indexOf("n == null || n.applyNewData(X, X.length > 0)");
-    const afterLoad = src.slice(loadIdx, loadIdx + 600);
-    expect(afterLoad).toContain("e.datafeed.subscribe(f, v");
-    expect(afterLoad).toContain("n.updateData(f1)");
-    expect(afterLoad).toContain("n.applyNewData(X, X.length > 0)");
+    const tail = after();
+    expect(tail).toMatch(/datafeed\.subscribe\([a-zA-Z_$][\w$]*, [a-zA-Z_$][\w$]*/);
+    expect(tail).toMatch(/updateData\(/);
+    expect(tail).toMatch(/applyNewData\([a-zA-Z_$][\w$]*, [a-zA-Z_$][\w$]*\.length > 0\)/);
   });
 
-  it("does not drop switches while a load is in flight", () => {
-    // The fix must NOT have removed the loading lock; `a` still guards
-    // concurrent loads. Instead it reads deps before the guard so a switch
-    // during loading still re-triggers the effect, and reloads afterwards.
-    const loadIdx = src.indexOf("n == null || n.applyNewData(X, X.length > 0)");
-    const effectHead = src.slice(loadIdx - 900, loadIdx);
-    expect(effectHead).toMatch(/if \(!a\) \{/); // lock preserved
-    expect(effectHead).toMatch(/const f = d\(\), v = L\(\);/); // deps read before lock
-    // effect still returns the loaded symbol/period tuple
-    expect(src.slice(loadIdx, loadIdx + 500)).toContain("symbol: f");
+  it("keeps the loading lock so concurrent loads coalesce", () => {
+    const head = before();
+    // The effect is guarded by a truthy loading flag returning the prior state.
+    expect(head).toMatch(/return [a-zA-Z_$][\w$]* \? [a-zA-Z_$][\w$]* : \(/);
+    // It returns the loaded selection tuple as its prev value.
+    const tail = after();
+    expect(tail).toMatch(/symbol: [a-zA-Z_$][\w$]*/);
+    expect(tail).toMatch(/period: [a-zA-Z_$][\w$]*/);
   });
 });

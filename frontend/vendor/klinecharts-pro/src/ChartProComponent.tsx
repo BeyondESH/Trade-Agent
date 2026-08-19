@@ -16,7 +16,8 @@ import { createSignal, createEffect, onMount, Show, onCleanup, startTransition, 
 
 import {
   init, dispose, utils, Nullable, Chart, OverlayMode, Styles,
-  TooltipIconPosition, ActionType, PaneOptions, Indicator, DomPosition, FormatDateType
+  TooltipIconPosition, ActionType, PaneOptions, Indicator, DomPosition, FormatDateType,
+  VisibleRange,
 } from 'klinecharts'
 
 import lodashSet from 'lodash/set'
@@ -34,8 +35,8 @@ import { translateTimezone } from './widget/timezone-modal/data'
 import { SymbolInfo, Period, ChartProOptions, ChartPro } from './types'
 
 export interface ChartProComponentProps extends
-  Required<Omit<ChartProOptions, 'container' | 'onSymbolChange' | 'onPeriodChange'>>,
-  Pick<ChartProOptions, 'onSymbolChange' | 'onPeriodChange'> {
+  Required<Omit<ChartProOptions, 'container' | 'onSymbolChange' | 'onPeriodChange' | 'pinnedTimeframes' | 'onPinChange'>>,
+  Pick<ChartProOptions, 'onSymbolChange' | 'onPeriodChange' | 'pinnedTimeframes' | 'onPinChange'> {
   ref: (chart: ChartPro) => void
 }
 
@@ -75,12 +76,17 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
 
   let loading = false
 
+  // Whether older history can still be preloaded (set to false once a backward
+  // load returns nothing; reset on symbol/period switch).
+  let canLoadMore = true
+
   const [theme, setTheme] = createSignal(props.theme)
   const [styles, setStyles] = createSignal(props.styles)
   const [locale, setLocale] = createSignal(props.locale)
 
   const [symbol, setSymbol] = createSignal(props.symbol)
   const [period, setPeriod] = createSignal(props.period)
+  const [pinnedTimeframes, setPinnedTimeframes] = createSignal(props.pinnedTimeframes ?? [])
   const [indicatorModalVisible, setIndicatorModalVisible] = createSignal(false)
   const [mainIndicators, setMainIndicators] = createSignal([...(props.mainIndicators!)])
   const [subIndicators, setSubIndicators] = createSignal({})
@@ -127,6 +133,11 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     let to = toTimestamp
     let from = to
     switch (period.timespan) {
+      case 'second': {
+        to = to - (to % 1000)
+        from = to - count * period.multiplier * 1000
+        break
+      }
       case 'minute': {
         to = to - (to % (60 * 1000))
         from = to - count * period.multiplier * 60 * 1000
@@ -182,6 +193,12 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         formatDate: (dateTimeFormat: Intl.DateTimeFormat, timestamp, format: string, type: FormatDateType) => {
           const p = period()
           switch (p.timespan) {
+            case 'second': {
+              if (type === FormatDateType.XAxis) {
+                return utils.formatDate(dateTimeFormat, timestamp, 'HH:mm:ss')
+              }
+              return utils.formatDate(dateTimeFormat, timestamp, 'YYYY-MM-DD HH:mm:ss')
+            }
             case 'minute': {
               if (type === FormatDateType.XAxis) {
                 return utils.formatDate(dateTimeFormat, timestamp, 'HH:mm')
@@ -246,17 +263,37 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       }
     })
     setSubIndicators(subIndicatorMap)
-    widget?.loadMore(timestamp => {
+    // Preload older history while the left edge of the viewport is still inside
+    // the loaded data, so dragging never lands on a blank screen before more
+    // data arrives. The hard-edge `loadMore` is kept as a fallback.
+    const loadOlderData = (timestamp: Nullable<number>) => {
+      if (loading || !canLoadMore) return
+      if (timestamp == null) return
       loading = true
       const get = async () => {
         const p = period()
         const [to] = adjustFromTo(p, timestamp!, 1)
         const [from] = adjustFromTo(p, to, 500)
         const kLineDataList = await props.datafeed.getHistoryKLineData(symbol(), p, from, to)
-        widget?.applyMoreData(kLineDataList, kLineDataList.length > 0)
+        canLoadMore = kLineDataList.length > 0
+        widget?.applyMoreData(kLineDataList, canLoadMore)
         loading = false
       }
       get()
+    }
+    widget?.loadMore(timestamp => {
+      loadOlderData(timestamp)
+    })
+    widget?.subscribeAction(ActionType.OnVisibleRangeChange, (data) => {
+      const range = data as VisibleRange
+      if (!range || typeof range.from !== 'number' || typeof range.to !== 'number') return
+      // Trigger when the left edge is within ~60% of a viewport of the data
+      // start (from === 0 satisfies this, covering the hard edge too).
+      const viewport = Math.max(1, range.to - range.from)
+      if (range.from <= Math.floor(viewport * 0.6)) {
+        const dataList = widget?.getDataList() ?? []
+        loadOlderData(dataList[range.from]?.timestamp ?? null)
+      }
     })
     widget?.subscribeAction(ActionType.OnTooltipIconClick, (data) => {
       if (data.indicatorName) {
@@ -312,13 +349,17 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   createEffect((prev?: PrevSymbolPeriod) => {
+    // Read the current symbol/period BEFORE the loading lock so Solid always
+    // tracks them (even when a previous load is still in flight). Without this
+    // a symbol/period switch during loading would never re-trigger the effect.
+    const s = symbol()
+    const p = period()
     if (!loading) {
       if (prev) {
         props.datafeed.unsubscribe(prev.symbol, prev.period)
       }
-      const s = symbol()
-      const p = period()
       loading = true
+      canLoadMore = true
       setLoadingVisible(true)
       const get = async () => {
         const [from, to] = adjustFromTo(p, new Date().getTime(), 500)
@@ -329,6 +370,14 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         })
         loading = false
         setLoadingVisible(false)
+        // Last-request-wins: if the selection changed while this load was in
+        // flight, nudge a reload by recreating the symbol/period object
+        // reference so the effect re-runs with the final selection.
+        const curSymbol = symbol()
+        const curPeriod = period()
+        if (curSymbol.ticker !== s.ticker || curPeriod.text !== p.text) {
+          setSymbol({ ...curSymbol })
+        }
       }
       get()
       return { symbol: s, period: p }
@@ -536,6 +585,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         spread={drawingBarVisible()}
         period={period()}
         periods={props.periods}
+        pinnedTimeframes={pinnedTimeframes()}
+        onPinChange={(ids) => { setPinnedTimeframes(ids); props.onPinChange?.(ids) }}
         onMenuClick={async () => {
           try {
             await startTransition(() => setDrawingBarVisible(!drawingBarVisible()))

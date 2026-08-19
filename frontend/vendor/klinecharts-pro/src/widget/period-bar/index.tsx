@@ -12,9 +12,11 @@
  * limitations under the License.
  */
 
-import { Component, Show, createSignal, onMount, onCleanup } from 'solid-js'
+import { Component, Show, For, createSignal, createMemo, onMount, onCleanup } from 'solid-js'
 
 import { SymbolInfo, Period } from '../../types'
+
+import Modal from '../../component/modal'
 
 import i18n from '../../i18n'
 
@@ -24,6 +26,9 @@ export interface PeriodBarProps {
   symbol: SymbolInfo
   period: Period
   periods: Period[]
+  /** Period identifiers (== `period.text`) rendered inline in the bar. */
+  pinnedTimeframes?: string[]
+  onPinChange?: (timeframes: string[]) => void
   onMenuClick: () => void
   onSymbolClick: () => void
   onPeriodChange: (period: Period) => void
@@ -33,10 +38,72 @@ export interface PeriodBarProps {
   onScreenshotClick: () => void
 }
 
+/** Group periods by time unit for the expandable panel, merging week/month. */
+function groupPeriods (periods: Period[]): Array<{ unit: string; periods: Period[] }> {
+  const order = ['second', 'minute', 'hour', 'day', 'weekmonth']
+  const groups: Array<{ unit: string; periods: Period[] }> = order.map(unit => ({ unit, periods: [] }))
+  periods.forEach(p => {
+    const bucket = p.timespan === 'week' || p.timespan === 'month' ? 'weekmonth' : p.timespan
+    const g = groups.find(x => x.unit === bucket)
+    if (g) g.periods.push(p)
+  })
+  return groups.filter(g => g.periods.length > 0)
+}
+
+/** Real-time-only level: has no REST history. */
+function isRealtimeOnly (p: Period): boolean {
+  return p.timespan === 'second'
+}
+
 const PeriodBar: Component<PeriodBarProps> = props => {
   let ref: Node
 
   const [fullScreen, setFullScreen] = createSignal(false)
+  const [expandVisible, setExpandVisible] = createSignal(false)
+  const [dropActive, setDropActive] = createSignal(false)
+
+  // Only periods whose identifier is pinned render inline, preserving the
+  // order of the full list. An absent `pinnedTimeframes` keeps legacy inline
+  // behaviour (everything shown).
+  const pinned = createMemo(() => {
+    const ids = props.pinnedTimeframes
+    if (!ids || ids.length === 0) return []
+    const set = new Set(ids)
+    return props.periods.filter(p => set.has(p.text))
+  })
+
+  /** Add a timeframe id to the pinned set (dedup); no-op if already pinned. */
+  const addPin = (id: string) => {
+    const current = props.pinnedTimeframes ?? []
+    if (current.includes(id)) return
+    props.onPinChange?.([...current, id])
+  }
+
+  /** Remove a timeframe id from the pinned set. */
+  const removePin = (id: string) => {
+    const current = props.pinnedTimeframes ?? []
+    props.onPinChange?.(current.filter(x => x !== id))
+  }
+
+  const onDragStart = (e: DragEvent, id: string) => {
+    if (e.dataTransfer) e.dataTransfer.setData('text/period', id)
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy'
+  }
+
+  const onDropZoneDragOver = (e: DragEvent) => {
+    e.preventDefault()
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+    setDropActive(true)
+  }
+
+  const onDropZoneDragLeave = () => setDropActive(false)
+
+  const onDropZoneDrop = (e: DragEvent) => {
+    e.preventDefault()
+    setDropActive(false)
+    const id = e.dataTransfer?.getData('text/period')
+    if (id) addPin(id)
+  }
 
   const fullScreenChange = () => {
     setFullScreen(full => !full)
@@ -78,15 +145,94 @@ const PeriodBar: Component<PeriodBarProps> = props => {
           <span>{props.symbol.shortName ?? props.symbol.name ?? props.symbol.ticker}</span>
         </div>
       </Show>
-      {
-        props.periods.map(p => (
+      <For each={pinned()}>
+        {(p) => (
           <span
             class={`item period ${p.text === props.period.text ? 'selected' : ''}`}
             onClick={() => { props.onPeriodChange(p) }}>
             {p.text}
           </span>
-        ))
-      }
+        )}
+      </For>
+      <span
+        class='item period expand'
+        title={i18n('expand_periods', props.locale)}
+        onClick={() => { setExpandVisible(true); }}>
+        ⋯
+      </span>
+      <Show when={expandVisible()}>
+        <Modal
+          width={360}
+          title={i18n('expand_periods', props.locale)}
+          onClose={() => { setExpandVisible(false) }}>
+          <div class="klinecharts-pro-period-body">
+            {/* 区域一:全部支持的时间周期,点击切换 K 线,可拖拽到下方保存为 pin */}
+            <div class="klinecharts-pro-period-all">
+              <div class="period-section-title">{i18n('all_periods', props.locale)}</div>
+              <div class="period-group-list">
+                <For each={groupPeriods(props.periods)}>
+                  {(group) => (
+                    <div class="period-group">
+                      <div class="period-group-title">{i18n(group.unit, props.locale)}</div>
+                      <div class="period-group-items">
+                        <For each={group.periods}>
+                          {(p) => {
+                            const isPinned = props.pinnedTimeframes?.includes(p.text) ?? false
+                            const isSelected = p.text === props.period.text
+                            return (
+                              <span
+                                class={`period-pill ${isPinned ? 'pinned' : ''} ${isSelected ? 'selected' : ''}`}
+                                draggable={true}
+                                onClick={() => { props.onPeriodChange(p) }}
+                                onDragStart={(e) => { onDragStart(e, p.text) }}>
+                                {p.text}
+                                {isRealtimeOnly(p) ? (
+                                  <span class="period-realtime">{i18n('realtime_only', props.locale)}</span>
+                                ) : null}
+                              </span>
+                            )
+                          }}
+                        </For>
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </div>
+            {/* 区域二:动态区,拖入保存为外部显示的 pin 周期 */}
+            <div
+              class={`klinecharts-pro-period-pin ${dropActive() ? 'drop-active' : ''}`}
+              onDragOver={onDropZoneDragOver}
+              onDragLeave={onDropZoneDragLeave}
+              onDrop={onDropZoneDrop}>
+              <div class="period-section-title">
+                {i18n('pinned', props.locale)}
+                <span class="period-pin-hint">{i18n('pin_hint', props.locale)}</span>
+              </div>
+              <div class="pin-chips">
+                <Show
+                  when={(props.pinnedTimeframes ?? []).length > 0}
+                  fallback={<span class="period-pin-empty">{i18n('pin_empty', props.locale)}</span>}>
+                  <For each={props.pinnedTimeframes ?? []}>
+                    {(id) => {
+                      const p = props.periods.find(x => x.text === id)
+                      return (
+                        <span
+                          class="pin-chip"
+                          title={i18n('pin_remove', props.locale)}
+                          onClick={() => { removePin(id) }}>
+                          <span class="pin-dot">★</span>
+                          <span>{p ? p.text : id}</span>
+                        </span>
+                      )
+                    }}
+                  </For>
+                </Show>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      </Show>
       <div
         class='item tools'
         onClick={props.onIndicatorClick}>

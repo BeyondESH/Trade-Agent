@@ -1,8 +1,5 @@
-# kline-ingestion Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change market-data-foundation. Update Purpose after archive.
-## Requirements
 ### Requirement: 按参数拉取 K 线
 
 系统 SHALL 支持按「品类 + 币种 + 时间级别 + 时间段(起止)」通过 MCP 拉取 K 线,并支持所有 MCP 支持的品类/币种。返回数据 MUST 归一为统一 OHLCV 模型,时间戳以 UTC 存储。系统 SHALL 支持面向图表的按需深度回灌：对全部受支持**且提供历史查询**的时间级别，能从已存最早 bar 继续向更早方向分页回溯拉取，并落库供 `/candles` 连续返回，直至交易所无更早历史。仅实时级别(交易所不提供历史查询的级别)MUST NOT 参与历史拉取、落库与深度回灌。
@@ -55,4 +52,3 @@ TBD - created by archiving change market-data-foundation. Update Purpose after a
 - **WHEN** 对周级、月级或新增的小时/天级级别执行缺口校验
 - **THEN** 系统 SHALL 成功解析其步长
 - **AND** MUST NOT 因级别未登记而抛出未支持异常
-

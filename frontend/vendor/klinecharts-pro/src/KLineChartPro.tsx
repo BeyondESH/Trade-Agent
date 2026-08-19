@@ -71,6 +71,8 @@ export default class KLineChartPro implements ChartPro {
           subIndicators={options.subIndicators ?? ['VOL']}
           onSymbolChange={options.onSymbolChange}
           onPeriodChange={options.onPeriodChange}
+          pinnedTimeframes={options.pinnedTimeframes}
+          onPinChange={options.onPinChange}
           datafeed={options.datafeed}/>
       ),
       this._container

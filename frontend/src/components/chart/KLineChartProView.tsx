@@ -10,6 +10,10 @@ import {
 import "../../../vendor/klinecharts-pro/dist/klinecharts-pro.css";
 import "../../klinecharts-pro-theme.css";
 import { FONT_FAMILY_STACK } from "../../lib/fonts";
+import {
+  loadPinnedTimeframes,
+  savePinnedTimeframes,
+} from "../../lib/periodsStore";
 
 export interface KLineChartProHandle {
   setSymbol(symbol: SymbolInfo): void;
@@ -20,17 +24,49 @@ export interface KLineChartProHandle {
   getRoot(): HTMLElement | null;
 }
 
-/** Period list aligned with backend-supported granularities. */
+/**
+ * Bitget-native timeframe set, aligned with the backend-supported granularities
+ * and the store's pinned-timeframe identifiers. `period.text` intentionally
+ * equals the canonical identifier (`periodToTimeframe` output) so the vendored
+ * period bar can match a pinned identifier to its Period directly.
+ */
 export const NATIVE_PERIODS: Period[] = [
+  { multiplier: 1, timespan: "second", text: "1s" },
   { multiplier: 1, timespan: "minute", text: "1m" },
+  { multiplier: 3, timespan: "minute", text: "3m" },
   { multiplier: 5, timespan: "minute", text: "5m" },
   { multiplier: 15, timespan: "minute", text: "15m" },
   { multiplier: 30, timespan: "minute", text: "30m" },
   { multiplier: 1, timespan: "hour", text: "1h" },
+  { multiplier: 2, timespan: "hour", text: "2h" },
   { multiplier: 4, timespan: "hour", text: "4h" },
+  { multiplier: 6, timespan: "hour", text: "6h" },
   { multiplier: 12, timespan: "hour", text: "12h" },
   { multiplier: 1, timespan: "day", text: "1d" },
+  { multiplier: 3, timespan: "day", text: "3d" },
+  { multiplier: 1, timespan: "week", text: "1w" },
+  { multiplier: 1, timespan: "month", text: "1mo" },
 ];
+
+/** Group a period list by time unit for the expandable panel. */
+export const PERIOD_GROUPS: { unit: string; label: string; periods: Period[] }[] = [
+  { unit: "second", label: "秒", periods: [] },
+  { unit: "minute", label: "分钟", periods: [] },
+  { unit: "hour", label: "小时", periods: [] },
+  { unit: "day", label: "天", periods: [] },
+  { unit: "week", label: "周/月", periods: [] },
+];
+export function groupPeriods(periods: Period[]) {
+  const grouped = PERIOD_GROUPS.map((g) => ({ ...g, periods: [] as Period[] }));
+  for (const p of periods) {
+    const g = grouped.find((x) =>
+      x.unit === p.timespan ||
+      (x.unit === "week" && (p.timespan === "week" || p.timespan === "month")),
+    );
+    if (g) g.periods.push(p);
+  }
+  return grouped.filter((g) => g.periods.length > 0);
+}
 
 interface Props {
   symbol: SymbolInfo;
@@ -98,6 +134,8 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         subIndicators: ["VOL"],
         onSymbolChange: (s) => propsRef.current.onSymbolChange?.(s),
         onPeriodChange: (p) => propsRef.current.onPeriodChange?.(p),
+        pinnedTimeframes: loadPinnedTimeframes(),
+        onPinChange: (ids) => savePinnedTimeframes(ids),
         styles: {
           grid: { horizontal: { color: "#2a2e39" }, vertical: { color: "#2a2e39" } },
           candle: {

@@ -38,6 +38,9 @@ export interface ChartProOptions {
   symbol: SymbolInfo
   period: Period
   periods?: Period[]
+  /** Identifiers (== each Period.text in `periods`) rendered in the period bar. */
+  pinnedTimeframes?: string[]
+  onPinChange?: (timeframes: string[]) => void
   timezone?: string
   mainIndicators?: string[]
   subIndicators?: string[]

@@ -41,30 +41,72 @@ function instrumentToSymbolInfo(inst: Instrument): SymbolInfo {
   };
 }
 
+/** Identifier -> Bitget-native timeframe string (stable, case-insensitive-safe). */
 export function periodToTimeframe(period: Period): string {
   switch (period.timespan) {
+    case "second":
+      return `${period.multiplier}s`;
     case "minute":
       return `${period.multiplier}m`;
     case "hour":
       return `${period.multiplier}h`;
     case "day":
       return `${period.multiplier}d`;
+    case "week":
+      return `${period.multiplier}w`;
+    case "month":
+      // `mo` never collides with minute `m` under case-insensitive comparison.
+      return `${period.multiplier}mo`;
     default:
-      return period.text.toLowerCase();
+      throw new Error(`periodToTimeframe: unknown timespan "${period.timespan}"`);
   }
 }
 
-/** Inverse of periodToTimeframe; falls back to 5m for unknown formats. */
+/** The set of native timeframe identifiers supported round-trip. */
+const NATIVE_TIMEFRAMES = new Set([
+  "1s", "1m", "3m", "5m", "15m", "30m",
+  "1h", "2h", "4h", "6h", "12h",
+  "1d", "3d", "1w", "1mo",
+]);
+
+/**
+ * Inverse of periodToTimeframe. Throws for identifiers outside the native set
+ * rather than silently falling back, so an unsupported level is surfaced
+ * instead of showing wrong-series data.
+ */
 export function periodFromTimeframe(timeframe: string): Period {
-  const m = /^(\d+)([mhd])$/i.exec(timeframe.trim());
-  if (m) {
-    const multiplier = Number(m[1]);
-    const unit = m[2].toLowerCase();
-    const timespan = unit === "m" ? "minute" : unit === "h" ? "hour" : "day";
-    const text = `${multiplier}${unit}`;
-    return { multiplier, timespan, text };
+  const tf = timeframe.trim().toLowerCase();
+  if (!NATIVE_TIMEFRAMES.has(tf)) {
+    throw new Error(`periodFromTimeframe: unsupported timeframe "${timeframe}"`);
   }
-  return { multiplier: 5, timespan: "minute", text: "5m" };
+  const m = /^(\d+)([smhdw]|mo)$/i.exec(tf);
+  if (!m) {
+    throw new Error(`periodFromTimeframe: unsupported timeframe "${timeframe}"`);
+  }
+  const multiplier = Number(m[1]);
+  const unit = m[2].toLowerCase();
+  let timespan: Period["timespan"];
+  switch (unit) {
+    case "s": timespan = "second"; break;
+    case "m": timespan = "minute"; break;
+    case "h": timespan = "hour"; break;
+    case "d": timespan = "day"; break;
+    case "w": timespan = "week"; break;
+    case "mo": timespan = "month"; break;
+    default: throw new Error(`periodFromTimeframe: unsupported unit "${unit}"`);
+  }
+  const text = `${multiplier}${unit}`;
+  return { multiplier, timespan, text };
+}
+
+/** True when the level is real-time only (no REST history, no persistence). */
+export function isRealtimeOnlyTimeframe(timeframe: string): boolean {
+  return timeframe.trim().toLowerCase() === "1s";
+}
+
+/** Normalize an identifier to the canonical lowercase form ("1MO" -> "1mo"). */
+export function normalizeTimeframe(timeframe: string): string {
+  return timeframe.trim().toLowerCase();
 }
 
 function toSeries(symbol: SymbolInfo, period: Period): SeriesRef {
@@ -73,6 +115,26 @@ function toSeries(symbol: SymbolInfo, period: Period): SeriesRef {
     symbol: symbol.ticker,
     timeframe: periodToTimeframe(period),
   };
+}
+
+/**
+ * Normalize a backward (older-history) load result before it is prepended to
+ * the chart: sort ascending by timestamp, drop duplicate timestamps, and
+ * (optionally) drop bars newer than the requested range. klinecharts
+ * applyMoreData concatenates without deduping, so this keeps the prepend seam
+ * free of duplicate bars.
+ */
+export function normalizeBackwardList(bars: KLineData[], maxTimestamp?: number): KLineData[] {
+  const seen = new Set<number>();
+  const out: KLineData[] = [];
+  for (const bar of [...bars].sort((a, b) => a.timestamp - b.timestamp)) {
+    if (maxTimestamp != null && bar.timestamp > maxTimestamp) continue;
+    if (!seen.has(bar.timestamp)) {
+      seen.add(bar.timestamp);
+      out.push(bar);
+    }
+  }
+  return out;
 }
 
 export class BitgetDatafeed implements Datafeed {
@@ -117,6 +179,11 @@ export class BitgetDatafeed implements Datafeed {
     from: number,
     to: number,
   ): Promise<KLineData[]> {
+    // Realtime-only levels (e.g. `1s`) have no REST history; never poke a
+    // history endpoint for them — the chart fills from the live WS stream.
+    if (isRealtimeOnlyTimeframe(periodToTimeframe(period))) {
+      return [];
+    }
     const series = toSeries(symbol, period);
     const key = this.seriesKey(series);
     // Only backfill when the request goes further back than the earliest bar
@@ -133,20 +200,41 @@ export class BitgetDatafeed implements Datafeed {
         const again = await this.fetchStored(series, from, to);
         if (again !== null && again.length > 0) {
           this.noteEarliest(key, again[0].timestamp);
-          return again;
+          return normalizeBackwardList(again, to);
         }
       }
-      return stored;
+      return normalizeBackwardList(stored, to);
     }
-    try {
-      const recent = await api.candlesRecent(series, 200);
-      if (recent.candles.length > 0) {
-        this.noteEarliest(key, recent.candles[0].open_time);
+    // Nothing in the local store for [from, to].
+    // The very first request for a series is an initial load: seed it from the
+    // recent candles (this is the only path where returning the latest bars is
+    // legitimate).
+    if (prevEarliest == null) {
+      try {
+        const recent = await api.candlesRecent(series, 200);
+        if (recent.candles.length > 0) {
+          this.noteEarliest(key, recent.candles[0].open_time);
+        }
+        return recent.candles.map(candleToKLine);
+      } catch {
+        return [];
       }
-      return recent.candles.map(candleToKLine);
-    } catch {
-      return [];
     }
+    // Backward load (dragging right beyond stored history) with an empty range:
+    // fetch older data on demand. Never fall back to the latest candles here —
+    // they are newer than the requested range and would be prepended as
+    // duplicates by applyMoreData.
+    if (!this.exhausted.has(key)) {
+      await this.backfill(series, to).catch(() => {
+        /* backfill is best-effort */
+      });
+      const again = await this.fetchStored(series, from, to);
+      if (again !== null && again.length > 0) {
+        this.noteEarliest(key, again[0].timestamp);
+        return normalizeBackwardList(again, to);
+      }
+    }
+    return [];
   }
 
   /**
@@ -155,6 +243,8 @@ export class BitgetDatafeed implements Datafeed {
    * most once per 5s per series; in-flight requests are deduped.
    */
   prefetchDeeper(symbol: SymbolInfo, period: Period): void {
+    // Realtime-only levels never accumulate persisted history to extend.
+    if (isRealtimeOnlyTimeframe(periodToTimeframe(period))) return;
     const series = toSeries(symbol, period);
     const key = this.seriesKey(series);
     const before = this.earliest.get(key);
