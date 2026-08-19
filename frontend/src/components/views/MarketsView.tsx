@@ -114,18 +114,49 @@ const TopCards: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, isDark 
   );
 };
 
+/** 抄底逃顶信号徽章：Buy=绿 / Sell=红 / Hold=灰 / 空或未知=N/A。 */
+const SignalBadge: React.FC<{ status: string }> = ({ status }) => {
+  const s = status.trim().toLowerCase();
+  const isBuy = s === "buy";
+  const isSell = s === "sell";
+  const isHold = s === "hold";
+  const cls = isBuy
+    ? "bg-[#089981]/20 text-[#089981]"
+    : isSell
+      ? "bg-[#f23645]/20 text-[#f23645]"
+      : "bg-gray-500/20 text-gray-400";
+  const label = isBuy || isSell || isHold ? status.toUpperCase() : "N/A";
+  return <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded ${cls}`}>{label}</span>;
+};
+
 const IndicatorCard: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, isDark }) => {
   const d = m.topCards.data;
-  if (!d) return null;
-  if (!d.indicatorName && !d.indicatorInfo) return null;
+  const indicators = d?.indicators ?? [];
+  const time = indicators.find((i) => i.createTime)?.createTime ?? null;
+  const fmtTime = (t: string) => (t.length >= 16 ? t.slice(11, 16) : t);
   return (
-    <div className={`mb-5 p-4 rounded-xl border ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}>
-      <div className="flex items-center gap-2">
-        <Gauge className="w-4 h-4 text-[#2962ff]" />
-        <span className="font-bold text-sm text-white">{t("Bottom/Top Indicator")}</span>
+    <div data-testid="indicator-card" className={`mb-5 p-4 rounded-xl border ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}>
+      <div className="flex items-center justify-between border-b pb-2 border-gray-500/20">
+        <span className="flex items-center gap-2 font-bold text-sm">
+          <Gauge className="w-4 h-4 text-[#2962ff]" />
+          <span>{t("Bottom/Top Indicator")}</span>
+        </span>
+        {time && <span className="text-[10px] text-gray-500 font-mono">{fmtTime(time)} UTC</span>}
       </div>
-      <div className="text-sm font-semibold mt-2">{d.indicatorName ?? "N/A"}</div>
-      {d.indicatorInfo && <p className="text-xs text-gray-400 mt-1 leading-relaxed">{d.indicatorInfo}</p>}
+      {indicators.length === 0 ? (
+        <div className="text-xs text-gray-500 mt-3">N/A</div>
+      ) : (
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {indicators.map((ind, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 text-xs min-w-0">
+              <span className="font-semibold truncate" title={ind.info || undefined}>
+                {ind.name}
+              </span>
+              <SignalBadge status={ind.status} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -36,8 +36,10 @@ TBD - created by archiving change markets-overview-blockbeats-data. Update Purpo
 
 #### Scenario: 抄底逃顶指标以说明卡呈现
 - **WHEN** `bottom_top_indicator` 取数成功
-- **THEN** SHALL 展示指标名称与指标说明文本
-- **AND** MUST NOT 为该指标编造或推导任何数值读数
+- **THEN** SHALL 展示该端点返回的每个指标的指标名称与其 `status` 信号徽章（`Buy`、`Sell`、`Hold`，空值或未知值 SHALL 显示为 `N/A`）
+- **AND** SHALL 展示每个指标的说明文本（如 hover 提示或行内小字）
+- **AND** `status` SHALL 取自上游真实字段，MUST NOT 编造或推导任何数值读数
+- **AND** 当返回数组为空或取数失败时 SHALL 显示 `N/A` 占位
 
 ### Requirement: 宏观走势板块
 视图 SHALL 提供宏观走势板块，展示 10 年期美债收益率（`us10y`）与 DXY 美元指数（`dxy`）。两个端点 SHALL 以 `type=1M` 请求。

@@ -4,6 +4,7 @@ import {
   extractTrend,
   extractSeries,
   parseNetflow,
+  summarizeIndicatorStatus,
   fetchMarketPulseEntry,
   fetchNetflow,
   MARKET_PULSE_ENDPOINTS,
@@ -60,6 +61,21 @@ describe("marketPulse helpers", () => {
     expect(parseNetflow({})).toEqual([]);
     expect(parseNetflow(null)).toEqual([]);
   });
+
+  it("summarizes bottom/top indicator status counts", () => {
+    expect(
+      summarizeIndicatorStatus([
+        { status: "Buy" },
+        { status: "buy" },
+        { status: "Hold" },
+        { status: "" },
+        { status: "Unknown" },
+      ]),
+    ).toBe("Buy 2 · Hold 1");
+    expect(summarizeIndicatorStatus([])).toBe("N/A");
+    expect(summarizeIndicatorStatus(null)).toBe("N/A");
+    expect(summarizeIndicatorStatus([{ info: "no status" }])).toBe("N/A");
+  });
 });
 
 describe("data fetching", () => {
@@ -74,6 +90,15 @@ describe("data fetching", () => {
     expect(entry.label).toBe("US Dollar Index (DXY)");
     expect(entry.value).toContain("103.5");
     expect(entry.trend).toBe(103.5);
+  });
+
+  it("summarizes bottom_top_indicator instead of flattening the array", async () => {
+    vi.mocked(api.blockbeatsData).mockResolvedValue({
+      status: 0,
+      data: [{ status: "Buy" }, { status: "Sell" }, { status: "Hold" }],
+    });
+    const entry = await fetchMarketPulseEntry("bottom_top_indicator", "Bottom/Top Indicator");
+    expect(entry.value).toBe("Buy 1 · Sell 1 · Hold 1");
   });
 
   it("tolerates upstream failures as N/A", async () => {

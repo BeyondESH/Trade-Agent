@@ -91,6 +91,23 @@ export function extractSeries(raw: unknown): number[] {
   return out.slice(0, 31);
 }
 
+/** Summarize the bottom/top indicator payload: count status signals (Buy/Sell/Hold). */
+export function summarizeIndicatorStatus(raw: unknown): string {
+  if (!Array.isArray(raw) || raw.length === 0) return "N/A";
+  const counts: Record<string, number> = {};
+  for (const r of raw) {
+    if (typeof r !== "object" || r === null) continue;
+    const s = String((r as Record<string, unknown>).status ?? "").trim().toUpperCase();
+    if (s === "BUY" || s === "SELL" || s === "HOLD") {
+      const key = s[0] + s.slice(1).toLowerCase();
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+  }
+  const parts = (Object.entries(counts) as [string, number][]).sort((a, b) => b[1] - a[1]);
+  if (parts.length === 0) return "N/A";
+  return parts.map(([k, v]) => `${k} ${v}`).join(" · ");
+}
+
 /** Fetch one data endpoint and normalize to a MarketPulseEntry. */
 export async function fetchMarketPulseEntry(endpoint: string, label: string): Promise<MarketPulseEntry> {
   try {
@@ -98,7 +115,7 @@ export async function fetchMarketPulseEntry(endpoint: string, label: string): Pr
     return {
       endpoint,
       label,
-      value: flattenValue(res?.data),
+      value: endpoint === "bottom_top_indicator" ? summarizeIndicatorStatus(res?.data) : flattenValue(res?.data),
       trend: extractTrend(res?.data),
       raw: res?.data,
     };

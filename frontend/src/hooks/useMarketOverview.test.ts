@@ -28,7 +28,14 @@ function mockAll(netflow: unknown = []) {
       case "bitfinex_long":
         return Promise.resolve(ok([{ symbol: "BTC", price: "107858.50", long: "45564" }]));
       case "bottom_top_indicator":
-        return Promise.resolve(ok([{ name: "市场脉动指数", info: "综合指标，小于20买，大于80卖" }]));
+        return Promise.resolve(
+          ok([
+            { name: "市场脉动指数", info: "综合指标，小于20买，大于80卖", status: "", create_time: "2026-08-19 08:03:09" },
+            { name: "整体市场流动性指数", info: "市值加权", status: "Hold", create_time: "2026-08-19 08:03:09" },
+            { name: "USDC/USDT 溢价", info: "溢折价", status: "Buy", create_time: "2026-08-19 08:03:09" },
+            { name: "逃顶信号", info: "测试", status: "Sell", create_time: "2026-08-19 08:03:09" },
+          ]),
+        );
       case "stablecoin_marketcap":
         return Promise.resolve(ok({ usdt: [{ date: "2026-01-28", market_cap: "100000000" }], usdc: [{ date: "2026-01-28", market_cap: "50000000" }] }));
       case "daily_tx":
@@ -63,7 +70,14 @@ describe("useMarketOverview", () => {
     expect(result.current.topCards.data?.compliantTotal).toBeCloseTo(567.89);
     expect(result.current.topCards.data?.longPrice).toBeCloseTo(107858.5);
     expect(result.current.topCards.data?.longCount).toBeCloseTo(45564);
-    expect(result.current.topCards.data?.indicatorName).toBe("市场脉动指数");
+    expect(result.current.topCards.data?.indicators).toHaveLength(4);
+    expect(result.current.topCards.data?.indicators[0]).toEqual({
+      name: "市场脉动指数",
+      info: "综合指标，小于20买，大于80卖",
+      status: "",
+      createTime: "2026-08-19 08:03:09",
+    });
+    expect(result.current.topCards.data?.indicators.map((i) => i.status)).toEqual(["", "Hold", "Buy", "Sell"]);
 
     expect(result.current.macro.data?.us10y?.price).toBeCloseTo(4.6);
     expect(result.current.macro.data?.us10y?.up).toBe(true);
@@ -100,6 +114,8 @@ describe("useMarketOverview", () => {
     // btc_etf failed -> that field is null (missing), not faked as 0
     expect(result.current.topCards.data?.etfNet).toBeNull();
     expect(result.current.topCards.data?.etfTotal).toBeNull();
+    // bottom_top_indicator missing -> empty indicator list (renders N/A)
+    expect(result.current.topCards.data?.indicators).toEqual([]);
     // macro still resolved
     expect(result.current.macro.data?.dxy?.price).toBeCloseTo(2);
   });

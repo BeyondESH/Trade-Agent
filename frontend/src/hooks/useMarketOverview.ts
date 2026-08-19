@@ -24,9 +24,19 @@ export interface TopCardData {
   /** Bitfinex 杠杆多头：价格 / 持仓数量。 */
   longPrice: number | null;
   longCount: number | null;
-  /** 抄底逃顶指标说明（无数值）。 */
-  indicatorName: string | null;
-  indicatorInfo: string | null;
+  /** 抄底逃顶指标信号列表（status 为上游真实字段）。 */
+  indicators: TopIndicatorRow[];
+}
+
+export interface TopIndicatorRow {
+  /** 指标名称（如「市场脉动指数」）。 */
+  name: string;
+  /** 指标说明文本。 */
+  info: string;
+  /** 上游信号值：Buy / Sell / Hold / ""（未知兜底为 N/A）。 */
+  status: string;
+  /** 数据时间（create_time，UTC 字符串）。 */
+  createTime: string;
 }
 
 export interface KlineSeries {
@@ -126,8 +136,15 @@ function normalizeTopCards(
   const fbtcRow = last((ibitRec.fbtc as Array<Record<string, unknown>>) ?? null);
   // bitfinex_long: [{ symbol, price, long, ... }]
   const longRow = last(bitfinexLong as Array<Record<string, unknown>>);
-  // bottom_top_indicator: [{ name, info, create_time }]
-  const indRow = last(indicator as Array<Record<string, unknown>>);
+  // bottom_top_indicator: [{ name, info, status, create_time }]
+  const indicators = Array.isArray(indicator)
+    ? indicator.map((r) => ({
+        name: String(pick(r, ["name"]) ?? "") || "?",
+        info: String(pick(r, ["info"]) ?? "") || "",
+        status: String(pick(r, ["status"]) ?? "") || "",
+        createTime: String(pick(r, ["create_time", "createTime"]) ?? "") || "",
+      }))
+    : [];
 
   return {
     etfNet: etfRow ? asNumber(pick(etfRow, ["day_net_inflow_million", "dayNetInflowMillion", "net_inflow_million", "netInflowMillion"])) : null,
@@ -138,8 +155,7 @@ function normalizeTopCards(
     fbtc: fbtcRow ? asNumber(pick(fbtcRow, ["day_net_inflow", "dayNetInflow", "net_inflow", "netInflow"])) : null,
     longPrice: longRow ? asNumber(pick(longRow, ["price"])) : null,
     longCount: longRow ? asNumber(pick(longRow, ["long"])) : null,
-    indicatorName: indRow ? String(pick(indRow, ["name"]) ?? "") || null : null,
-    indicatorInfo: indRow ? String(pick(indRow, ["info"]) ?? "") || null : null,
+    indicators,
   };
 }
 
