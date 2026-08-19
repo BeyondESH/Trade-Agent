@@ -34,7 +34,7 @@ TBD - created by archiving change right-dock-ui-polish. Update Purpose after arc
 
 ### Requirement: 完全隐藏滚动条工具类
 
-系统 SHALL 提供 `no-scrollbar` 工具类用于完全隐藏滚动条（滑块与轨道均不可见，且不占用空间），该类 SHALL 在样式入口以 Tailwind v4 `@utility` 机制定义，使项目中所有既有引用生效。该类 SHALL 用于滚动条无信息价值的横向控件条（如分类 chip 条、Tab 条），纵向长列表 SHALL 使用隐式滚动条而非该类。
+系统 SHALL 提供 `no-scrollbar` 工具类用于完全隐藏滚动条（滑块与轨道均不可见，且不占用布局空间），该类 SHALL 在样式入口以 Tailwind v4 `@utility` 机制定义，使项目中所有既有引用生效。该类 SHALL 用于滚动条无信息价值的横向控件条（如分类 chip 条、Tab 条），纵向长列表 SHALL 使用隐式滚动条而非该类。当内容溢出时，该类 SHALL 允许横向滚动，但滚动条槽位 MUST NOT 占用或压缩容器布局空间（含可用高度），MUST NOT 因此触发垂直滚动条或挤压内容。
 
 #### Scenario: 工具类生效
 
@@ -43,8 +43,10 @@ TBD - created by archiving change right-dock-ui-polish. Update Purpose after arc
 
 #### Scenario: 横向控件条无滚动条
 
-- **WHEN** 渲染底部 Tab 栏、顶部标签栏或新闻分类 chip 条
-- **THEN** 这些窄条 SHALL NOT 在 hover 时出现滚动条侵占其可视高度
+- **WHEN** 渲染底部 Tab 栏、顶部标签栏或新闻分类 chip 条，且其内容横向溢出
+- **THEN** 这些窄条 SHALL 可横向滚动且 SHALL NOT 显示任何滚动条（含 hover）
+- **AND** 滚动条槽位 SHALL NOT 压缩容器可用高度
+- **AND** 容器 SHALL NOT 因此出现垂直滚动条，内容高度 SHALL 保持不变
 
 #### Scenario: 纵向长列表使用隐式滚动条
 

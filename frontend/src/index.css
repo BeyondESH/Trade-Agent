@@ -97,10 +97,15 @@ body,
   background: transparent;
 }
 
-/* Standard property twin-setting as a forward-compatible fallback. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--tv-scrollbar-thumb) transparent;
+/* Standard property twin-setting as a forward-compatible fallback. Placed in
+   the base layer so utilities (e.g. @utility no-scrollbar) can override it:
+   unlayered rules always beat layered ones, which broke scrollbar-width:
+   none and left Chromium scrollbar gutters occupying 8px of layout space. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--tv-scrollbar-thumb) transparent;
+  }
 }
 
 /* Reduced motion: no fade transition, thumb directly visible. */
