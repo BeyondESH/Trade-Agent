@@ -177,7 +177,7 @@ export default function App() {
   const [events] = useState<EconomicEvent[]>(INITIAL_CALENDAR);
   const rawBook = useOrderBook(activeSymbol?.id ?? 'BTCUSDT', 'USDT-FUTURES');
   const trades = useTrades(activeSymbol?.id ?? 'BTCUSDT', 'USDT-FUTURES');
-  const orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[] } = useMemo(() => {
+  const orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[]; spread: number | null } = useMemo(() => {
     const toEntries = (levels: BookLevel[], desc: boolean): OrderBookEntry[] => {
       const sorted = [...levels].sort((a, b) => (desc ? b.price - a.price : a.price - b.price));
       let total = 0;
@@ -186,7 +186,11 @@ export default function App() {
         return { price: l.price, amount: l.size, total };
       });
     };
-    return { bids: toEntries(rawBook.bids, true), asks: toEntries(rawBook.asks, false) };
+    return {
+      bids: toEntries(rawBook.bids, true),
+      asks: toEntries(rawBook.asks, false),
+      spread: rawBook.spread,
+    };
   }, [rawBook]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
 

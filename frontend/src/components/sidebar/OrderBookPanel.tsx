@@ -5,7 +5,7 @@ import { t } from '../../lib/i18n';
 
 interface Props {
   symbol: SymbolInfo;
-  orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[] };
+  orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[]; spread: number | null };
   theme: 'dark' | 'light';
 }
 
@@ -14,6 +14,10 @@ export const OrderBookPanel: React.FC<Props> = ({ symbol, orderBook, theme }) =>
   const maxBidTotal = orderBook.bids[orderBook.bids.length - 1]?.total || 1;
   const maxAskTotal = orderBook.asks[orderBook.asks.length - 1]?.total || 1;
   const maxTotal = Math.max(maxBidTotal, maxAskTotal);
+  const spreadText =
+    orderBook.spread != null
+      ? orderBook.spread.toFixed(symbol.digits)
+      : '--';
 
   return (
     <div id="orderbook-panel" className="flex flex-col h-full w-full select-none text-xs">
@@ -58,7 +62,7 @@ export const OrderBookPanel: React.FC<Props> = ({ symbol, orderBook, theme }) =>
           <span className={`text-sm ${symbol.change24hPercent >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
             ${symbol.price.toFixed(symbol.digits)}
           </span>
-          <span className="text-[10px] text-gray-400 font-normal">价差: 0.02 (0.01%)</span>
+          <span className="text-[10px] text-gray-400 font-normal">价差: {spreadText}</span>
         </div>
 
         {/* Bids (Green) */}

@@ -43,7 +43,7 @@ interface Props {
   onRemoveAlert: (id: string) => void;
   onOpenCreateAlert: () => void;
   events: EconomicEvent[];
-  orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[] };
+  orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[]; spread: number | null };
   trades: Trade[];
   theme: 'dark' | 'light';
 }
