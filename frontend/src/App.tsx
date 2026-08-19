@@ -873,15 +873,16 @@ export default function App() {
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       />
 
-      <CreateAlertModal
-        isOpen={isAlertOpen}
-        onClose={() => {
+      {isAlertOpen && (
+        <CreateAlertModal
+          isOpen={isAlertOpen}
+          onClose={() => {
   setIsAlertOpen(false);
   setAlertPrefillPrice(null);
 }}
-        symbol={activeSymbol}
-        initialPrice={alertPrefillPrice ?? undefined}
-        onAddAlert={(newAlt) => {
+          symbol={activeSymbol}
+          initialPrice={alertPrefillPrice ?? undefined}
+          onAddAlert={(newAlt) => {
   setAlerts((prev) => [newAlt, ...prev]);
   const mapped: Alert = {
     id: newAlt.id,
@@ -895,8 +896,9 @@ export default function App() {
   upsertAlert(mapped);
   mirrorAlertCreate(mapped);
 }}
-        theme={theme}
-      />
+          theme={theme}
+        />
+      )}
 
       <OrderModal
         isOpen={orderModal.isOpen}
