@@ -200,10 +200,10 @@ export class BitgetDatafeed implements Datafeed {
         const again = await this.fetchStored(series, from, to);
         if (again !== null && again.length > 0) {
           this.noteEarliest(key, again[0].timestamp);
-          return normalizeBackwardList(again, to);
+          return this.mergeLiveTail(series, again, to);
         }
       }
-      return normalizeBackwardList(stored, to);
+      return this.mergeLiveTail(series, stored, to);
     }
     // Nothing in the local store for [from, to].
     // The very first request for a series is an initial load: seed it from the
@@ -296,6 +296,27 @@ export class BitgetDatafeed implements Datafeed {
       return [];
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Merge the live-buffer bars into the stored history so the chart never
+   * shows a gap between persisted history and the realtime buffer (the backend
+   * persists on a schedule, not continuously). The store may be missing bars
+   * in the middle (not only the tail), so the full buffer is merged and the
+   * combined list is sorted ascending and deduplicated — keeping the
+   * load/append seam free of duplicates and out-of-order timestamps.
+   */
+  private async mergeLiveTail(series: SeriesRef, stored: KLineData[], to: number): Promise<KLineData[]> {
+    const base = normalizeBackwardList(stored, to);
+    if (base.length === 0) return base;
+    try {
+      const recent = await api.candlesRecent(series, 500);
+      if (recent.candles.length === 0) return base;
+      const buffered = recent.candles.map(candleToKLine);
+      return normalizeBackwardList([...base, ...buffered], to);
+    } catch {
+      return base;
     }
   }
 

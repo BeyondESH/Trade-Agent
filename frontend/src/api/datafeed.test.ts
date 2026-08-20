@@ -183,7 +183,95 @@ describe("BitgetDatafeed history", () => {
     });
     const d = new BitgetDatafeed();
     await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
-    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(m.candlesRecent).toHaveBeenCalled();
+  });
+
+  it("merges live-buffer bars newer than the stored tail to fill the gap", async () => {
+    m.candles.mockResolvedValue({
+      candles: [
+        { open_time: 1000, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+        { open_time: 2000, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+      ],
+      count: 2,
+    });
+    // buffer carries the bars the store is missing (between 2000 and now)
+    m.candlesRecent.mockResolvedValue({
+      candles: [
+        { open_time: 3000, open: 2, high: 3, low: 1, close: 2.5, volume: 2 },
+        { open_time: 4000, open: 2.5, high: 4, low: 2, close: 3, volume: 3 },
+      ],
+      count: 2,
+    });
+    const d = new BitgetDatafeed();
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 5000);
+    expect(bars.map((b) => b.timestamp)).toEqual([1000, 2000, 3000, 4000]);
+  });
+
+  it("does not duplicate bars already present in the store", async () => {
+    m.candles.mockResolvedValue({
+      candles: [
+        { open_time: 1000, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+        { open_time: 2000, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+      ],
+      count: 2,
+    });
+    // buffer overlaps the stored tail and adds one newer bar
+    m.candlesRecent.mockResolvedValue({
+      candles: [
+        { open_time: 2000, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+        { open_time: 3000, open: 2, high: 3, low: 1, close: 2.5, volume: 2 },
+      ],
+      count: 2,
+    });
+    const d = new BitgetDatafeed();
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 4000);
+    expect(bars.map((b) => b.timestamp)).toEqual([1000, 2000, 3000]);
+  });
+
+  it("fills a middle gap where the store tail is newer than the missing bars", async () => {
+    // store is missing the middle (3000-4000) but has bars around it
+    m.candles.mockResolvedValue({
+      candles: [
+        { open_time: 1000, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+        { open_time: 2000, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+        { open_time: 5000, open: 1, high: 2, low: 0, close: 1, volume: 1 },
+      ],
+      count: 3,
+    });
+    // buffer carries the missing middle bars plus the newer tail
+    m.candlesRecent.mockResolvedValue({
+      candles: [
+        { open_time: 3000, open: 2, high: 3, low: 1, close: 2.5, volume: 2 },
+        { open_time: 4000, open: 2.5, high: 4, low: 2, close: 3, volume: 3 },
+        { open_time: 5000, open: 3, high: 4, low: 2, close: 3.5, volume: 4 },
+      ],
+      count: 3,
+    });
+    const d = new BitgetDatafeed();
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 6000);
+    expect(bars.map((b) => b.timestamp)).toEqual([1000, 2000, 3000, 4000, 5000]);
+  });
+
+  it("keeps stored history when the buffer has nothing newer", async () => {
+    m.candles.mockResolvedValue({
+      candles: [{ open_time: 1000, open: 1, high: 2, low: 0, close: 1, volume: 1 }],
+      count: 1,
+    });
+    m.candlesRecent.mockResolvedValue({ candles: [], count: 0 });
+    const d = new BitgetDatafeed();
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    expect(bars.map((b) => b.timestamp)).toEqual([1000]);
+  });
+
+  it("keeps stored history when the buffer call fails", async () => {
+    m.candles.mockResolvedValue({
+      candles: [{ open_time: 1000, open: 1, high: 2, low: 0, close: 1, volume: 1 }],
+      count: 1,
+    });
+    m.candlesRecent.mockRejectedValue(new Error("offline"));
+    const d = new BitgetDatafeed();
+    const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
+    expect(bars.map((b) => b.timestamp)).toEqual([1000]);
   });
 
   it("subscribe bridges the live WS candle to the callback and unsubscribes", () => {
@@ -317,7 +405,8 @@ describe("BitgetDatafeed backfill", () => {
     expect(m.backfill).toHaveBeenCalledTimes(1);
     expect(m.backfill.mock.calls[0][1]).toBe(1000);
     expect(bars.map((b) => b.timestamp)).toEqual([400, 500]);
-    expect(m.candlesRecent).not.toHaveBeenCalled();
+    // only the merge call from the initial stored-data load, never the backward path
+    expect(m.candlesRecent).toHaveBeenCalledTimes(1);
   });
 
   it("backward load with empty store and failed backfill returns [] without recent fallback", async () => {
@@ -329,7 +418,7 @@ describe("BitgetDatafeed backfill", () => {
     await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
     const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 400, 1000);
     expect(m.backfill).toHaveBeenCalledTimes(1);
-    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(m.candlesRecent).toHaveBeenCalledTimes(1);
     expect(bars).toEqual([]);
   });
 
@@ -344,7 +433,7 @@ describe("BitgetDatafeed backfill", () => {
     await d.getHistoryKLineData(SYMBOL, PERIOD, 400, 1000);
     const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 200, 900);
     expect(m.backfill).toHaveBeenCalledTimes(1);
-    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(m.candlesRecent).toHaveBeenCalledTimes(1);
     expect(bars).toEqual([]);
   });
 
@@ -359,7 +448,7 @@ describe("BitgetDatafeed backfill", () => {
     const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 400, 1000);
     expect(m.backfill).toHaveBeenCalledTimes(1);
     expect(bars).toEqual([]);
-    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(m.candlesRecent).toHaveBeenCalledTimes(1);
   });
 
   it("initial load with empty store still falls back to recent candles (regression guard)", async () => {
@@ -380,7 +469,7 @@ describe("BitgetDatafeed backfill", () => {
     const d = new BitgetDatafeed();
     await d.getHistoryKLineData(SYMBOL, PERIOD, 0, 2000);
     const bars = await d.getHistoryKLineData(SYMBOL, PERIOD, 200, 500);
-    expect(m.candlesRecent).not.toHaveBeenCalled();
+    expect(m.candlesRecent).toHaveBeenCalledTimes(1);
     expect(bars.map((b) => b.timestamp)).toEqual([300, 500]);
   });
 });
