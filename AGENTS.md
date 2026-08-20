@@ -34,3 +34,26 @@
 - **If a subagent is needed, use `general`, not `explore`** (`explore` does not support MCP and cannot call codemap tools).
 
 <!-- codemap:end -->
+
+## Test Suite (three layers)
+
+Full-stack E2E test pyramid. All layers run locally; the `online` subset is
+opt-in.
+
+| Layer | Where | Command | Scope |
+|---|---|---|---|
+| L1 data integrity | `backend/tests/test_data_integrity.py` | `cd backend && python -m pytest -m integrity` | full parquet series quality (monotonic, OHLC, gaps vs whitelists) |
+| L2 live API/WS | `backend/tests/test_live_api.py`, `test_live_ws.py` | `cd backend && python -m pytest tests/test_live_api.py tests/test_live_ws.py` | real uvicorn process spawned by `live_server` fixture; all REST endpoints + /ws channels |
+| L3 browser journeys | `frontend/tests/e2e/*.spec.ts` | `cd frontend && npm run test:e2e` | Playwright (chromium) user journeys; webServer auto-starts vite + backend |
+
+Notes:
+- L2 `live_server` fixture spawns an isolated uvicorn with a temp data dir and
+  the incremental-persistence scheduler disabled (`MD_SCHEDULE_INTERVAL_SECONDS=0`).
+- The `online` marker (`--run-online`) gates tests that need external network
+  (Bitget REST/WS, BlockBeats). Without the flag they skip; never fail.
+- L1 freshness (type-C staleness) also skips when no backend is running.
+- Gap registries live in `backend/tests/data_registry.py`: `KNOWN_GAPS` (type B
+  micro-gaps, hard gate) and `STRUCTURAL_EXEMPTIONS` (type A structural gaps).
+- Full regression: `cd backend && python -m pytest -q` and
+  `cd frontend && npm run test && npm run typecheck`.
+

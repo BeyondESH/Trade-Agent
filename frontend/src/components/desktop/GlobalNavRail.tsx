@@ -120,6 +120,7 @@ export const GlobalNavRail: React.FC<Props> = ({
       <div className="flex flex-col items-center gap-1.5 w-full pt-2 border-t border-gray-500/20">
         {onOpenAlertModal && (
           <button
+            data-testid="nav-create-alert"
             onClick={onOpenAlertModal}
             className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
               isDark ? 'hover:bg-[#1e222d] hover:text-white' : 'hover:bg-white hover:text-black'
@@ -132,6 +133,7 @@ export const GlobalNavRail: React.FC<Props> = ({
 
         {onOpenOrderModal && (
           <button
+            data-testid="nav-open-order"
             onClick={() => onOpenOrderModal('BUY')}
             className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
               isDark ? 'hover:bg-[#1e222d] hover:text-white' : 'hover:bg-white hover:text-black'
@@ -143,6 +145,7 @@ export const GlobalNavRail: React.FC<Props> = ({
         )}
 
         <button
+          data-testid="nav-command-palette"
           onClick={onOpenCommandPalette}
           className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
             isDark ? 'hover:bg-[#1e222d] hover:text-white' : 'hover:bg-white hover:text-black'

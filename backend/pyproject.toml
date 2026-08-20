@@ -27,3 +27,11 @@ packages = ["src/market_data"]
 
 [tool.uv]
 package = true
+
+[tool.pytest.ini_options]
+markers = [
+    "integrity: full parquet data quality gate (L1)",
+    "live: real-process API/WS tests against a spawned uvicorn (L2)",
+    "online: tests that require external network (Bitget/BlockBeats), skipped when unreachable",
+]
+testpaths = ["tests"]

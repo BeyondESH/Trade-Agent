@@ -5,3 +5,6 @@ dist/
 .env.*
 *.log
 e2e-results/
+test-results/
+playwright-report/
+

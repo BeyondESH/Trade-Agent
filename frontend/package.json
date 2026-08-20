@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "preview": "vite preview",
-    "diagnose:kline": "node scripts/diagnose-kline-realtime.mjs"
+    "diagnose:kline": "node scripts/diagnose-kline-realtime.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/google-sans-flex": "^5.3.1",
@@ -22,6 +23,7 @@
     "react-dom": "^19.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.1.14",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",

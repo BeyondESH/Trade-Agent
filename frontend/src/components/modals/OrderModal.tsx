@@ -92,6 +92,7 @@ export const OrderModal: React.FC<Props> = ({
         <div className="grid grid-cols-2 p-2 gap-2 border-b border-gray-500/10">
           <button
             type="button"
+            data-testid="order-side-buy"
             onClick={() => setSide('BUY')}
             className={`py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
               side === 'BUY'
@@ -106,6 +107,7 @@ export const OrderModal: React.FC<Props> = ({
           </button>
           <button
             type="button"
+            data-testid="order-side-sell"
             onClick={() => setSide('SELL')}
             className={`py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
               side === 'SELL'
@@ -148,6 +150,7 @@ export const OrderModal: React.FC<Props> = ({
               <label className="text-gray-400 font-semibold mb-1 block">{t('Limit Price ($)')}</label>
               <input
                 type="number"
+                data-testid="order-price-input"
                 step="any"
                 value={price}
                 onChange={(e) => setPrice(Number(e.target.value))}
@@ -166,6 +169,7 @@ export const OrderModal: React.FC<Props> = ({
             </div>
             <input
               type="number"
+              data-testid="order-amount-input"
               step="any"
               min="0.01"
               value={amount}
@@ -269,6 +273,7 @@ export const OrderModal: React.FC<Props> = ({
           </button>
           <button
             type="submit"
+            data-testid="order-submit"
             className={`px-5 py-1.5 rounded text-xs font-bold text-white transition-all shadow-md ${
               side === 'BUY' ? 'bg-[#089981] hover:bg-[#067a67]' : 'bg-[#f23645] hover:bg-[#d02534]'
             }`}

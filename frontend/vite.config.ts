@@ -29,5 +29,12 @@ export default defineConfig({
     globals: true,
     fileParallelism: false,
     setupFiles: ["./src/test-setup.ts"],
+    exclude: [
+      "tests/e2e/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/cypress/**",
+      "**/.{idea,git,cache,output,temp}/**",
+    ],
   },
 });

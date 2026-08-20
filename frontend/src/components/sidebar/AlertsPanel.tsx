@@ -53,6 +53,7 @@ export const AlertsPanel: React.FC<Props> = ({
           alerts.map((al) => (
             <div
               key={al.id}
+              data-testid={`alert-item-${al.id}`}
               className={`p-2.5 rounded-lg border flex items-center justify-between ${
                 isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'
               }`}
@@ -68,6 +69,7 @@ export const AlertsPanel: React.FC<Props> = ({
                 </div>
               </div>
               <button
+                data-testid={`alert-delete-${al.id}`}
                 onClick={() => onRemoveAlert(al.id)}
                 className="p-1 rounded hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
                 title={t('Delete Alert')}

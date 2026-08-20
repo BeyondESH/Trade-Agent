@@ -69,6 +69,7 @@ export const CreateAlertModal: React.FC<Props> = ({
           <div>
             <label className="text-gray-400 font-semibold mb-1 block">{t('Condition')}</label>
             <select
+              data-testid="alert-condition"
               value={condition}
               onChange={(e) => setCondition(e.target.value as any)}
               className={`w-full p-2 rounded border outline-none ${
@@ -87,6 +88,7 @@ export const CreateAlertModal: React.FC<Props> = ({
             <label className="text-gray-400 font-semibold mb-1 block">{t('Target Price ($)')}</label>
             <input
               type="number"
+              data-testid="alert-target-price"
               step="any"
               value={targetPrice}
               onChange={(e) => setTargetPrice(Number(e.target.value))}
@@ -144,6 +146,7 @@ export const CreateAlertModal: React.FC<Props> = ({
           </button>
           <button
             type="submit"
+            data-testid="alert-submit"
             className="px-4 py-1.5 rounded text-xs font-semibold bg-[#2962ff] text-white hover:bg-[#1e53e5] transition-colors"
           >
             Create Alert

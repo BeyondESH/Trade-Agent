@@ -233,6 +233,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
 
                 {tabs.length > 1 && (
                   <button
+                    data-testid={`tab-close-${tab.id}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseTab(tab.id);
@@ -248,6 +249,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
 
           {/* "+" New Tab Button -> Dashboard */}
           <button
+            data-testid="tab-new"
             onClick={() => onNewTab('dashboard')}
             className={`p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors`}
             title={t('Add New Workspace Tab')}
