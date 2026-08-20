@@ -254,3 +254,60 @@ describe("bitgetWs shared instance", () => {
     expect(typeof bitgetWs.subscribe).toBe("function");
   });
 });
+
+describe("BitgetWsClient monotonicity guard", () => {
+  it("drops a stale frame whose open_time is older than the last delivered bar", () => {
+    const c = new BitgetWsClient();
+    const cb = vi.fn();
+    c.subscribe(A, cb);
+    const sock = FakeWebSocket.instances[0];
+    sock.emitOpen();
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(2000, 5)));
+    expect(cb).toHaveBeenCalledTimes(1);
+    // a frame arriving out-of-order with an older bucket must not append
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000, 7)));
+    expect(cb).toHaveBeenCalledTimes(1); // unchanged: stale dropped
+    expect(cb).toHaveBeenLastCalledWith(expect.objectContaining({ open_time: 2000 }));
+  });
+
+  it("still replaces the current bucket when a same-open_time, changed bar arrives", () => {
+    const c = new BitgetWsClient();
+    const cb = vi.fn();
+    c.subscribe(A, cb);
+    const sock = FakeWebSocket.instances[0];
+    sock.emitOpen();
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(2000, 5)));
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(2000, 9)));
+    expect(cb).toHaveBeenCalledTimes(2);
+    expect(cb).toHaveBeenLastCalledWith(expect.objectContaining({ open_time: 2000, close: 9 }));
+  });
+
+  it("appends a new, later bucket", () => {
+    const c = new BitgetWsClient();
+    const cb = vi.fn();
+    c.subscribe(A, cb);
+    const sock = FakeWebSocket.instances[0];
+    sock.emitOpen();
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(2000, 5)));
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(3000, 8)));
+    expect(cb).toHaveBeenCalledTimes(2);
+    expect(cb).toHaveBeenLastCalledWith(expect.objectContaining({ open_time: 3000, close: 8 }));
+  });
+
+  it("does not misjudge a fresh series whose first bar precedes a different series' bar", () => {
+    const c = new BitgetWsClient();
+    const five = vi.fn();
+    const hour = vi.fn();
+    c.subscribe({ category: "USDT-FUTURES", symbol: "BTCUSDT", timeframe: "5m" }, five);
+    c.subscribe({ category: "USDT-FUTURES", symbol: "BTCUSDT", timeframe: "1h" }, hour);
+    const sock = FakeWebSocket.instances[0];
+    sock.emitOpen();
+    // 1h series sees an early bar first; the 5m series is independent.
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "1h", candle(1000, 1)));
+    expect(hour).toHaveBeenCalledTimes(1);
+    // a 5m bar with a smaller open_time than the 1h bar is valid for its own series
+    sock.emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(500, 2)));
+    expect(five).toHaveBeenCalledTimes(1);
+    expect(five).toHaveBeenCalledWith(expect.objectContaining({ open_time: 500 }));
+  });
+});

@@ -179,6 +179,19 @@ def create_app(
             cache_scheduler.start()
         except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
             logger.warning("BlockBeats cache scheduler start failed: %s", exc)
+        # Incremental persistence: keep the parquet store current with the live
+        # stream so history never lags real-time by more than one interval.
+        # Without this, store stops at the last manual CLI pull and the chart
+        # shows a gap between stored history and the live buffer. Uses the
+        # REST-only job (public Bitget v3 endpoint) — no MCP/npx dependency.
+        from market_data.scheduler import build_rest_scheduler
+
+        ingest_scheduler: BackgroundScheduler | None = None
+        try:
+            ingest_scheduler = build_rest_scheduler(store, settings)
+            ingest_scheduler.start()
+        except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
+            logger.warning("Incremental persistence scheduler start failed: %s", exc)
         try:
             stream.start()
         except Exception as exc:  # noqa: BLE001 - stream is best-effort
@@ -193,6 +206,8 @@ def create_app(
             await stream.stop()
             await market.stop()
             cache_scheduler.shutdown(wait=False)
+            if ingest_scheduler is not None:
+                ingest_scheduler.shutdown(wait=False)
 
     app = FastAPI(title="AI Trading API", version="0.1.0", lifespan=_lifespan)
 
@@ -690,6 +705,17 @@ def create_app(
                     snap = _snapshot(category, symbol, tf)
                     if "error" in snap:
                         continue
+                    # Ordering guard: never re-push a `last_candle` older than the
+                    # most recent one already delivered via the event-driven push,
+                    # otherwise the frontend chart would append an out-of-order
+                    # bucket. Indicator/S-R fields are still delivered as usual.
+                    skey = candle_series_key(category, symbol, tf)
+                    bc = snap.get("last_candle")
+                    if bc is not None:
+                        open_time = int(bc["open_time"])
+                        prev = candle_sent_open_time.get(skey)
+                        if prev is not None and open_time < prev:
+                            snap = {**snap, "last_candle": None}
                     await send({"channel": "candle", "category": category, "symbol": symbol,
                                 "timeframe": tf, "action": "update",
                                 "data": snap})
@@ -702,10 +728,24 @@ def create_app(
         candle_pending: dict[tuple[str, str, str], dict] = {}
         candle_timers: set[tuple[str, str, str]] = set()
         candle_listener_regs: dict[tuple[str, str, str], Callable[[dict], None]] = {}
+        # Watermark of the most recent `last_candle.open_time` actually sent to
+        # this connection per series. The ~5s poll snapshot must never re-push a
+        # bar older than this, or the frontend chart would append an out-of-order
+        # bucket and corrupt the ascending time series. The event-driven push is
+        # the ordering authority; the poll loop only samples stream.latest().
+        candle_sent_open_time: dict[tuple[str, str, str], int] = {}
         loop = asyncio.get_running_loop()
 
         def candle_series_key(category: str, symbol: str, timeframe: str) -> tuple[str, str, str]:
             return (category, symbol, timeframe)
+
+        def candle_send(skey: tuple[str, str, str], frame: dict, open_time: int | None) -> None:
+            """Send a candle frame and record the watermark for ordering."""
+            if open_time is not None:
+                prev = candle_sent_open_time.get(skey)
+                if prev is None or open_time > prev:
+                    candle_sent_open_time[skey] = open_time
+            loop.create_task(send(frame))
 
         def candle_update_listener(category: str, symbol: str, timeframe: str) -> Callable[[dict], None]:
             """Build a stream listener for one series of this connection."""
@@ -716,7 +756,8 @@ def create_app(
                 frame = candle_pending.pop(skey, None)
                 if frame is not None:
                     candle_throttle[skey] = loop.time()
-                    await send(frame)
+                    ot = frame.get("data", {}).get("last_candle", {}).get("open_time")
+                    candle_send(skey, frame, ot)
 
             def _on_bar(bar: dict) -> None:
                 # Only forward while this connection still holds the candle sub.
@@ -729,7 +770,7 @@ def create_app(
                 last = candle_throttle.get(skey, 0.0)
                 if now - last >= 1.0:
                     candle_throttle[skey] = now
-                    asyncio.create_task(send(frame))
+                    candle_send(skey, frame, int(bar["open_time"]))
                 else:
                     candle_pending[skey] = frame
                     if skey not in candle_timers:
@@ -747,6 +788,7 @@ def create_app(
             candle_throttle.pop(skey, None)
             candle_pending.pop(skey, None)
             candle_timers.discard(skey)
+            candle_sent_open_time.pop(skey, None)
 
         market.add_listener(listener)
         candle_task = asyncio.create_task(candle_loop())

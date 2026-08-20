@@ -163,6 +163,13 @@ export class BitgetWsClient {
       const s = entry.series;
       if (s.symbol !== symbol || s.category !== category || s.timeframe !== timeframe) continue;
       if (entry.last && sameCandle(entry.last, candle)) continue; // no duplicate re-delivery
+      // Monotonicity guard: a bar with an open_time strictly older than the
+      // last bar already delivered to this series (each series keyed by
+      // category:symbol:timeframe) would be appended as an out-of-order bucket
+      // by klinecharts' updateData. Drop it so the chart series stays a valid
+      // strictly ascending time series. History/backfill paths (getHistoryKLineData /
+      // applyMoreData) are unaffected — only live candle frames route through here.
+      if (entry.last && candle.open_time < entry.last.open_time) continue;
       entry.last = candle;
       for (const fn of [...entry.listeners]) {
         try {

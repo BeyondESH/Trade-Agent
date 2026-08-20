@@ -110,7 +110,7 @@ describe("KLineChartProView mount lifecycle under StrictMode", () => {
       await new Promise((r) => setTimeout(r, 10));
     });
     // A fresh mount (e.g. remounting the component) creates a new instance.
-    let unmount2: () => void;
+      let unmount2: () => void;
     await act(async () => {
       const r2 = renderInStrictMode(makeDatafeed());
       unmount2 = r2.unmount;
@@ -118,6 +118,18 @@ describe("KLineChartProView mount lifecycle under StrictMode", () => {
     expect(mockInstances).toHaveLength(2);
     await act(async () => {
       unmount2!();
+    });
+  });
+
+  it("exposes a read-only diagnostic handle on window when the chart is ready", async () => {
+    const datafeed = makeDatafeed();
+    const { unmount } = renderInStrictMode(datafeed);
+    const handle = (window as unknown as { __kline_chart__?: unknown }).__kline_chart__;
+    // The vendor mock's getChart() returns an object exposing getDataList.
+    expect(handle).toBeTruthy();
+    expect(typeof (handle as { getDataList?: unknown }).getDataList).toBe("function");
+    await act(async () => {
+      unmount();
     });
   });
 });

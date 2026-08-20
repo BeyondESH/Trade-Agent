@@ -425,6 +425,55 @@ def test_ws_candle_unsubscribe_removes_listener() -> None:
             assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.unsubscribed
 
 
+def test_ws_candle_poll_snapshot_does_not_send_stale_last_candle() -> None:
+    """The ~5s poll snapshot must never re-push a last_candle older than the
+    most recent one already delivered by the event-driven push, or the chart
+    would append an out-of-order bucket. Enhancement fields still flow."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            assert ws.receive_json()["action"] == "snapshot"
+            assert ws.receive_json()["event"] == "subscribed"
+            # event-driven live push with a NEWER bucket (open_time = B2)
+            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
+                        {"open_time": BASE + 2 * STEP, "open": 1, "high": 2, "low": 0,
+                         "close": 1.5, "volume": 1})
+            upd = ws.receive_json()
+            assert upd["action"] == "update"
+            assert upd["data"]["last_candle"]["open_time"] == BASE + 2 * STEP
+            # now the poll stream lags: latest() returns an OLDER bucket (open_time = B1)
+            stream.bar = {"open_time": BASE + 1 * STEP, "open": 1, "high": 2, "low": 0,
+                          "close": 1.1, "volume": 1}
+            # the next 5s poll must strip the stale last_candle (set to None)
+            poll = ws.receive_json()
+            assert poll["action"] == "update"
+            assert poll["data"]["last_candle"] is None
+            assert "price" in poll["data"]  # enhancement/snapshot fields still present
+
+
+def test_ws_candle_poll_snapshot_keeps_last_candle_when_not_stale() -> None:
+    """When no newer event-driven push has happened, the poll snapshot still
+    delivers its last_candle normally (guard must not over-strip)."""
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        stream = _FakeStream(None)
+        stream.bar = {"open_time": BASE + 1 * STEP, "open": 1, "high": 2, "low": 0,
+                      "close": 1.2, "volume": 1}
+        c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
+        with c.websocket_connect("/ws") as ws:
+            ws.send_json({"op": "subscribe", "args": [
+                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            assert ws.receive_json()["action"] == "snapshot"
+            assert ws.receive_json()["event"] == "subscribed"
+            poll = ws.receive_json()
+            assert poll["action"] == "update"
+            assert poll["data"]["last_candle"]["open_time"] == BASE + 1 * STEP
+
+
 def test_ws_candle_disconnect_removes_listener() -> None:
     """Closing the connection releases the candle listener for that series."""
     with _tmp() as tmp:

@@ -188,7 +188,13 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
       });
       proRef.current = pro;
       mountedRef.current = true;
-      props.onReady?.((pro.getChart() ?? null) as Chart | null);
+      const chart = (pro.getChart() ?? null) as Chart | null;
+      // Read-only diagnostic handle for end-to-end (Playwright) assertions.
+      // Exposes the live chart's public data list; does not change rendering.
+      if (typeof window !== "undefined") {
+        (window as unknown as { __kline_chart__?: Chart | null }).__kline_chart__ = chart;
+      }
+      props.onReady?.(chart);
 
       // Canvas text figures are rasterized once at draw time and do not
       // re-resolve after a webfont finishes downloading the way DOM text does

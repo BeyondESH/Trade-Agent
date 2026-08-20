@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import tempfile
+import time
 import types
 from pathlib import Path
 
@@ -169,6 +170,107 @@ def test_scheduler_isolates_failures() -> None:
     # Must not raise even though every target fails, and must attempt all targets.
     run_incremental_pull(ingestor, settings)
     assert ingestor.calls == ["USDT-FUTURES/BTCUSDT/5m", "USDT-FUTURES/ETHUSDT/5m"]
+
+
+class _RestStore:
+    """ParquetStore-like stand-in for the REST incremental job."""
+
+    def __init__(self, latest) -> None:  # noqa: ANN001
+        self._latest = latest
+        self.saved: list[Series] = []
+
+    def latest_open_time(self, series: Series) -> int | None:  # noqa: ANN001
+        return self._latest
+
+    def save(self, series: Series, frame) -> int:  # noqa: ANN001
+        self.saved.append(series)
+        return len(frame)
+
+
+def test_rest_incremental_fills_gap(monkeypatch) -> None:  # noqa: ANN001
+    from market_data import scheduler as scheduler_mod
+    from market_data.scheduler import run_incremental_pull_rest
+
+    # series: 5m, latest bar at BASE -> should fetch rows > BASE and save them.
+    rows = [
+        [BASE + STEP, 100.0, 101.0, 99.0, 100.5, 10.0],
+        [BASE + 2 * STEP, 100.5, 102.0, 100.0, 101.5, 11.0],
+    ]
+    monkeypatch.setattr(
+        KlineIngestor, "_fetch_v3_history_page",
+        staticmethod(lambda category, symbol, granularity, end_ms, limit: rows),
+    )
+    store = _RestStore(latest=BASE)
+    settings = types.SimpleNamespace(
+        symbols=["BTCUSDT"],
+        timeframes=["5m"],
+        category="USDT-FUTURES",
+        candle_page_limit=100,
+    )
+    run_incremental_pull_rest(store, settings)
+    assert store.saved == [Series("USDT-FUTURES", "BTCUSDT", "5m")]
+
+
+def test_rest_incremental_skips_when_up_to_date(monkeypatch) -> None:  # noqa: ANN001
+    from market_data import scheduler as scheduler_mod  # noqa: F401
+    from market_data.scheduler import run_incremental_pull_rest
+
+    called = []
+
+    def fake_fetch(*_a, **_k):  # noqa: ANN002, ANN003
+        called.append(1)
+        return []
+
+    monkeypatch.setattr(
+        KlineIngestor, "_fetch_v3_history_page", staticmethod(fake_fetch)
+    )
+    # latest within the current second => start_ms >= end_ms, no fetch.
+    store = _RestStore(latest=int(time.time() * 1000) + 100_000)
+    settings = types.SimpleNamespace(
+        symbols=["BTCUSDT"],
+        timeframes=["5m"],
+        category="USDT-FUTURES",
+        candle_page_limit=100,
+    )
+    run_incremental_pull_rest(store, settings)
+    assert called == []
+    assert store.saved == []
+
+
+def test_rest_incremental_failure_isolated(monkeypatch) -> None:  # noqa: ANN001
+    from market_data.scheduler import run_incremental_pull_rest
+
+    def boom(*_a, **_k):  # noqa: ANN002, ANN003
+        raise RuntimeError("rest down")
+
+    monkeypatch.setattr(KlineIngestor, "_fetch_v3_history_page", staticmethod(boom))
+    store = _RestStore(latest=None)  # fresh series -> seeds lookback
+    settings = types.SimpleNamespace(
+        symbols=["BTCUSDT", "ETHUSDT"],
+        timeframes=["5m"],
+        category="USDT-FUTURES",
+        candle_page_limit=100,
+    )
+    # Must not raise, and attempt both symbols.
+    run_incremental_pull_rest(store, settings)
+    assert store.saved == []
+
+
+def test_build_rest_scheduler_registers_job() -> None:  # noqa: ANN001
+    from market_data.scheduler import build_rest_scheduler
+
+    store = _RestStore(latest=0)
+    settings = types.SimpleNamespace(
+        symbols=["BTCUSDT"], timeframes=["5m"], category="USDT-FUTURES",
+        candle_page_limit=100, schedule_interval_seconds=300,
+    )
+    sched = build_rest_scheduler(store, settings)
+    try:
+        job_ids = [j.id for j in sched.get_jobs()]
+        assert "incremental_pull_rest" in job_ids
+    finally:
+        if sched.running:
+            sched.shutdown(wait=False)
 
 
 def _run_all() -> None:
