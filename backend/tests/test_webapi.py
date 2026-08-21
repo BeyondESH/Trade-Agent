@@ -398,8 +398,8 @@ def test_backtest_with_factors_and_params() -> None:
         if status["status"] == "done":
             result = status["result"]
             assert "total_return" in result
-            assert "series" in result and set(result["series"]) == {
-                "open_time", "equity", "drawdown", "signal", "proba"}
+            assert set(result["series"]) == {
+                "open_time", "equity", "drawdown", "signal", "proba", "benchmark"}
             assert "data_meta" in result and result["data_meta"]["n_test"] == result["test_bars"]
 
 
@@ -413,6 +413,205 @@ def test_backtest_rejects_bad_expression() -> None:
         job = c.post("/backtest", json=body).json()
         status = c.get(f"/jobs/{job['job_id']}").json()
         assert status["status"] == "error" and "forbidden" in status["error"]
+
+
+def test_backtest_with_window() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        body = {"symbol": "BTCUSDT", "timeframe": "1m",
+                "start": 1_700_000_000_000, "end": 1_700_060_000_000}
+        job = c.post("/backtest", json=body).json()
+        status = c.get(f"/jobs/{job['job_id']}").json()
+        assert status["status"] in ("done", "running", "error")
+        if status["status"] == "done":
+            assert "data_meta" in status["result"]
+
+
+def test_backtest_rejects_invalid_window() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        body = {"symbol": "BTCUSDT", "timeframe": "1m",
+                "start": 1_700_060_000_000, "end": 1_700_000_000_000}
+        job = c.post("/backtest", json=body).json()
+        status = c.get(f"/jobs/{job['job_id']}").json()
+        assert status["status"] == "error" and "invalid window" in status["error"]
+
+
+def test_backtest_rejects_invalid_timeframe() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        job = c.post("/backtest", json={"symbol": "BTCUSDT", "timeframe": "1s"}).json()
+        status = c.get(f"/jobs/{job['job_id']}").json()
+        assert status["status"] == "error" and "Unsupported timeframe" in status["error"]
+
+
+# -- model selection + sweep + walk-forward --------------------------------
+def test_backtest_rejects_invalid_model() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest", json={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "params": {"model": "svm"},
+        })
+        assert r.status_code == 422
+
+
+def test_backtest_accepts_model_hgb() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        job = c.post("/backtest", json={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "params": {"model": "hgb"},
+        }).json()
+        status = c.get(f"/jobs/{job['job_id']}").json()
+        assert status["status"] in ("done", "running", "error")
+        if status["status"] == "done":
+            assert "model_metrics" in status["result"]
+
+
+def test_backtest_accepts_hyperparams_and_money() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        body = {
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "params": {
+                "model": "lr", "C": 0.1, "max_iter": 500, "solver": "lbfgs",
+                "scale": False, "init_cash": 100_000, "size": 0.5,
+            },
+        }
+        r = c.post("/backtest", json=body)
+        assert r.status_code == 200
+        status = c.get(f"/jobs/{r.json()['job_id']}").json()
+        assert status["status"] in ("done", "running", "error")
+        if status["status"] == "done":
+            assert "series" in status["result"]
+
+
+def test_backtest_accepts_hgb_hyperparams() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        body = {
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "params": {"model": "hgb", "max_depth": 4, "learning_rate": 0.05,
+                       "min_samples_leaf": 8},
+        }
+        r = c.post("/backtest", json=body)
+        assert r.status_code == 200
+        status = c.get(f"/jobs/{r.json()['job_id']}").json()
+        assert status["status"] in ("done", "running", "error")
+
+
+def test_backtest_rejects_unknown_param() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest", json={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "params": {"model": "lr", "evil": 1.0},
+        })
+        assert r.status_code == 422 and "unknown backtest params" in r.json()["detail"]
+
+
+def test_sweep_returns_grid() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest/sweep", json={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "thresholds": [0.5, 0.6],
+            "fees": [0.0004, 0.001],
+        })
+        assert r.status_code == 200
+        body = r.json()
+        rows = body["results"]
+        assert len(rows) == 4
+        for row in rows:
+            assert {"threshold", "fee", "slippage", "total_return",
+                    "max_drawdown", "win_rate", "trades"} <= set(row)
+        assert "data_meta" in body
+
+
+def test_sweep_rejects_insufficient_data() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest/sweep", json={
+            "symbol": "BTCUSDT", "timeframe": "1h",
+            "start": 1_700_000_000_000, "end": 1_700_300_000_000,
+            "thresholds": [0.55],
+        })
+        assert r.status_code == 422
+
+
+def test_sweep_rejects_invalid_model() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest/sweep", json={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "thresholds": [0.55],
+            "params": {"model": "xgb"},
+        })
+        assert r.status_code == 422
+
+
+def test_sweep_with_params_ignores_singular_keys() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest/sweep", json={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "thresholds": [0.5],
+            "params": {"thresh": 0.7, "fee": 0.001, "train_ratio": 0.6},
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert len(body["results"]) == 1
+        assert body["results"][0]["threshold"] == 0.5
+
+
+def test_walkforward_returns_folds() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest/walkforward", json={
+            "symbol": "BTCUSDT", "timeframe": "5m", "n_splits": 2,
+            "params": {"train_ratio": 0.5},
+        })
+        assert r.status_code == 200
+        body = r.json()
+        folds = body["folds"]
+        assert len(folds) == 2
+        for f in folds:
+            assert {"fold", "train_start", "train_end", "test_start", "test_end",
+                    "total_return", "max_drawdown", "win_rate", "trades",
+                    "roc_auc", "log_loss"} <= set(f)
+            assert f["train_end"] < f["test_start"]
+
+
+def test_walkforward_rejects_invalid_window() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest/walkforward", json={
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "start": 1_700_060_000_000, "end": 1_700_000_000_000,
+        })
+        assert r.status_code == 400
+
+
+def test_walkforward_rejects_insufficient_data() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/backtest/walkforward", json={
+            "symbol": "BTCUSDT", "timeframe": "1h",
+            "start": 1_700_000_000_000, "end": 1_700_300_000_000,
+            "n_splits": 5,
+        })
+        assert r.status_code == 422
+
+
+def test_dl_features_rejects_invalid_window() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        r = c.post("/dl/features", json={
+            "symbol": "BTCUSDT", "timeframe": "1m",
+            "start": 1_700_060_000_000, "end": 1_700_000_000_000,
+        })
+        assert r.status_code == 400
 
 
 def test_dl_features_returns_ic_and_coverage() -> None:

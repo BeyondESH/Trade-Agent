@@ -1,20 +1,19 @@
 import React, { useState } from "react";
 import { ThemeMode, SymbolInfo } from "../../types/trading";
-import { DlQuantTab } from "./agent/DlQuantTab";
+import { QuantLabPanel } from "./agent/QuantLabPanel";
 import { AgentAnalysisTab } from "./agent/AgentAnalysisTab";
-import { BacktestTab } from "./agent/BacktestTab";
 
 interface Props {
   symbols: SymbolInfo[];
   theme: ThemeMode;
 }
 
-type AgentTab = "dl" | "agent" | "backtest";
+type AgentTab = "quant" | "agent";
 
-/** AI Agent page: Tab1 DL 量化工作台, Tab2 Agent 行情分析, Tab3 回测.
+/** AI Agent page: Tab1 QUANT LAB 量化研究面板, Tab2 Agent 行情分析.
  * All tabs stay mounted so switching never loses in-flight state. */
 export const AgentView: React.FC<Props> = ({ symbols, theme }) => {
-  const [tab, setTab] = useState<AgentTab>("dl");
+  const [tab, setTab] = useState<AgentTab>("quant");
 
   const tabBtn = (id: AgentTab, label: string) => (
     <button
@@ -38,18 +37,14 @@ export const AgentView: React.FC<Props> = ({ symbols, theme }) => {
           theme === "dark" ? "border-[#2a2e39]" : "border-[#cbcfd9]"
         }`}
       >
-        {tabBtn("dl", "深度学习量化")}
+        {tabBtn("quant", "QUANT LAB")}
         {tabBtn("agent", "AI Agent 分析")}
-        {tabBtn("backtest", "回测")}
       </div>
-      <div className={tab === "dl" ? "flex-1 overflow-y-auto p-4" : "hidden"}>
-        <DlQuantTab symbols={symbols} theme={theme} />
+      <div className={tab === "quant" ? "flex-1 overflow-y-auto p-4" : "hidden"}>
+        <QuantLabPanel symbols={symbols} theme={theme} />
       </div>
       <div className={tab === "agent" ? "flex-1 overflow-y-auto p-4" : "hidden"}>
         <AgentAnalysisTab symbols={symbols} theme={theme} />
-      </div>
-      <div className={tab === "backtest" ? "flex-1 overflow-y-auto p-4" : "hidden"}>
-        <BacktestTab symbols={symbols} theme={theme} />
       </div>
     </div>
   );

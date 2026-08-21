@@ -35,6 +35,56 @@
   --tv-scrollbar-thumb-hover: #787b86;
 }
 
+/* shadcn/ui variable layer bound to the --tv-* tokens. Components reference
+   these (bg-background, text-foreground, ...) so both theme families stay in
+   sync; colors MUST NOT be hardcoded in components. */
+:root,
+[data-theme="dark"] {
+  --background: var(--tv-bg);
+  --foreground: var(--tv-text);
+  --card: var(--tv-panel);
+  --card-foreground: var(--tv-text);
+  --popover: var(--tv-panel);
+  --popover-foreground: var(--tv-text);
+  --primary: var(--tv-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--tv-panel);
+  --secondary-foreground: var(--tv-text);
+  --muted: var(--tv-panel);
+  --muted-foreground: var(--tv-muted);
+  --accent: var(--tv-accent);
+  --accent-foreground: #ffffff;
+  --destructive: var(--tv-down);
+  --destructive-foreground: #ffffff;
+  --border: var(--tv-border);
+  --input: var(--tv-border);
+  --ring: var(--tv-accent);
+  --radius: 0.375rem;
+}
+
+[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #131722;
+  --card: var(--tv-panel);
+  --card-foreground: #131722;
+  --popover: var(--tv-panel);
+  --popover-foreground: #131722;
+  --primary: var(--tv-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--tv-panel);
+  --secondary-foreground: #131722;
+  --muted: var(--tv-panel);
+  --muted-foreground: var(--tv-muted);
+  --accent: var(--tv-accent);
+  --accent-foreground: #ffffff;
+  --destructive: var(--tv-down);
+  --destructive-foreground: #ffffff;
+  --border: var(--tv-border);
+  --input: var(--tv-border);
+  --ring: var(--tv-accent);
+  --radius: 0.375rem;
+}
+
 /* Single source of truth for the global font stack: Western (Latin/digits/
    punctuation) -> Google Sans Flex, CJK -> Noto Sans SC, then system fallback.
    "Google Sans Flex Variable" MUST precede "Noto Sans SC Variable" so Latin

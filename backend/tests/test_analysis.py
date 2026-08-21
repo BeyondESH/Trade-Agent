@@ -73,6 +73,36 @@ def test_insufficient_data_no_error() -> None:
     assert np.isnan(out["boll_mid"].iloc[-1])  # not enough for 20-window
 
 
+def test_rsi_atr_insufficient_nan() -> None:
+    df = _df([100.0, 101.0, 102.0])
+    assert np.isnan(indicators.rsi(df["close"], 14).iloc[-1])
+    assert np.isnan(indicators.atr(df["high"], df["low"], df["close"], 14).iloc[-1])
+
+
+def test_indicators_deterministic() -> None:
+    df = _df(list(range(1, 61)))
+    a = indicators.compute(df)
+    b = indicators.compute(df)
+    assert a.equals(b)
+
+
+def test_indicator_no_lookahead() -> None:
+    """A value at bar t must be identical whether or not future bars exist."""
+    full = _df(list(range(1, 81)))
+    prefix = full.iloc[:40]
+    for col in ("boll_mid", "boll_upper", "rsi", "atr"):
+        if col == "rsi":
+            v_full = indicators.rsi(full["close"], 14).iloc[39]
+            v_prefix = indicators.rsi(prefix["close"], 14).iloc[39]
+        elif col == "atr":
+            v_full = indicators.atr(full["high"], full["low"], full["close"], 14).iloc[39]
+            v_prefix = indicators.atr(prefix["high"], prefix["low"], prefix["close"], 14).iloc[39]
+        else:
+            v_full = indicators.compute(full)[col].iloc[39]
+            v_prefix = indicators.compute(prefix)[col].iloc[39]
+        assert v_full == v_prefix or (np.isnan(v_full) and np.isnan(v_prefix))
+
+
 # -- 6.2 structure ---------------------------------------------------------
 def test_find_swings() -> None:
     closes = [100, 101, 105, 101, 100, 99, 95, 99, 100]  # peak at idx2, trough idx6

@@ -127,6 +127,22 @@ def is_realtime_only_timeframe(timeframe: str) -> bool:
     return _normalize_timeframe(timeframe) in _REALTIME_ONLY_TIMEFRAMES
 
 
+# All valid persistence-level timeframes, newest first (realtime-only excluded).
+VALID_TIMEFRAMES: list[str] = [
+    tf for tf, _ in sorted(
+        _TIMEFRAME_STEP_MS.items(), key=lambda kv: kv[1], reverse=True
+    )
+    if tf not in _REALTIME_ONLY_TIMEFRAMES
+]
+
+
+def validate_timeframe(timeframe: str) -> None:
+    """Raise ValueError for timeframes outside the valid historical set."""
+    norm = _normalize_timeframe(timeframe)
+    if norm not in _TIMEFRAME_STEP_MS or norm in _REALTIME_ONLY_TIMEFRAMES:
+        raise ValueError(f"Unsupported timeframe: {timeframe!r}")
+
+
 def timeframe_step_ms(timeframe: str) -> int:
     try:
         return _TIMEFRAME_STEP_MS[_normalize_timeframe(timeframe)]

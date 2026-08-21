@@ -1,13 +1,18 @@
-"""Technical indicators, self-implemented on pandas/numpy (no TA-Lib/pandas-ta).
+"""Technical indicators computed via the vectorbt Indicator framework.
 
-All indicators use only data up to the current bar (no look-ahead) and return
-NaN where there is insufficient history rather than raising.
+Function signatures are preserved (the factor DSL in factors.py depends on
+them). RSI/ATR/BBANDS/MACD are computed by vectorbt standard implementations;
+KDJ-J, VEGAS channels and Fibonacci retracements have no vectorbt-native
+counterpart and remain thin pandas/numpy wrappers. All indicators only use
+data up to the current bar (no look-ahead) and return NaN where there is
+insufficient history rather than raising.
 """
 
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import vectorbt as vbt
 
 
 def ema(series: pd.Series, span: int) -> pd.Series:
@@ -17,15 +22,23 @@ def ema(series: pd.Series, span: int) -> pd.Series:
 def macd(
     close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
 ) -> pd.DataFrame:
-    dif = ema(close, fast) - ema(close, slow)
-    dea = ema(dif, signal)
-    hist = 2.0 * (dif - dea)
-    return pd.DataFrame({"dif": dif, "dea": dea, "macd_hist": hist})
+    ind = vbt.MACD.run(
+        close,
+        fast_window=fast,
+        slow_window=slow,
+        signal_window=signal,
+        macd_ewm=True,
+        signal_ewm=True,
+    )
+    return pd.DataFrame(
+        {"dif": ind.macd, "dea": ind.signal, "macd_hist": ind.hist}
+    )
 
 
 def kdj(
     high: pd.Series, low: pd.Series, close: pd.Series, n: int = 9
 ) -> pd.DataFrame:
+    """Chinese-style KDJ (rsv -> ewm(1/3) K/D, J = 3K - 2D). No vectorbt native."""
     low_min = low.rolling(n).min()
     high_max = high.rolling(n).max()
     rng = (high_max - low_min).replace(0, np.nan)
@@ -37,10 +50,9 @@ def kdj(
 
 
 def bollinger(close: pd.Series, n: int = 20, mult: float = 2.0) -> pd.DataFrame:
-    mid = close.rolling(n).mean()
-    std = close.rolling(n).std(ddof=0)
+    ind = vbt.BBANDS.run(close, window=n, alpha=mult)
     return pd.DataFrame(
-        {"boll_mid": mid, "boll_upper": mid + mult * std, "boll_lower": mid - mult * std}
+        {"boll_mid": ind.middle, "boll_upper": ind.upper, "boll_lower": ind.lower}
     )
 
 
@@ -56,23 +68,13 @@ def vegas(close: pd.Series) -> pd.DataFrame:
 
 
 def rsi(close: pd.Series, n: int = 14) -> pd.Series:
-    """Wilder RSI. Returns NaN where there is insufficient history."""
-    delta = close.diff()
-    up = delta.clip(lower=0.0)
-    down = (-delta).clip(lower=0.0)
-    avg_up = up.ewm(alpha=1 / n, adjust=False).mean()
-    avg_down = down.ewm(alpha=1 / n, adjust=False).mean()
-    rs = avg_up / avg_down.replace(0, np.nan)
-    return 100.0 - 100.0 / (1.0 + rs)
+    """RSI (vectorbt standard; ewm=True keeps Wilder smoothing)."""
+    return vbt.RSI.run(close, window=n, ewm=True).rsi
 
 
 def atr(high: pd.Series, low: pd.Series, close: pd.Series, n: int = 14) -> pd.Series:
-    """Average True Range (Wilder). NaN until history accumulates."""
-    prev_close = close.shift(1)
-    tr = pd.concat(
-        [(high - low), (high - prev_close).abs(), (low - prev_close).abs()], axis=1
-    ).max(axis=1)
-    return tr.ewm(alpha=1 / n, adjust=False).mean()
+    """Average True Range via vectorbt (Wilder ewm by default)."""
+    return vbt.ATR.run(high, low, close, window=n).atr
 
 
 def vol_ratio(volume: pd.Series, n: int = 20) -> pd.Series:

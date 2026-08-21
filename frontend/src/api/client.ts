@@ -17,7 +17,9 @@ import type {
   Portfolio,
   SeriesRef,
   StructureResponse,
+  SweepResult,
   Ticker,
+  WalkForwardResult,
 } from "./types";
 import type { GlobalNewsItem } from "../types/trading";
 
@@ -106,7 +108,10 @@ export const api = {
   structure: (s: SeriesRef) =>
     request<StructureResponse>(`/structure${qs({ ...s })}`),
 
-  backtest: (s: SeriesRef, opts?: { factors?: FactorDef[]; params?: BacktestParams }) =>
+  backtest: (
+    s: SeriesRef,
+    opts?: { factors?: FactorDef[]; params?: BacktestParams; start?: number; end?: number },
+  ) =>
     request<{ job_id: string }>("/backtest", {
       method: "POST",
       body: JSON.stringify({ ...s, ...opts }),
@@ -121,10 +126,42 @@ export const api = {
   backtestHistoryDelete: (id: string) =>
     request<{ deleted: boolean }>(`/backtest/history/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
-  dlFeatures: (s: SeriesRef, factors?: FactorDef[]) =>
+  dlFeatures: (s: SeriesRef, factors?: FactorDef[], start?: number, end?: number) =>
     request<DlFeaturesResponse>("/dl/features", {
       method: "POST",
-      body: JSON.stringify({ ...s, factors }),
+      body: JSON.stringify({ ...s, factors, start, end }),
+    }),
+
+  sweep: (
+    s: SeriesRef,
+    opts: {
+      thresholds: number[];
+      factors?: FactorDef[];
+      params?: BacktestParams;
+      start?: number;
+      end?: number;
+      fees?: number[];
+      slippages?: number[];
+    },
+  ) =>
+    request<SweepResult>("/backtest/sweep", {
+      method: "POST",
+      body: JSON.stringify({ ...s, ...opts }),
+    }),
+
+  walkforward: (
+    s: SeriesRef,
+    opts: {
+      n_splits?: number;
+      factors?: FactorDef[];
+      params?: BacktestParams;
+      start?: number;
+      end?: number;
+    },
+  ) =>
+    request<WalkForwardResult>("/backtest/walkforward", {
+      method: "POST",
+      body: JSON.stringify({ ...s, ...opts }),
     }),
 
   agentDecide: (s: SeriesRef) =>

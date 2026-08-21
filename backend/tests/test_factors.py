@@ -72,15 +72,15 @@ def test_expression_uses_columns_and_functions() -> None:
     assert s.iloc[-1] >= 0.0
 
 
-# -- 4.2 default snapshot (backward compatibility) --------------------------
-def test_default_snapshot_metrics_unchanged() -> None:
+# -- 4.2 default snapshot (vectorbt standard semantics) --------------------
+def test_default_snapshot_metrics() -> None:
     closes = 100 + 5 * np.sin(np.arange(150) / 4)
     df = _df(150, closes=closes)
-    r = run_pipeline(df)
-    assert abs(r["total_return"] - 0.3430136021573116) < 1e-9
-    assert abs(r["max_drawdown"] - 0.0018434927969389703) < 1e-9
-    assert abs(r["win_rate"] - 0.9210526315789473) < 1e-9
-    assert r["trades"] == 4 and r["bars"] == 39
+    r = run_pipeline(df, timeframe="1h")
+    assert abs(r["total_return"] - 0.2719919645338017) < 1e-9
+    assert abs(r["max_drawdown"] - -0.000899390368790054) < 1e-9
+    assert abs(r["win_rate"] - 1.0) < 1e-9
+    assert r["trades"] == 4 and r["bars"] == 35
 
 
 def test_default_features_columns_and_rows() -> None:
@@ -110,10 +110,10 @@ def test_custom_factor_backtest_returns_series() -> None:
         {"id": "rsi_14", "name": "RSI14", "kind": "preset", "fn": "rsi", "params": {"period": 14}},
         {"id": "mom_10", "name": "Mom", "kind": "preset", "fn": "mom", "params": {"n": 10}},
     ]
-    r = run_pipeline(df, factor_defs=cfg)
+    r = run_pipeline(df, factor_defs=cfg, timeframe="1h")
     assert "total_return" in r and "series" in r and "data_meta" in r
     series = r["series"]
-    assert set(series) == {"open_time", "equity", "drawdown", "signal", "proba"}
+    assert set(series) == {"open_time", "equity", "drawdown", "signal", "proba", "benchmark"}
     n = r["data_meta"]["n_test"]
     assert len(series["open_time"]) == n == len(series["equity"])
 
@@ -127,7 +127,7 @@ def test_series_position_takes_effect_next_bar() -> None:
     test_df = df.loc[X.index].reset_index(drop=True)
     signals = np.zeros(len(test_df))
     signals[-1] = 1.0
-    m = backtest(test_df, signals, fee=0.0, slippage=0.0)
+    m = backtest(test_df, signals, fee=0.0, slippage=0.0, timeframe="1h")
     assert abs(m["total_return"]) < 1e-9
 
 

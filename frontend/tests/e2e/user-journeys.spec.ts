@@ -45,6 +45,17 @@ test("alert CRUD round-trips", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(1500);
 
+  // The backend alert store persists across test sessions, so clear any
+  // leftovers first to make this journey self-contained.
+  await page.locator("#right-tab-alerts").click();
+  await expect(page.locator("#right-tab-alerts")).toBeVisible();
+  while (await page.locator('[data-testid^="alert-item-"]').count() > 0) {
+    await page.locator('[data-testid^="alert-item-"]').first()
+      .locator('[data-testid^="alert-delete-"]').click();
+    await page.waitForTimeout(300);
+  }
+  await expect(page.locator('[data-testid^="alert-item-"]')).toHaveCount(0, { timeout: 10_000 });
+
   // Open create-alert modal from the left nav rail.
   await page.locator('[data-testid="nav-create-alert"]').click();
   await expect(page.locator('[data-testid="alert-target-price"]')).toBeVisible();
@@ -53,8 +64,7 @@ test("alert CRUD round-trips", async ({ page }) => {
   await page.locator('[data-testid="alert-submit"]').click();
   await expect(page.locator('[data-testid="alert-submit"]')).toBeHidden({ timeout: 10_000 });
 
-  // Alerts panel: open the alerts tab in the right dock and verify the item.
-  await page.locator("#right-tab-alerts").click();
+  // Alerts panel: verify the item appears.
   await expect(page.locator('[data-testid^="alert-item-"]').first()).toBeVisible({ timeout: 10_000 });
 
   // Delete it via the per-item remove button.

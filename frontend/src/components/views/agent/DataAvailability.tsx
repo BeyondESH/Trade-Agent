@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { ThemeMode } from "../../../types/trading";
-import type { SeriesRef } from "../../../api/types";
+import type { DataWindow, SeriesRef } from "../../../api/types";
 import { api } from "../../../api/client";
-import { Panel, cardCls, fmtTime } from "./ui";
+import { cardCls, fmtTime } from "./ui";
 
 interface Props {
   series: SeriesRef;
+  range?: DataWindow;
   theme: ThemeMode;
 }
 
@@ -18,15 +19,15 @@ interface Availability {
 
 const SPARSE_THRESHOLD = 500;
 
-/** Fetches a cheap sample of the selected series and surfaces data availability. */
-export const DataAvailability: React.FC<Props> = ({ series, theme }) => {
+/** Fetches a cheap sample of the selected series (within the window) and surfaces data availability. */
+export const DataAvailability: React.FC<Props> = ({ series, range, theme }) => {
   const [state, setState] = useState<Availability>({ count: 0, start: null, end: null, loading: true });
 
   useEffect(() => {
     let cancelled = false;
     setState((s) => ({ ...s, loading: true }));
     api
-      .candles(series, undefined, undefined, 5000)
+      .candles(series, range?.start, range?.end, 5000)
       .then((r) => {
         if (cancelled) return;
         const first = r.candles[0];
@@ -45,7 +46,7 @@ export const DataAvailability: React.FC<Props> = ({ series, theme }) => {
     return () => {
       cancelled = true;
     };
-  }, [series.category, series.symbol, series.timeframe]);
+  }, [series.category, series.symbol, series.timeframe, range?.start, range?.end]);
 
   const sparse = !state.loading && state.count > 0 && state.count < SPARSE_THRESHOLD;
   const empty = !state.loading && state.count === 0;

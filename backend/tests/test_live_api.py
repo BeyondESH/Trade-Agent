@@ -94,6 +94,30 @@ def test_backtest_and_job(client: httpx.Client) -> None:
     assert jr.json()["job_id"] == job_id
 
 
+def test_backtest_sweep_live(client: httpx.Client) -> None:
+    r = client.post("/backtest/sweep", json={
+        "category": CAT, "symbol": "BTCUSDT", "timeframe": "1m",
+        "thresholds": [0.5, 0.6],
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["results"]) >= 2
+    assert {"threshold", "fee", "slippage", "total_return",
+            "max_drawdown", "win_rate", "trades"} <= set(body["results"][0])
+
+
+def test_backtest_walkforward_live(client: httpx.Client) -> None:
+    r = client.post("/backtest/walkforward", json={
+        "category": CAT, "symbol": "BTCUSDT", "timeframe": "1m",
+        "n_splits": 2,
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["folds"]) == 2
+    for f in body["folds"]:
+        assert f["train_end"] < f["test_start"]
+
+
 def test_job_not_found(client: httpx.Client) -> None:
     r = client.get("/jobs/does-not-exist")
     assert r.status_code == 404

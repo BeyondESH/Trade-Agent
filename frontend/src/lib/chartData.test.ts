@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { monthlyReturns, returnsHistogram, tradePnl } from "./chartData";
+import {
+  equityVsBenchmark,
+  monthlyHeatmap,
+  monthlyReturns,
+  probaHistogram,
+  probaThresholdData,
+  returnsHistogram,
+  tradePnl,
+} from "./chartData";
 import type { BacktestTrade } from "../api/types";
 
 const mkTrade = (netReturn: number): BacktestTrade => ({
@@ -84,5 +92,72 @@ describe("returnsHistogram", () => {
     const total = out.reduce((s, b) => s + b.count, 0);
     // NaN bar skipped: valid diffs are 1.5/NaN? no — diff 3->4 and 4->5 only.
     expect(total).toBe(2);
+  });
+});
+
+describe("probaHistogram", () => {
+  it("returns [] for empty or all-invalid input", () => {
+    expect(probaHistogram([])).toEqual([]);
+    expect(probaHistogram([Number.NaN, Number.NaN])).toEqual([]);
+  });
+
+  it("bins probabilities into [0,1] ranges", () => {
+    const out = probaHistogram([0.1, 0.25, 0.55, 0.9, 0.05], 10);
+    expect(out).toHaveLength(10);
+    const total = out.reduce((s, b) => s + b.count, 0);
+    expect(total).toBe(5);
+  });
+
+  it("clamps values outside [0,1]", () => {
+    const out = probaHistogram([-0.5, 1.5, 0.5], 10);
+    const total = out.reduce((s, b) => s + b.count, 0);
+    expect(total).toBe(3);
+  });
+});
+
+describe("equityVsBenchmark", () => {
+  it("zips equity with benchmark, null when lane is missing", () => {
+    expect(equityVsBenchmark([1, 1.1], [1, 1.2])).toEqual([
+      { i: 0, equity: 1, benchmark: 1 },
+      { i: 1, equity: 1.1, benchmark: 1.2 },
+    ]);
+    expect(equityVsBenchmark([1, 1.1], [1])).toEqual([
+      { i: 0, equity: 1, benchmark: 1 },
+      { i: 1, equity: 1.1, benchmark: null },
+    ]);
+    expect(equityVsBenchmark([1, 1.1])).toEqual([
+      { i: 0, equity: 1, benchmark: null },
+      { i: 1, equity: 1.1, benchmark: null },
+    ]);
+  });
+});
+
+describe("probaThresholdData", () => {
+  it("annotates proba with ordered upper/lower thresholds", () => {
+    const out = probaThresholdData([0.6, 0.4], 0.55);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toEqual({ i: 0, proba: 0.6, upper: 0.55, lower: 0.45 });
+    expect(out[1].upper).toBe(0.55);
+  });
+});
+
+describe("monthlyHeatmap", () => {
+  it("groups monthly returns into year x month cells", () => {
+    const monthly = [
+      { month: "2023-11", value: 0.05 },
+      { month: "2023-12", value: 0.02 },
+      { month: "2024-01", value: -0.03 },
+    ];
+    const out = monthlyHeatmap(monthly);
+    expect(out.years).toEqual([2023, 2024]);
+    expect(out.cells).toEqual([
+      { year: 2023, month: 11, value: 0.05 },
+      { year: 2023, month: 12, value: 0.02 },
+      { year: 2024, month: 1, value: -0.03 },
+    ]);
+  });
+
+  it("handles empty input", () => {
+    expect(monthlyHeatmap([])).toEqual({ years: [], cells: [] });
   });
 });

@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from "react";
 import { ThemeMode } from "../../../types/trading";
-import type { DlFeaturesResponse, FactorDef, FactorIc, SeriesRef } from "../../../api/types";
+import type { DlFeaturesResponse, DataWindow, FactorDef, FactorIc, SeriesRef } from "../../../api/types";
 import { api } from "../../../api/client";
 import { Panel, btnCls, fmtNum } from "./ui";
+import { FactorIcChart } from "./FactorIcChart";
 
 type SortKey = "ic_abs" | "ic" | "coverage" | "id";
 type SortDir = "asc" | "desc";
@@ -10,11 +11,12 @@ type SortDir = "asc" | "desc";
 interface Props {
   series: SeriesRef;
   factors: FactorDef[];
+  range?: DataWindow;
   theme: ThemeMode;
 }
 
 /** Runs /dl/features and renders a sortable IC table. */
-export const FactorIcTable: React.FC<Props> = ({ series, factors, theme }) => {
+export const FactorIcTable: React.FC<Props> = ({ series, factors, range, theme }) => {
   const [data, setData] = useState<DlFeaturesResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,14 +28,14 @@ export const FactorIcTable: React.FC<Props> = ({ series, factors, theme }) => {
     setError(null);
     try {
       const enabled = factors.filter((f) => f.enabled !== false);
-      const res = await api.dlFeatures(series, enabled.length > 0 ? enabled : undefined);
+      const res = await api.dlFeatures(series, enabled.length > 0 ? enabled : undefined, range?.start, range?.end);
       setData(res);
     } catch (e) {
       setError(String(e));
     } finally {
       setLoading(false);
     }
-  }, [series, factors]);
+  }, [series, factors, range]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -81,6 +83,7 @@ export const FactorIcTable: React.FC<Props> = ({ series, factors, theme }) => {
           <span>因子数: {data.factors.length}</span>
         </div>
       )}
+      <FactorIcChart factors={data?.factors ?? []} theme={theme} />
       {rows.length === 0 && !loading && <span className="text-xs text-gray-500">点击「分析因子 IC」查看各因子预测力。</span>}
       {rows.length > 0 && (
         <div className="overflow-x-auto">

@@ -84,13 +84,35 @@ class SeriesBody(BaseModel):
     timeframe: str
 
 
-class BacktestBody(SeriesBody):
+class WindowBody(BaseModel):
+    """Optional time-window (UTC ms) for candle reads; absent → full range."""
+    start: int | None = None
+    end: int | None = None
+
+
+class BacktestBody(SeriesBody, WindowBody):
     """Optional factor set + training params; absent → defaults (backward compat)."""
     factors: list[dict] | None = None
     params: dict | None = None
 
 
-class FeaturesBody(SeriesBody):
+class SweepBody(SeriesBody, WindowBody):
+    """Parameter grid scan over thresholds (and optional fees/slippages)."""
+    factors: list[dict] | None = None
+    params: dict | None = None
+    thresholds: list[float]
+    fees: list[float] | None = None
+    slippages: list[float] | None = None
+
+
+class WalkForwardBody(SeriesBody, WindowBody):
+    """Multi-fold walk-forward: TimeSeriesSplit folds, each backtested."""
+    factors: list[dict] | None = None
+    params: dict | None = None
+    n_splits: int | None = None
+
+
+class FeaturesBody(SeriesBody, WindowBody):
     factors: list[dict] | None = None
 
 
@@ -202,11 +224,13 @@ def create_app(
         from market_data.scheduler import build_rest_scheduler
 
         ingest_scheduler: BackgroundScheduler | None = None
-        try:
-            ingest_scheduler = build_rest_scheduler(store, settings)
-            ingest_scheduler.start()
-        except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
-            logger.warning("Incremental persistence scheduler start failed: %s", exc)
+        # interval 0 disables incremental persistence (tests / isolated runs).
+        if settings.schedule_interval_seconds > 0:
+            try:
+                ingest_scheduler = build_rest_scheduler(store, settings)
+                ingest_scheduler.start()
+            except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
+                logger.warning("Incremental persistence scheduler start failed: %s", exc)
         try:
             stream.start()
         except Exception as exc:  # noqa: BLE001 - stream is best-effort
@@ -215,6 +239,12 @@ def create_app(
             market.start()
         except Exception as exc:  # noqa: BLE001 - market stream is best-effort
             logger.warning("Market stream start failed: %s", exc)
+        # Warm up the vectorbt/Numba hot path on startup so the first backtest
+        # job doesn't pay the JIT compile cost (best-effort, thread-safe).
+        try:
+            dlquant.warmup()
+        except Exception as exc:  # noqa: BLE001 - warm-up is best-effort
+            logger.warning("vectorbt warm-up failed: %s", exc)
         try:
             news_broker.start()
         except Exception as exc:  # noqa: BLE001 - news poller is best-effort
@@ -561,16 +591,66 @@ def create_app(
 
     # -- background jobs (backtest / pull) --------------------------------
     _BACKTEST_PARAM_KEYS = ("train_ratio", "thresh", "fee", "slippage")
+    _SWEEP_PARAM_KEYS = ("train_ratio",)
+    _WALKFORWARD_PARAM_KEYS = ("thresh", "fee", "slippage")
+    _VALID_MODELS = ("lr", "hgb")
+    # sklearn hyperparameters forwarded to SklearnModel (lr / hgb respective).
+    _MODEL_PARAM_KEYS = (
+        "C", "max_iter", "solver",
+        "max_depth", "learning_rate", "min_samples_leaf",
+    )
+    # vbt.Portfolio.from_signals money/size knobs.
+    _BACKTEST_MONEY_KEYS = ("init_cash", "size")
+    _BACKTEST_ALLOWED_KEYS = frozenset(
+        {*_BACKTEST_PARAM_KEYS, "model", "scale",
+         *_MODEL_PARAM_KEYS, *_BACKTEST_MONEY_KEYS}
+    )
+
+    def _validate_window(start: int | None, end: int | None) -> None:
+        if start is not None and end is not None and start >= end:
+            raise ValueError(f"invalid window: start({start}) >= end({end})")
+
+    def _validate_model(model: str | None) -> None:
+        if model is not None and model not in _VALID_MODELS:
+            raise ValueError(f"invalid model: {model!r} (expected one of {_VALID_MODELS})")
+
+    def _validate_backtest_params(params: dict | None) -> None:
+        """Reject unknown backtest params (hyperparameters/money keys included)."""
+        if not params:
+            return
+        unknown = set(params) - _BACKTEST_ALLOWED_KEYS
+        if unknown:
+            raise ValueError(f"unknown backtest params: {sorted(unknown)}")
+
+    def _model_from_params(params: dict | None) -> dlquant.SklearnModel | None:
+        if params and params.get("model"):
+            kwargs = {}
+            for key in (*_MODEL_PARAM_KEYS, "scale"):
+                if key in params:
+                    kwargs[key] = params[key]
+            return dlquant.SklearnModel(kind=params["model"], **kwargs)
+        return None
 
     def _run_backtest(job_id: str, category: str, symbol: str, timeframe: str,
-                      factors: list[dict] | None = None, params: dict | None = None) -> None:
+                      factors: list[dict] | None = None, params: dict | None = None,
+                      start: int | None = None, end: int | None = None) -> None:
         try:
-            df = _read(category, symbol, timeframe)
-            kwargs: dict = {}
+            from market_data.models import validate_timeframe
+            validate_timeframe(timeframe)
+            _validate_window(start, end)
+            _validate_model(params.get("model") if params else None)
+            _validate_backtest_params(params)
+            df = _read(category, symbol, timeframe, start, end)
+            if df.empty:
+                raise ValueError("no data in the requested window (run /candles/backfill first)")
+            kwargs: dict = {"timeframe": timeframe}
             if factors is not None:
                 kwargs["factor_defs"] = factors
+            model = _model_from_params(params)
+            if model is not None:
+                kwargs["model"] = model
             if params:
-                for key in _BACKTEST_PARAM_KEYS:
+                for key in (*_BACKTEST_PARAM_KEYS, *_BACKTEST_MONEY_KEYS):
                     if key in params:
                         kwargs[key] = params[key]
             result = dlquant.run_pipeline(df, **kwargs)
@@ -587,10 +667,16 @@ def create_app(
 
     @app.post("/backtest")
     def backtest(body: BacktestBody, bg: BackgroundTasks) -> dict:
+        if body.params and body.params.get("model") not in (None, *_VALID_MODELS):
+            raise HTTPException(status_code=422, detail=f"invalid model: {body.params['model']!r}")
+        try:
+            _validate_backtest_params(body.params)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         job_id = uuid.uuid4().hex[:12]
         jobs[job_id] = {"status": "running"}
         bg.add_task(_run_backtest, job_id, body.category, body.symbol, body.timeframe,
-                    body.factors, body.params)
+                    body.factors, body.params, body.start, body.end)
         return {"job_id": job_id}
 
     @app.get("/jobs/{job_id}")
@@ -598,6 +684,63 @@ def create_app(
         if job_id not in jobs:
             raise HTTPException(status_code=404, detail="job not found")
         return {"job_id": job_id, **jobs[job_id]}
+
+    # -- parameter sweep + walk-forward (synchronous) ----------------------
+    def _read_quant_window(body: SeriesBody) -> Any:
+        from market_data.models import validate_timeframe
+        validate_timeframe(body.timeframe)
+        _validate_window(body.start, body.end)
+        df = _read(body.category, body.symbol, body.timeframe, body.start, body.end)
+        if df.empty:
+            raise HTTPException(status_code=422, detail="no data in the requested window (run /candles/backfill first)")
+        return df
+
+    @app.post("/backtest/sweep")
+    def backtest_sweep(body: SweepBody) -> dict:
+        if body.params and body.params.get("model") not in (None, *_VALID_MODELS):
+            raise HTTPException(status_code=422, detail=f"invalid model: {body.params['model']!r}")
+        df = _read_quant_window(body)
+        kwargs: dict = {"timeframe": body.timeframe}
+        if body.factors is not None:
+            kwargs["factor_defs"] = body.factors
+        model = _model_from_params(body.params)
+        if model is not None:
+            kwargs["model"] = model
+        if body.params:
+            for key in _SWEEP_PARAM_KEYS:
+                if key in body.params:
+                    kwargs[key] = body.params[key]
+        kwargs["thresholds"] = body.thresholds
+        if body.fees is not None:
+            kwargs["fees"] = body.fees
+        if body.slippages is not None:
+            kwargs["slippages"] = body.slippages
+        result = dlquant.sweep_params(df, **kwargs)
+        if "error" in result:
+            raise HTTPException(status_code=422, detail=result["error"])
+        return result
+
+    @app.post("/backtest/walkforward")
+    def backtest_walkforward(body: WalkForwardBody) -> dict:
+        if body.params and body.params.get("model") not in (None, *_VALID_MODELS):
+            raise HTTPException(status_code=422, detail=f"invalid model: {body.params['model']!r}")
+        df = _read_quant_window(body)
+        kwargs: dict = {"timeframe": body.timeframe}
+        if body.factors is not None:
+            kwargs["factor_defs"] = body.factors
+        model = _model_from_params(body.params)
+        if model is not None:
+            kwargs["model"] = model
+        if body.params:
+            for key in _WALKFORWARD_PARAM_KEYS:
+                if key in body.params:
+                    kwargs[key] = body.params[key]
+        if body.n_splits is not None:
+            kwargs["n_splits"] = body.n_splits
+        result = dlquant.walk_forward_run(df, **kwargs)
+        if "error" in result:
+            raise HTTPException(status_code=422, detail=result["error"])
+        return result
 
     # -- backtest history -------------------------------------------------
     @app.get("/backtest/history")
@@ -627,7 +770,12 @@ def create_app(
 
     @app.post("/dl/features")
     def dl_features(body: FeaturesBody) -> dict:
-        df = _read(body.category, body.symbol, body.timeframe)
+        from market_data.models import validate_timeframe
+        validate_timeframe(body.timeframe)
+        _validate_window(body.start, body.end)
+        df = _read(body.category, body.symbol, body.timeframe, body.start, body.end)
+        if df.empty:
+            raise HTTPException(status_code=422, detail="no data in the requested window (run /candles/backfill first)")
         feats = compute_factors(df, body.factors)
         if len(feats.columns) == 0:
             raise HTTPException(status_code=422, detail="no factors selected")

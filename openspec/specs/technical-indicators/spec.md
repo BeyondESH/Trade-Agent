@@ -5,12 +5,13 @@ TBD - created by archiving change indicator-structure-engine. Update Purpose aft
 ## Requirements
 ### Requirement: 技术指标计算
 
-系统 SHALL 从 OHLCV 数据本地计算 MACD、KDJ、布林带、VEGAS 通道与斐波那契回撤位,不依赖交易所指标接口或 TA-Lib/pandas-ta 原生库。计算 MUST 为确定性的,且只使用截至当前 bar 的数据(无前视偏差)。
+系统 SHALL 从 OHLCV 数据本地计算 MACD、KDJ、布林带、VEGAS 通道与斐波那契回撤位,计算由 vectorbt Indicator 体系完成,不依赖交易所指标接口。计算 MUST 为确定性的,且只使用截至当前 bar 的数据(无前视偏差)。
 
 #### Scenario: 计算 MACD/KDJ/BOLL
 
 - **WHEN** 传入足够长度的 OHLCV 帧
 - **THEN** 系统 SHALL 返回附带 MACD(dif/dea/hist)、KDJ(k/d/j)、BOLL(mid/upper/lower)列的结果
+- **AND** 指标 SHALL 由 vectorbt Indicator 计算
 
 #### Scenario: VEGAS 与斐波那契
 

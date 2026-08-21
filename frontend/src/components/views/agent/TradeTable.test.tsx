@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { TradeTable } from "./TradeTable";
 import type { BacktestTrade } from "../../../api/types";
 
@@ -30,5 +30,20 @@ describe("TradeTable", () => {
     expect(screen.getByText("5.10%")).toBeInTheDocument(); // gross win
     expect(screen.getByText("-2.00%")).toBeInTheDocument();
     expect(screen.getByText("-1.90%")).toBeInTheDocument();
+  });
+
+  it("sorts rows by net return descending when header clicked", () => {
+    render(
+      <TradeTable
+        trades={[trade(0.05, 0.051), trade(-0.02, -0.019, "short"), trade(0.01, 0.011)]}
+        theme="dark"
+      />,
+    );
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent("多");
+    fireEvent.click(screen.getByText("净利"));
+    const sorted = screen.getAllByRole("row").slice(1);
+    expect(sorted[0]).toHaveTextContent("多"); // 5.00% stays first
+    expect(sorted[2]).toHaveTextContent("空");
   });
 });

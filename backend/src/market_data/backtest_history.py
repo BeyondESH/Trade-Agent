@@ -22,12 +22,15 @@ MAX_RUNS = 20
 MAX_SERIES_POINTS = 500
 MAX_TRADES = 2000
 
-SERIES_LANES = ("open_time", "equity", "drawdown", "signal", "proba")
+SCHEMA = "vectorbt"
+
+SERIES_LANES = ("open_time", "equity", "drawdown", "signal", "proba", "benchmark")
 SCALAR_KEYS = ("total_return", "max_drawdown", "win_rate", "trades", "bars", "test_bars")
 TRADE_KEYS = ("side", "entry_time", "entry_price", "exit_time", "exit_price",
               "bars", "gross_return", "net_return")
 META_KEYS = ("id", "created_at", "category", "symbol", "timeframe",
-             "params", "factors", "metrics", "data_meta")
+             "params", "factors", "metrics", "data_meta", "schema", "legacy")
+DETAIL_KEYS = META_KEYS + ("stats", "model_metrics", "feature_weights", "roc_curve")
 
 
 def downsample(values: list, max_points: int) -> list:
@@ -39,7 +42,13 @@ def downsample(values: list, max_points: int) -> list:
 
 
 def _meta(entry: dict) -> dict:
+    """Lightweight metadata for the list endpoint (no stats/model_metrics)."""
     return {k: entry[k] for k in META_KEYS if k in entry}
+
+
+def _detail(entry: dict) -> dict:
+    """Full record for the detail endpoint, including stats/model_metrics."""
+    return {k: entry[k] for k in DETAIL_KEYS if k in entry}
 
 
 def _validate_entry(entry: dict) -> dict:
@@ -92,6 +101,10 @@ def _validate_entry(entry: dict) -> dict:
         "trade_list": trade_list,
         "series": series,
         "data_meta": entry["data_meta"],
+        "stats": entry.get("stats") or {},
+        "model_metrics": entry.get("model_metrics") or {},
+        "feature_weights": entry.get("feature_weights"),
+        "roc_curve": entry.get("roc_curve"),
     }
 
 
@@ -108,7 +121,17 @@ class BacktestHistoryStore:
             data = json.loads(self.path.read_text(encoding="utf-8"))
             if not isinstance(data, list):
                 return []
-            return [e for e in data if isinstance(e, dict) and isinstance(e.get("id"), str)]
+            out = []
+            for e in data:
+                if not isinstance(e, dict) or not isinstance(e.get("id"), str):
+                    continue
+                # Records persisted by the pre-vectorbt engine carry no schema
+                # marker; flag them so new UIs don't mis-render old semantics.
+                if e.get("schema") != SCHEMA:
+                    e = dict(e)
+                    e["legacy"] = True
+                out.append(e)
+            return out
         except (json.JSONDecodeError, OSError):
             return []
 
@@ -160,6 +183,12 @@ class BacktestHistoryStore:
             "series": {lane: downsample(series.get(lane, []), MAX_SERIES_POINTS)
                        for lane in SERIES_LANES},
             "data_meta": result.get("data_meta") or {},
+            "stats": result.get("stats") or {},
+            "model_metrics": result.get("model_metrics") or {},
+            "feature_weights": result.get("feature_weights"),
+            "roc_curve": result.get("roc_curve"),
+            "schema": SCHEMA,
+            "legacy": False,
         })
         with self._lock:
             entries = self._load()

@@ -5,7 +5,11 @@ description = "Bitget market-data foundation: MCP-based kline ingestion, Parquet
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.0.0",
+    "numpy>=2.4",
     "pandas>=2.2",
+    "vectorbt>=1.1",
+    "scikit-learn>=1.9",
+    "quantstats>=0.0.64",
     "pyarrow>=16.0",
     "openpyxl>=3.1",
     "APScheduler>=3.10",

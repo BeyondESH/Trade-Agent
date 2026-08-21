@@ -15,6 +15,25 @@ export interface HistogramBin {
   count: number;
 }
 
+/** Histogram of model probabilities bucketed into `bins` ranges in [0,1].
+ * Returns [] when proba is empty or has no finite values. */
+export function probaHistogram(proba: number[], bins = 20): HistogramBin[] {
+  const vals = proba.filter((p) => Number.isFinite(p));
+  if (vals.length === 0) return [];
+  const counts = new Array<number>(bins).fill(0);
+  for (const p of vals) {
+    const clamped = Math.max(0, Math.min(1, p));
+    let b = Math.floor(clamped * bins);
+    if (b >= bins) b = bins - 1;
+    counts[b]++;
+  }
+  const width = 1 / bins;
+  return counts.map((count, i) => ({
+    label: `${(i * width).toFixed(2)}`,
+    count,
+  }));
+}
+
 function monthKey(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -73,4 +92,55 @@ export function returnsHistogram(equity: number[], bins = 20): HistogramBin[] {
     label: `${((min + i * width) * 100).toFixed(2)}%`,
     count,
   }));
+}
+
+/** Point for the equity-vs-benchmark chart; benchmark null when absent. */
+export interface EquityBenchPoint {
+  i: number;
+  equity: number;
+  benchmark: number | null;
+}
+
+/** Zip equity with the (optional) benchmark lane for charting. */
+export function equityVsBenchmark(
+  equity: number[],
+  benchmark?: number[],
+): EquityBenchPoint[] {
+  const bench = benchmark ?? [];
+  return equity.map((v, i) => ({ i, equity: v, benchmark: bench[i] ?? null }));
+}
+
+/** Point for the proba time series with threshold bands. */
+export interface ProbaPoint {
+  i: number;
+  proba: number;
+  upper: number;
+  lower: number;
+}
+
+/** Annotate a proba lane with its long/short threshold lines. */
+export function probaThresholdData(proba: number[], thresh: number): ProbaPoint[] {
+  const round6 = (v: number) => Math.round(v * 1e6) / 1e6;
+  const upper = round6(Math.max(thresh, 1 - thresh));
+  const lower = round6(Math.min(thresh, 1 - thresh));
+  return proba.map((p, i) => ({ i, proba: p, upper, lower }));
+}
+
+export interface MonthCell {
+  year: number;
+  month: number;
+  value: number;
+}
+
+/** Group monthly returns (from `monthlyReturns`) into a year x month grid. */
+export function monthlyHeatmap(monthly: MonthlyReturn[]): {
+  years: number[];
+  cells: MonthCell[];
+} {
+  const years = [...new Set(monthly.map((m) => Number(m.month.slice(0, 4))))].sort();
+  const cells = monthly.map((m) => {
+    const [y, mo] = m.month.split("-").map(Number);
+    return { year: y, month: mo, value: m.value };
+  });
+  return { years, cells };
 }

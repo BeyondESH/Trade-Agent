@@ -136,6 +136,58 @@ def test_load_handles_corrupt_file(tmp_path) -> None:  # noqa: ANN001
     assert store.get("x") is None
 
 
+def test_save_stats_and_model_metrics(tmp_path) -> None:  # noqa: ANN001
+    store = BacktestHistoryStore(tmp_path / "history.json")
+    result = _result(10)
+    result["stats"] = {"sharpe_ratio": 1.42, "sortino_ratio": 1.1,
+                       "calmar_ratio": 0.9, "profit_factor": 2.1}
+    result["model_metrics"] = {"roc_auc": 0.72, "log_loss": 0.61}
+    saved = store.save(SERIES_REF, {"model": "hgb"}, None, result)
+    # List metadata excludes heavy per-run fields.
+    assert "stats" not in saved and "model_metrics" not in saved
+
+    detail = store.get(saved["id"])
+    assert detail["stats"] == result["stats"]
+    assert detail["model_metrics"] == result["model_metrics"]
+
+
+def test_legacy_record_missing_stats_tolerated(tmp_path) -> None:  # noqa: ANN001
+    store = BacktestHistoryStore(tmp_path / "history.json")
+    saved = store.save(SERIES_REF, None, None, _result(10))
+    detail = store.get(saved["id"])
+    # Records written without stats/model_metrics fall back to empty dicts.
+    assert detail["stats"] == {}
+    assert detail["model_metrics"] == {}
+
+
+def test_new_fields_persisted_and_meta_omits(tmp_path) -> None:  # noqa: ANN001
+    store = BacktestHistoryStore(tmp_path / "history.json")
+    result = _result(10)
+    result["feature_weights"] = {
+        "kind": "coef",
+        "features": ["log_ret", "macd_hist"],
+        "values": [0.5, -0.2],
+    }
+    result["roc_curve"] = {"fpr": [0.0, 0.5, 1.0], "tpr": [0.0, 0.6, 1.0]}
+    result["series"]["benchmark"] = [1.0, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.14, 1.16, 1.18]
+    saved = store.save(SERIES_REF, {"model": "lr"}, None, result)
+    assert "feature_weights" not in saved and "roc_curve" not in saved
+
+    detail = store.get(saved["id"])
+    assert detail["feature_weights"] == result["feature_weights"]
+    assert detail["roc_curve"] == result["roc_curve"]
+    assert detail["series"]["benchmark"] == result["series"]["benchmark"]
+
+
+def test_old_record_without_new_fields_tolerated(tmp_path) -> None:  # noqa: ANN001
+    store = BacktestHistoryStore(tmp_path / "history.json")
+    saved = store.save(SERIES_REF, None, None, _result(10))
+    detail = store.get(saved["id"])
+    assert detail.get("feature_weights") is None
+    assert detail.get("roc_curve") is None
+    assert detail["series"].get("benchmark", []) == []  # missing lane defaults empty
+
+
 def _run_all() -> None:
     import inspect
     import pathlib

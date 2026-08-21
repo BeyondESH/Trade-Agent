@@ -86,15 +86,22 @@ export const HistorySidebar: React.FC<Props> = ({ activeId, onSelect, onDeleted,
                   <span className="font-mono text-[11px] font-bold">
                     {r.symbol} <span className="text-gray-400">{r.timeframe}</span>
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      remove(r.id);
-                    }}
-                    className="text-[10px] text-[#f23645] hover:underline shrink-0"
-                  >
-                    删除
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {r.legacy && (
+                      <span className="text-[10px] text-[#ff9800] font-semibold" title="旧引擎记录,字段口径不同,仅供查看">
+                        legacy
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        remove(r.id);
+                      }}
+                      className="text-[10px] text-[#f23645] hover:underline shrink-0"
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
                 <div className="text-[10px] text-gray-400 font-mono">{fmtTime(r.created_at)}</div>
                 <div className="flex justify-between text-[11px] font-mono">
