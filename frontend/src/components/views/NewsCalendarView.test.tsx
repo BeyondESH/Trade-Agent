@@ -10,6 +10,10 @@ vi.mock("../../lib/newsfeed", async (importOriginal) => {
   return { ...mod, fetchNewsflashPage: vi.fn() };
 });
 
+vi.mock("./GlobalNewsFeed", () => ({
+  GlobalNewsFeed: () => <div data-testid="global-news-feed">Global Feed</div>,
+}));
+
 const mockedFetch = vi.mocked(fetchNewsflashPage);
 
 function mkItems(start: number, size: number): NewsItem[] {
@@ -100,5 +104,19 @@ describe("NewsCalendarView infinite scroll", () => {
     });
     expect(screen.queryByText("news-20")).toBeNull();
     expect(mockedFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("switches to the global news feed segment and back", async () => {
+    mockedFetch.mockResolvedValue({ items: mkItems(0, 20), page: 1, hasMore: true });
+    renderView();
+    expect(await screen.findByText("news-0")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("全域快讯"));
+    expect(screen.getByTestId("global-news-feed")).toBeTruthy();
+    expect(screen.queryByText("news-0")).toBeNull();
+
+    // Back to Market News Wire: the BlockBeats flow is untouched.
+    fireEvent.click(screen.getByText("市场快讯"));
+    expect(await screen.findByText("news-0")).toBeTruthy();
   });
 });

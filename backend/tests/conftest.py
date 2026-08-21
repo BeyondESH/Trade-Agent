@@ -10,6 +10,7 @@ Provides:
 from __future__ import annotations
 
 import logging
+import math
 import os
 import socket
 import subprocess
@@ -138,7 +139,10 @@ def live_server(tmp_path_factory) -> Iterator[str]:
             if gap and idx == gap[0]:
                 idx += gap[1] - gap[0]
                 continue
-            rows.append((SEED_BASE + idx * step_ms, 100.0, 105.0, 95.0, 101.0, 10.0))
+            # close varies deterministically so the DL backtest pipeline has
+            # non-constant features and produces a real result.
+            close = 101.0 + 0.5 * math.sin(idx / 4.0)
+            rows.append((SEED_BASE + idx * step_ms, 100.0, 105.0, 95.0, close, 10.0))
             idx += 1
         df = pd.DataFrame(rows, columns=["open_time", "open", "high", "low", "close", "volume"])
         store.save(Series(cat, sym, tf), df)
@@ -148,7 +152,6 @@ def live_server(tmp_path_factory) -> Iterator[str]:
     env["MD_DATA_DIR"] = str(data_dir)
     env["MD_SCHEDULE_INTERVAL_SECONDS"] = "0"
     env["MD_LOG_LEVEL"] = "WARNING"
-
     proc, log_path = _spawn_live(env, port)
     base = f"http://127.0.0.1:{port}"
     try:

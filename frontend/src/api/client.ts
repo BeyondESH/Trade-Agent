@@ -4,8 +4,14 @@ import type {
   AnalyzeResponse,
   AppConfig,
   BackfillResponse,
+  BacktestHistoryDetail,
+  BacktestHistoryMeta,
+  BacktestJobResult,
+  BacktestParams,
   Candle,
   ChartConfig,
+  DlFeaturesResponse,
+  FactorDef,
   Instrument,
   Level,
   Portfolio,
@@ -13,6 +19,7 @@ import type {
   StructureResponse,
   Ticker,
 } from "./types";
+import type { GlobalNewsItem } from "../types/trading";
 
 const BASE = "/api";
 
@@ -99,13 +106,26 @@ export const api = {
   structure: (s: SeriesRef) =>
     request<StructureResponse>(`/structure${qs({ ...s })}`),
 
-  backtest: (s: SeriesRef) =>
+  backtest: (s: SeriesRef, opts?: { factors?: FactorDef[]; params?: BacktestParams }) =>
     request<{ job_id: string }>("/backtest", {
       method: "POST",
-      body: JSON.stringify(s),
+      body: JSON.stringify({ ...s, ...opts }),
     }),
 
-  job: (id: string) => request<Record<string, unknown>>(`/jobs/${id}`),
+  job: (id: string) =>
+    request<{ status: "running" | "done" | "error"; result?: BacktestJobResult; error?: string }>(`/jobs/${id}`),
+
+  backtestHistory: () => request<{ runs: BacktestHistoryMeta[] }>("/backtest/history"),
+  backtestHistoryDetail: (id: string) =>
+    request<BacktestHistoryDetail>(`/backtest/history/${encodeURIComponent(id)}`),
+  backtestHistoryDelete: (id: string) =>
+    request<{ deleted: boolean }>(`/backtest/history/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  dlFeatures: (s: SeriesRef, factors?: FactorDef[]) =>
+    request<DlFeaturesResponse>("/dl/features", {
+      method: "POST",
+      body: JSON.stringify({ ...s, factors }),
+    }),
 
   agentDecide: (s: SeriesRef) =>
     request<AgentDecision>("/agent/decide", {
@@ -193,5 +213,16 @@ export const api = {
   blockbeatsData: (endpoint: string, opts?: { network?: string; type?: string }) =>
     request<{ status: number; data: unknown }>(
       `/blockbeats/data/${encodeURIComponent(endpoint)}${qs({ network: opts?.network, type: opts?.type })}`,
+    ),
+
+  // Global news pipeline (AKShare-based; free, no API key).
+  newsCategories: () => request<{ categories: string[] }>("/news/categories"),
+  newsContext: (hours?: number, category?: string) =>
+    request<{ items: GlobalNewsItem[]; generated_at: string }>(
+      `/news/context${qs({ hours, category })}`,
+    ),
+  newsHistory: (offset = 0, limit = 100, category?: string) =>
+    request<{ items: GlobalNewsItem[]; total: number }>(
+      `/news/history${qs({ offset, limit, category })}`,
     ),
 };

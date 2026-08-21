@@ -305,6 +305,68 @@ def test_unknown_symbol_empty(client: httpx.Client) -> None:
     assert r.json()["count"] == 0
 
 
+# -- backtest history ----------------------------------------------------
+
+def _run_backtest_done(client: httpx.Client, **extra: object) -> dict:
+    """Submit a /backtest and poll /jobs until it finishes."""
+    import time
+    body = {"category": CAT, "symbol": "BTCUSDT", "timeframe": "1m", **extra}
+    r = client.post("/backtest", json=body)
+    assert r.status_code == 200
+    job_id = r.json()["job_id"]
+    for _ in range(120):
+        jr = client.get(f"/jobs/{job_id}")
+        assert jr.status_code == 200
+        if jr.json()["status"] != "running":
+            return jr.json()
+        time.sleep(0.25)
+    raise AssertionError("backtest job did not finish in time")
+
+
+def test_backtest_history_auto_saved(client: httpx.Client) -> None:
+    done = _run_backtest_done(client)
+    assert done["status"] == "done"
+
+    runs = client.get("/backtest/history")
+    assert runs.status_code == 200
+    metas = runs.json()["runs"]
+    assert isinstance(metas, list) and len(metas) >= 1
+    run_id = None
+    for m in metas:
+        assert {"id", "created_at", "category", "symbol", "timeframe",
+                "metrics", "data_meta"} <= set(m)
+        assert "trade_list" not in m and "series" not in m  # list stays light
+        if m["symbol"] == "BTCUSDT" and m["timeframe"] == "1m":
+            run_id = m["id"]
+    assert run_id is not None
+
+    detail = client.get(f"/backtest/history/{run_id}")
+    assert detail.status_code == 200
+    entry = detail.json()
+    assert isinstance(entry["trade_list"], list)
+    assert "equity" in entry["series"]
+    assert entry["metrics"]["bars"] >= 1
+
+
+def test_backtest_history_detail_missing(client: httpx.Client) -> None:
+    r = client.get("/backtest/history/does-not-exist")
+    assert r.status_code == 404
+
+
+def test_backtest_history_delete(client: httpx.Client) -> None:
+    done = _run_backtest_done(client, params={"thresh": 0.8})
+    assert done["status"] == "done"
+    runs = client.get("/backtest/history")
+    run_id = runs.json()["runs"][0]["id"]
+
+    assert client.get(f"/backtest/history/{run_id}").status_code == 200
+    r = client.delete(f"/backtest/history/{run_id}")
+    assert r.status_code == 200 and r.json()["deleted"] is True
+    assert client.get(f"/backtest/history/{run_id}").status_code == 404
+    # deleting again → 404
+    assert client.delete(f"/backtest/history/{run_id}").status_code == 404
+
+
 # -- blockbeats (online: real upstream; offline: local cache) -----------
 
 @pytest.mark.online

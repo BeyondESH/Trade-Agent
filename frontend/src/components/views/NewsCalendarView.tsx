@@ -3,6 +3,7 @@ import { EconomicEvent, ThemeMode } from '../../types/trading';
 import { INITIAL_CALENDAR } from '../../data/marketData';
 import { NEWSFLASH_TYPES, fetchNewsflashPage, type NewsflashType } from '../../lib/newsfeed';
 import type { NewsItem } from '../../types/trading';
+import { GlobalNewsFeed } from './GlobalNewsFeed';
 import { t } from '../../lib/i18n';
 import {
   Newspaper,
@@ -11,6 +12,7 @@ import {
   Clock,
   Globe,
   AlertCircle,
+  Radio,
 } from 'lucide-react';
 
 interface Props {
@@ -22,7 +24,7 @@ const PAGE_SIZE = 20;
 const SCROLL_THRESHOLD = 120;
 
 export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme }) => {
-  const [activeTab, setActiveTab] = useState<'news' | 'calendar'>('news');
+  const [activeTab, setActiveTab] = useState<'news' | 'calendar' | 'global'>('news');
   const [newsType, setNewsType] = useState<NewsflashType>('all');
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -141,6 +143,19 @@ export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme
             <Calendar className="w-3.5 h-3.5" />
             <span>{t('Economic Calendar')}</span>
           </button>
+          <button
+            onClick={() => setActiveTab('global')}
+            className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors ${
+              activeTab === 'global'
+                ? 'bg-[#2962ff] text-white shadow-xs'
+                : isDark
+                ? 'text-gray-400 hover:text-white'
+                : 'text-gray-600 hover:text-black'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>{t('Global News Feed')}</span>
+          </button>
         </div>
       </div>
 
@@ -216,6 +231,9 @@ export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme
             <div className="text-xs text-gray-400 text-center py-2">已加载全部</div>
           )}
         </div>
+      ) : activeTab === 'global' ? (
+        /* Global News Feed — AKShare multi-source 7x24 flash, SSE rolling */
+        <GlobalNewsFeed theme={theme} />
       ) : (
         /* Economic Calendar View (BlockBeats has no calendar API; stays mock) */
         <div className={`p-4 rounded-xl border flex flex-col gap-3 ${

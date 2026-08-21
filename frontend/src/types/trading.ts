@@ -10,7 +10,8 @@ export type DesktopViewMode =
   | 'heatmaps'
   | 'markets'
   | 'community'
-  | 'news';
+  | 'news'
+  | 'agent';
 
 export interface DesktopTab {
   id: string;
@@ -216,6 +217,28 @@ export interface NewsItem {
   sentiment: 'bullish' | 'bearish' | 'neutral';
   summary: string;
   relatedSymbols: string[];
+}
+
+export type GlobalNewsSource = 'em' | 'sina' | 'ths' | 'cls';
+
+export type GlobalNewsCategory =
+  | 'crypto'
+  | 'macro'
+  | 'policy'
+  | 'a-share'
+  | 'global-market'
+  | 'industry'
+  | 'company'
+  | 'other';
+
+export interface GlobalNewsItem {
+  id: string;
+  source: GlobalNewsSource;
+  category: GlobalNewsCategory;
+  title: string;
+  content: string;
+  url: string | null;
+  ts: number; // epoch seconds
 }
 
 export interface EconomicEvent {

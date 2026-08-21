@@ -8,6 +8,7 @@ import {
   Flame,
   Users,
   Newspaper,
+  Bot,
   Sun,
   Moon,
   Search,
@@ -74,6 +75,11 @@ export const GlobalNavRail: React.FC<Props> = ({
       id: 'news',
       label: t('News'),
       icon: <Newspaper className="w-4 h-4" />,
+    },
+    {
+      id: 'agent',
+      label: t('AI Agent'),
+      icon: <Bot className="w-4 h-4" />,
     },
   ];
 

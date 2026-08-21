@@ -27,6 +27,7 @@ export const zh = {
   "Heatmaps": "热力图",
   "Community": "社区",
   "News": "新闻",
+  "AI Agent": "AI Agent",
   "Command Palette (⌘K)": "命令面板 (⌘K)",
   "Switch to Light Mode": "切换浅色模式",
   "Switch to Dark Mode": "切换深色模式",
@@ -296,6 +297,24 @@ export const zh = {
   "Actual": "实际值",
   "Forecast": "预期值",
   "Previous": "前值",
+
+  // Global news feed (AKShare)
+  "Global News Feed": "全域快讯",
+  "All": "全部",
+  "Original Article": "原文",
+  "Connecting...": "连接中...",
+  "News sources unavailable": "新闻源暂不可用",
+  "New Items": "条新快讯",
+  "Load Earlier": "加载更早",
+  "All Loaded": "已加载全部",
+  "crypto": "加密",
+  "macro": "宏观",
+  "policy": "政策",
+  "a-share": "A股",
+  "global-market": "海外",
+  "industry": "产业",
+  "company": "公司",
+  "other": "其他",
 } as const;
 
 export type I18nKey = keyof typeof zh;

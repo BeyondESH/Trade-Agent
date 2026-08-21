@@ -7,7 +7,10 @@ Run:
 
 from __future__ import annotations
 
+import asyncio
+import json
 import tempfile
+import time
 from pathlib import Path
 
 import numpy as np
@@ -49,12 +52,76 @@ def _seed(tmp) -> Settings:  # noqa: ANN001
     return settings
 
 
-def _client(tmp) -> TestClient:  # noqa: ANN001
-    return TestClient(create_app(_seed(tmp)))
+def _client(tmp, news_broker=None) -> TestClient:  # noqa: ANN001
+    broker = news_broker if news_broker is not None else _FakeNewsBroker()
+    return TestClient(create_app(_seed(tmp), news_broker=broker))
 
 
 def _tmp():
     return tempfile.TemporaryDirectory()
+
+
+class _FakeNewsBroker:
+    """Controllable news-broker stand-in so offline tests never touch AKShare."""
+
+    def __init__(self, items: list[dict] | None = None, categories: list[str] | None = None) -> None:
+        self.items = items or []
+        self._categories = categories or [
+            "crypto", "macro", "policy", "a-share",
+            "global-market", "industry", "company",
+        ]
+        self.subscribed: list[asyncio.Queue] = []
+
+    @property
+    def categories(self) -> list[str]:
+        return self._categories
+
+    def start(self) -> None:
+        return
+
+    def stop(self) -> None:
+        return
+
+    def subscribe(self, queue: asyncio.Queue) -> None:
+        self.subscribed.append(queue)
+        loop = asyncio.get_running_loop()
+        for item in self.items:
+            loop.call_soon_threadsafe(queue.put_nowait, item)
+        loop.call_soon_threadsafe(queue.put_nowait, None)
+
+    def unsubscribe(self, queue: asyncio.Queue) -> None:
+        if queue in self.subscribed:
+            self.subscribed.remove(queue)
+
+    def recent(self, hours: int | None = None, categories: str | None = None) -> list[dict]:
+        cutoff = None if hours is None else time.time() - hours * 3600
+        cats = {c.strip() for c in categories.split(",")} if categories else None
+        out = [i for i in self.items if cutoff is None or i["ts"] >= cutoff]
+        if cats:
+            out = [i for i in out if i["category"] in cats]
+        return out
+
+    def snapshot(self, max_items: int = 100) -> tuple[list[dict], int]:
+        items = sorted(self.items, key=lambda i: i["ts"], reverse=True)
+        return items[:max_items], len(items)
+
+    def page(self, offset: int = 0, limit: int = 100, categories: str | None = None) -> tuple[list[dict], int]:
+        cats = {c.strip() for c in categories.split(",")} if categories else None
+        out = self.items
+        if cats:
+            out = [i for i in out if i["category"] in cats]
+        items = sorted(out, key=lambda i: i["ts"], reverse=True)
+        return items[offset : offset + limit], len(items)
+
+    def health(self) -> dict:
+        return {
+            "poll_seconds": 60,
+            "buffer_size": 500,
+            "buffer_items": len(self.items),
+            "last_poll": None,
+            "running": False,
+            "sources": {},
+        }
 
 
 class _FakeStream:
@@ -310,6 +377,85 @@ def test_backtest_job() -> None:
         # TestClient runs background tasks synchronously after response.
         status = c.get(f"/jobs/{job['job_id']}").json()
         assert status["status"] in ("done", "running", "error")
+
+
+# -- 8.6b factor-driven backtest + /dl/features ----------------------------
+def test_backtest_with_factors_and_params() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        body = {
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "factors": [
+                {"id": "rsi_14", "name": "RSI14", "kind": "preset", "fn": "rsi", "params": {"period": 14}},
+                {"id": "mom_10", "name": "Mom", "kind": "preset", "fn": "mom", "params": {"n": 10}},
+            ],
+            "params": {"train_ratio": 0.8, "thresh": 0.6, "fee": 0.001, "slippage": 0.001},
+        }
+        job = c.post("/backtest", json=body).json()
+        assert "job_id" in job
+        status = c.get(f"/jobs/{job['job_id']}").json()
+        assert status["status"] in ("done", "running", "error")
+        if status["status"] == "done":
+            result = status["result"]
+            assert "total_return" in result
+            assert "series" in result and set(result["series"]) == {
+                "open_time", "equity", "drawdown", "signal", "proba"}
+            assert "data_meta" in result and result["data_meta"]["n_test"] == result["test_bars"]
+
+
+def test_backtest_rejects_bad_expression() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        body = {
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "factors": [{"id": "evil", "name": "Evil", "kind": "expr", "expr": "close.__class__"}],
+        }
+        job = c.post("/backtest", json=body).json()
+        status = c.get(f"/jobs/{job['job_id']}").json()
+        assert status["status"] == "error" and "forbidden" in status["error"]
+
+
+def test_dl_features_returns_ic_and_coverage() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        body = {
+            "symbol": "BTCUSDT", "timeframe": "5m",
+            "factors": [
+                {"id": "rsi_14", "name": "RSI14", "kind": "preset", "fn": "rsi", "params": {"period": 14}},
+                {"id": "sparse", "name": "Sparse", "kind": "expr", "expr": "shift(close, 100)"},
+            ],
+        }
+        r = c.post("/dl/features", json=body)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["n_rows"] > 0 and "start" in data and "end" in data
+        by_id = {f["id"]: f for f in data["factors"]}
+        assert set(by_id) == {"rsi_14", "sparse"}
+        assert by_id["rsi_14"]["ic"] is not None or by_id["rsi_14"]["ic"] is None
+        assert by_id["rsi_14"]["coverage"] > by_id["sparse"]["coverage"]
+        assert 0.0 < by_id["rsi_14"]["coverage"] <= 1.0
+        assert by_id["sparse"]["coverage"] < 0.5
+        assert "last_value" in by_id["rsi_14"] and "ic_abs" in by_id["rsi_14"]
+
+
+def test_config_factors_roundtrip_and_default() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        # fresh config has no factors -> None (frontend treats as default)
+        cfg = c.get("/config").json()
+        assert "factors" in cfg and cfg["factors"] is None
+        factors = [
+            {"id": "rsi_14", "name": "RSI14", "kind": "preset", "fn": "rsi",
+             "params": {"period": 14}, "enabled": True},
+        ]
+        cfg["factors"] = factors
+        assert c.put("/config", json=cfg).status_code == 200
+        back = c.get("/config").json()
+        assert back["factors"] == factors
+        # invalid provider/risk still rejected
+        bad = c.get("/config").json()
+        bad["risk"]["margin_pct"] = 2.0
+        assert c.put("/config", json=bad).status_code == 400
 
 
 # -- 8.7 websocket subscription protocol ---------------------------------
@@ -1115,6 +1261,126 @@ def test_alerts_round_trip_reference_line_with_color() -> None:
         # unsetting color is allowed (None patch is ignored)
         c.put(f"/alerts/{created['id']}", json={"color": None})
         assert c.get("/alerts").json()["alerts"][0]["color"] == "#abcdef"
+
+
+def _run_all() -> None:
+    for name, fn in list(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
+            print(f"PASS {name}")
+    print("All webapi tests passed.")
+
+
+# -- global news pipeline -------------------------------------------------
+
+
+def test_news_categories_and_health() -> None:
+    with _tmp() as tmp:
+        with _client(tmp) as c:
+            cats = c.get("/news/categories")
+            assert cats.status_code == 200
+            assert cats.json()["categories"][0] == "crypto"
+            health = c.get("/news/health")
+            assert health.status_code == 200
+            assert health.json()["status"] == "ok"
+
+
+def _news_item(news_id: str, category: str, ts: int) -> dict:
+    return {
+        "id": news_id,
+        "source": "em",
+        "category": category,
+        "title": news_id,
+        "content": "",
+        "url": None,
+        "ts": ts,
+    }
+
+
+def test_news_context_filters() -> None:
+    now = int(time.time())
+    items = [
+        _news_item("em_crypto", "crypto", now),
+        _news_item("em_macro_old", "macro", now - 2 * 3600),
+    ]
+    with _tmp() as tmp:
+        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+            r = c.get("/news/context", params={"hours": 1, "category": "crypto"})
+            assert r.status_code == 200
+            body = r.json()
+            assert len(body["items"]) == 1
+            assert body["items"][0]["id"] == "em_crypto"
+            assert "generated_at" in body
+
+            all_r = c.get("/news/context")
+            assert len(all_r.json()["items"]) == 2
+
+
+def test_news_stream_sse() -> None:
+    now = int(time.time())
+    items = [_news_item("em_a", "crypto", now), _news_item("em_b", "macro", now)]
+    with _tmp() as tmp:
+        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+            with c.stream("GET", "/news/stream") as r:
+                assert r.status_code == 200
+                assert r.headers["content-type"].startswith("text/event-stream")
+                lines = [ln for ln in r.iter_lines() if ln]
+                events = [ln for ln in lines if ln.startswith("event: ")]
+                assert events[0] == "event: snapshot"
+                assert events.count("event: item") == 2
+                data_lines = [ln for ln in lines if ln.startswith("data: ")]
+                snap = json.loads(data_lines[0][len("data: "):])
+                assert len(snap["items"]) == 2
+                assert snap["total"] == 2
+                assert "sources" in snap
+
+
+def test_news_stream_snapshot_capped_newest_first() -> None:
+    now = int(time.time())
+    items = [_news_item(f"em_{i}", "crypto", now - i) for i in range(120)]
+    with _tmp() as tmp:
+        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+            with c.stream("GET", "/news/stream") as r:
+                lines = [ln for ln in r.iter_lines() if ln]
+                snap = json.loads(lines[1][len("data: "):])
+                assert len(snap["items"]) == 100
+                assert snap["total"] == 120
+                ids = [i["id"] for i in snap["items"]]
+                assert ids[0] == "em_0" and ids[-1] == "em_99"  # newest first
+
+
+def test_news_history_paging_and_filters() -> None:
+    now = int(time.time())
+    items = [
+        _news_item("em_crypto_0", "crypto", now),
+        _news_item("em_macro_0", "macro", now - 100),
+        _news_item("em_crypto_1", "crypto", now - 200),
+        _news_item("em_macro_1", "macro", now - 300),
+    ]
+    with _tmp() as tmp:
+        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+            # newest-first full page
+            r = c.get("/news/history").json()
+            assert [i["id"] for i in r["items"]] == [
+                "em_crypto_0", "em_macro_0", "em_crypto_1", "em_macro_1"]
+            assert r["total"] == 4
+
+            # offset/limit pagination
+            r = c.get("/news/history", params={"offset": 1, "limit": 2}).json()
+            assert [i["id"] for i in r["items"]] == ["em_macro_0", "em_crypto_1"]
+            assert r["total"] == 4
+
+            # category filter
+            r = c.get("/news/history", params={"category": "macro"}).json()
+            assert [i["id"] for i in r["items"]] == ["em_macro_0", "em_macro_1"]
+            assert r["total"] == 2
+
+            # out-of-range offset -> empty items + total, not an error
+            r = c.get("/news/history", params={"offset": 100}).json()
+            assert r["items"] == [] and r["total"] == 4
+
+            # limit clamped
+            assert c.get("/news/history", params={"limit": 999}).status_code == 200
 
 
 def _run_all() -> None:

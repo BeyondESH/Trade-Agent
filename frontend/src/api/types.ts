@@ -65,6 +65,106 @@ export interface AppConfig {
   risk: RiskConfig;
   system_prompt: string | null;
   manual_rules: string[];
+  /** Custom factor set for the DL workbench; null/absent → engine defaults. */
+  factors?: FactorDef[] | null;
+}
+
+export interface FactorDef {
+  id: string;
+  name: string;
+  kind: "preset" | "expr";
+  fn?: string;
+  params?: Record<string, number | string>;
+  expr?: string;
+  enabled?: boolean;
+}
+
+export interface BacktestParams {
+  train_ratio?: number;
+  thresh?: number;
+  fee?: number;
+  slippage?: number;
+}
+
+export interface BacktestSeries {
+  open_time: number[];
+  equity: number[];
+  drawdown: number[];
+  signal: number[];
+  proba: number[];
+}
+
+export interface BacktestDataMeta {
+  n_train: number;
+  n_test: number;
+  start: number;
+  end: number;
+}
+
+export interface BacktestJobResult {
+  total_return?: number;
+  max_drawdown?: number;
+  win_rate?: number;
+  trades?: number;
+  bars?: number;
+  test_bars?: number;
+  series?: BacktestSeries;
+  data_meta?: BacktestDataMeta;
+  /** Per-trade records; absent for pre-change backends / failed runs. */
+  trade_list?: BacktestTrade[];
+  error?: string;
+}
+
+export interface BacktestTrade {
+  side: "long" | "short";
+  entry_time: number;
+  entry_price: number;
+  exit_time: number;
+  exit_price: number;
+  bars: number;
+  gross_return: number;
+  net_return: number;
+}
+
+export interface BacktestHistoryMeta {
+  id: string;
+  created_at: number;
+  category: string;
+  symbol: string;
+  timeframe: string;
+  params: BacktestParams;
+  factors: FactorDef[];
+  metrics: {
+    total_return?: number;
+    max_drawdown?: number;
+    win_rate?: number;
+    trades?: number;
+    bars?: number;
+    test_bars?: number;
+  };
+  data_meta: BacktestDataMeta;
+}
+
+export interface BacktestHistoryDetail extends BacktestHistoryMeta {
+  trade_list: BacktestTrade[];
+  series: BacktestSeries;
+}
+
+export interface FactorIc {
+  id: string;
+  ic: number | null;
+  ic_abs: number | null;
+  mean: number | null;
+  std: number | null;
+  coverage: number;
+  last_value: number | null;
+}
+
+export interface DlFeaturesResponse {
+  factors: FactorIc[];
+  n_rows: number;
+  start: number;
+  end: number;
 }
 
 export interface AgentDecision {

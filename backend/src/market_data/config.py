@@ -69,6 +69,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("bb_api_key", "BB_API_KEY", "MD_BB_API_KEY"),
     )
 
+    # Global news pipeline: a dedicated background thread polls the AKShare
+    # sources every `news_poll_seconds`; the ring buffer keeps the most recent
+    # items for SSE replay and `/news/context` queries.
+    news_poll_seconds: int = 60
+    news_buffer_size: int = 500
+
     # Per-request candle page size. Bitget history-candles caps this at 100.
     candle_page_limit: int = 100
 

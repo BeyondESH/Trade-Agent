@@ -58,6 +58,7 @@ import { ScreenerView } from './components/views/ScreenerView';
 import { HeatmapsView } from './components/views/HeatmapsView';
 import { CommunityIdeasView } from './components/views/CommunityIdeasView';
 import { NewsCalendarView } from './components/views/NewsCalendarView';
+import { AgentView } from './components/views/AgentView';
 
 // Modals & Overlays
 import { CreateAlertModal } from './components/modals/CreateAlertModal';
@@ -362,6 +363,7 @@ export default function App() {
     else if (type === 'heatmaps') title = 'Heatmaps';
     else if (type === 'community') title = 'Community';
     else if (type === 'news') title = 'News';
+    else if (type === 'agent') title = 'AI Agent';
     else if (type === 'dashboard') title = 'Dashboard';
 
     const newTab: DesktopTab = {
@@ -397,6 +399,8 @@ export default function App() {
                   ? 'Heatmaps'
                   : type === 'community'
                   ? 'Community'
+                  : type === 'agent'
+                  ? 'AI Agent'
                   : 'News',
               symbol: type === 'chart' ? t.symbol || activeSymbol.ticker : undefined,
             }
@@ -880,6 +884,13 @@ export default function App() {
           {activeView === 'news' && (
             <NewsCalendarView
               onOpenChartWithTicker={handleOpenChartWithTicker}
+              theme={theme}
+            />
+          )}
+
+          {activeView === 'agent' && (
+            <AgentView
+              symbols={symbols}
               theme={theme}
             />
           )}

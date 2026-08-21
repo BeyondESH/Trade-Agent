@@ -13,39 +13,25 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 
-from market_data import indicators
-
-FEATURE_COLUMNS = [
-    "log_ret",
-    "macd_hist",
-    "kdj_j",
-    "boll_pos",
-    "vegas_dist",
-    "roll_mean_5",
-    "roll_std_5",
-]
+from market_data.factors import FEATURE_COLUMNS, compute_factors
 
 
 # -- 1. features -----------------------------------------------------------
-def build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
-    """Return (X, y). y[t] = 1 if close[t+1] > close[t] else 0 (no look-ahead)."""
-    ind = indicators.compute(df)
-    close = ind["close"]
-    feats = pd.DataFrame(index=ind.index)
-    feats["log_ret"] = np.log(close / close.shift(1))
-    feats["macd_hist"] = ind["macd_hist"]
-    feats["kdj_j"] = ind["kdj_j"]
-    boll_width = (ind["boll_upper"] - ind["boll_lower"]).replace(0, np.nan)
-    feats["boll_pos"] = (close - ind["boll_mid"]) / boll_width
-    feats["vegas_dist"] = (close - ind["vegas_ema144"]) / close
-    feats["roll_mean_5"] = feats["log_ret"].rolling(5).mean()
-    feats["roll_std_5"] = feats["log_ret"].rolling(5).std()
+def build_features(
+    df: pd.DataFrame, factor_defs: list | None = None
+) -> tuple[pd.DataFrame, pd.Series]:
+    """Return (X, y). y[t] = 1 if close[t+1] > close[t] else 0 (no look-ahead).
 
+    ``factor_defs=None`` uses the default 7-factor set (backward compatible);
+    otherwise it must be a list of factor definitions (preset/expr dicts).
+    """
+    feats = compute_factors(df, factor_defs)
+    close = df["close"]
     label = (close.shift(-1) > close).astype("float64")  # next-bar direction
     label.iloc[-1] = np.nan  # last row has no future -> drop
 
     data = feats.assign(_y=label).dropna()
-    X = data[FEATURE_COLUMNS]
+    X = data[list(feats.columns)]
     y = data["_y"]
     return X, y
 
@@ -125,15 +111,77 @@ def signals_from_proba(proba: np.ndarray, thresh: float = 0.55) -> np.ndarray:
     return sig
 
 
+def _extract_trades(
+    times: pd.Series,
+    close: pd.Series,
+    position: pd.Series,
+    pct: pd.Series,
+    net: pd.Series,
+) -> list[dict]:
+    """Split the position series into per-trade records.
+
+    A trade is a contiguous run of non-zero position with constant sign.
+    ``position[i]`` takes effect on bar i (signal[i-1]), so entry/exit prices
+    come from the bar before the position change. A direct sign flip closes the
+    old trade and opens a new one, charging fee+slippage on each side (the
+    vectorized ``turnover`` counts 2 units on a flip bar). A trade still open
+    at the last bar is marked-to-market with no exit cost.
+
+    ``net`` is the per-bar PnL already net of costs, so the trade's
+    ``net_return`` is the exact product of its bars' factors (including the
+    exit-to-flat cost bar) — compounding trade net_returns reconstructs the
+    returned equity curve exactly.
+    """
+    trades: list[dict] = []
+    n = len(position)
+    i = 0
+    while i < n:
+        if position.iloc[i] == 0:
+            i += 1
+            continue
+        side = "long" if position.iloc[i] > 0 else "short"
+        e = i
+        x = e
+        while x < n and position.iloc[x] != 0 and (position.iloc[x] > 0) == (position.iloc[e] > 0):
+            x += 1
+        gross = 1.0
+        factor = 1.0
+        for j in range(e, x):
+            gross *= 1.0 + position.iloc[j] * pct.iloc[j]
+            factor *= 1.0 + net.iloc[j]
+        if x < n and position.iloc[x] == 0:  # exit-to-flat bar carries the exit cost factor
+            factor *= 1.0 + net.iloc[x]
+        trades.append({
+            "side": side,
+            "entry_time": int(times[e - 1]),
+            "entry_price": round(float(close.iloc[e - 1]), 8),
+            "exit_time": int(times[x - 1]),
+            "exit_price": round(float(close.iloc[x - 1]), 8),
+            "bars": x - e,
+            "gross_return": round(gross - 1.0, 8),
+            "net_return": round(factor - 1.0, 8),
+        })
+        i = x
+    return trades
+
+
 def backtest(
     df: pd.DataFrame,
     signals: np.ndarray,
     fee: float = 0.0004,
     slippage: float = 0.0005,
+    proba: np.ndarray | None = None,
 ) -> dict:
     """Vectorized backtest. `signals[i]` aligns to df row i; position takes
-    effect on the next bar (shift(1)) to avoid look-ahead."""
+    effect on the next bar (shift(1)) to avoid look-ahead.
+
+    Returns the scalar metrics dict plus a ``series`` key carrying per-bar
+    open_time / equity / drawdown / signal / proba aligned to df rows, and a
+    ``trade_list`` key with per-trade records (side / times / prices / returns).
+    The scalar ``trades`` count is preserved.
+    """
     close = df["close"].reset_index(drop=True)
+    times = df["open_time"].reset_index(drop=True)
     sig = pd.Series(signals, index=close.index).reindex(close.index).fillna(0.0)
     position = sig.shift(1).fillna(0.0)
     pct = close.pct_change().fillna(0.0)
@@ -143,19 +191,29 @@ def backtest(
     net = gross - cost
 
     equity = (1.0 + net).cumprod()
+    drawdown = equity / equity.cummax() - 1.0
     trades = int((position.diff().fillna(position).abs() > 0).sum())
     wins = int((net[net != 0] > 0).sum())
     active = int((net != 0).sum())
     peak = equity.cummax()
     max_dd = float(((peak - equity) / peak).max()) if len(equity) else 0.0
 
-    return {
+    metrics = {
         "total_return": float(equity.iloc[-1] - 1.0) if len(equity) else 0.0,
         "max_drawdown": max_dd,
         "win_rate": (wins / active) if active else 0.0,
         "trades": trades,
         "bars": int(len(close)),
     }
+    metrics["series"] = {
+        "open_time": [int(t) for t in df["open_time"].tolist()],
+        "equity": [round(float(v), 8) for v in equity.tolist()],
+        "drawdown": [round(float(v), 8) for v in drawdown.tolist()],
+        "signal": [round(float(v), 8) for v in sig.tolist()],
+        "proba": [round(float(p), 8) for p in proba] if proba is not None else [],
+    }
+    metrics["trade_list"] = _extract_trades(times, close, position, pct, net)
+    return metrics
 
 
 # -- 5. pipeline -----------------------------------------------------------
@@ -166,14 +224,21 @@ def run_pipeline(
     thresh: float = 0.55,
     fee: float = 0.0004,
     slippage: float = 0.0005,
+    factor_defs: list | None = None,
 ) -> dict:
-    X, y = build_features(df)
+    X, y = build_features(df, factor_defs)
     if len(X) < 50:
         return {"error": f"insufficient data after features (rows={len(X)})"}
     te, proba = train_predict(X, y, model, train_ratio)
     signals = signals_from_proba(proba, thresh)
     # Map test signals back onto the test slice of the original frame.
     test_df = df.loc[X.index[te]].reset_index(drop=True)
-    metrics = backtest(test_df, signals, fee, slippage)
-    metrics["test_bars"] = int(len(te))
-    return metrics
+    result = backtest(test_df, signals, fee, slippage, proba)
+    result["test_bars"] = int(len(te))
+    result["data_meta"] = {
+        "n_train": int(len(X) - len(te)),
+        "n_test": int(len(te)),
+        "start": int(test_df["open_time"].iloc[0]),
+        "end": int(test_df["open_time"].iloc[-1]),
+    }
+    return result

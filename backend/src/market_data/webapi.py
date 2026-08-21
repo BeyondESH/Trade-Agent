@@ -18,18 +18,22 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 import httpx
+import numpy as np
 from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from market_data import blockbeats, blockbeats_cache, dlquant, indicators, levels
 from market_data.agent import build_agent_context
 from market_data.alertstore import AlertStore
 from market_data.appconfig import ConfigStore
+from market_data.backtest_history import BacktestHistoryStore
 from market_data.chartstore import ChartStore
 from market_data.config import Settings, get_settings
 from market_data.execution import ExecutionEngine, LiveBroker, OrderRequest
+from market_data.factors import compute_factors
 from market_data.ingestion import KlineIngestor
+from market_data.news_broker import HEARTBEAT_SECONDS, NewsBroker, sse_frame
 from market_data.llm import (
     LLMTextProvider,
     ProviderConfig,
@@ -78,6 +82,16 @@ class SeriesBody(BaseModel):
     category: str = "USDT-FUTURES"
     symbol: str
     timeframe: str
+
+
+class BacktestBody(SeriesBody):
+    """Optional factor set + training params; absent → defaults (backward compat)."""
+    factors: list[dict] | None = None
+    params: dict | None = None
+
+
+class FeaturesBody(SeriesBody):
+    factors: list[dict] | None = None
 
 
 class BackfillBody(BaseModel):
@@ -135,6 +149,7 @@ def create_app(
     market: MarketStream | None = None,
     backfill_client_factory: Callable[[], Any] | None = None,
     backfill_rest_fetcher: Callable[[str, str, str, int, int], list] | None = None,
+    news_broker: NewsBroker | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     stream = stream or BitgetWsStream(
@@ -201,10 +216,15 @@ def create_app(
         except Exception as exc:  # noqa: BLE001 - market stream is best-effort
             logger.warning("Market stream start failed: %s", exc)
         try:
+            news_broker.start()
+        except Exception as exc:  # noqa: BLE001 - news poller is best-effort
+            logger.warning("News broker start failed: %s", exc)
+        try:
             yield
         finally:
             await stream.stop()
             await market.stop()
+            news_broker.stop()
             cache_scheduler.shutdown(wait=False)
             if ingest_scheduler is not None:
                 ingest_scheduler.shutdown(wait=False)
@@ -215,11 +235,16 @@ def create_app(
     config_store = ConfigStore(settings.data_dir / "config" / "app.json")
     chart_store = ChartStore(settings.chart_config_path)
     alert_store = AlertStore(settings.data_dir / "alerts" / "alerts.json")
+    history_store = BacktestHistoryStore(settings.data_dir / "backtest_history" / "history.json")
     journal = TradeJournal(settings.data_dir / "memory" / "trades.jsonl")
     engine = ExecutionEngine(portfolio=Portfolio(equity=1000.0))
     run_control = RunControl()
     jobs: dict[str, dict] = {}
     pending: dict[str, OrderBody] = {}
+
+    # Global news pipeline: dedicated polling thread + SSE hub. Tests inject a
+    # fake broker so no real AKShare network traffic happens in offline runs.
+    news_broker = news_broker or NewsBroker()
 
     # Backfill throttling: per-series serialization + a small cross-series
     # concurrency cap (the MCP bridge is the bottleneck and Bitget rate
@@ -480,19 +505,92 @@ def create_app(
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=502, detail=f"blockbeats cache refresh failed: {exc}") from exc
 
+    # -- Global news pipeline (AKShare -> SSE / context) ------------------
+    @app.get("/news/categories")
+    def news_categories() -> dict:
+        return {"categories": news_broker.categories}
+
+    @app.get("/news/context")
+    def news_context(hours: int | None = None, category: str | None = None) -> dict:
+        return {
+            "items": news_broker.recent(hours=hours, categories=category),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    @app.get("/news/history")
+    def news_history(offset: int = 0, limit: int = 100, category: str | None = None) -> dict:
+        """Page the ring buffer newest-first (0..buffer size)."""
+        offset = max(0, offset)
+        limit = min(200, max(1, limit))
+        items, total = news_broker.page(offset=offset, limit=limit, categories=category)
+        return {"items": items, "total": total}
+
+    @app.get("/news/health")
+    def news_health() -> dict:
+        return {"status": "ok", **news_broker.health()}
+
+    @app.get("/news/stream")
+    async def news_stream() -> StreamingResponse:
+        async def _event_gen():
+            queue: asyncio.Queue = asyncio.Queue()
+            news_broker.subscribe(queue)
+            try:
+                snap_items, snap_total = news_broker.snapshot()
+                yield sse_frame("snapshot", {
+                    "items": snap_items,
+                    "total": snap_total,
+                    "sources": news_broker.health().get("sources", {}),
+                })
+                while True:
+                    try:
+                        item = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)
+                    except asyncio.TimeoutError:
+                        yield ": ping\n\n"
+                        continue
+                    if item is None:
+                        break
+                    yield sse_frame("item", item)
+            finally:
+                news_broker.unsubscribe(queue)
+
+        return StreamingResponse(
+            _event_gen(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
     # -- background jobs (backtest / pull) --------------------------------
-    def _run_backtest(job_id: str, category: str, symbol: str, timeframe: str) -> None:
+    _BACKTEST_PARAM_KEYS = ("train_ratio", "thresh", "fee", "slippage")
+
+    def _run_backtest(job_id: str, category: str, symbol: str, timeframe: str,
+                      factors: list[dict] | None = None, params: dict | None = None) -> None:
         try:
             df = _read(category, symbol, timeframe)
-            jobs[job_id] = {"status": "done", "result": dlquant.run_pipeline(df)}
+            kwargs: dict = {}
+            if factors is not None:
+                kwargs["factor_defs"] = factors
+            if params:
+                for key in _BACKTEST_PARAM_KEYS:
+                    if key in params:
+                        kwargs[key] = params[key]
+            result = dlquant.run_pipeline(df, **kwargs)
+            jobs[job_id] = {"status": "done", "result": result}
+            try:
+                history_store.save(
+                    {"category": category, "symbol": symbol, "timeframe": timeframe},
+                    params, factors, result,
+                )
+            except Exception:  # noqa: BLE001
+                logger.exception("failed to persist backtest history")
         except Exception as exc:  # noqa: BLE001
             jobs[job_id] = {"status": "error", "error": str(exc)}
 
     @app.post("/backtest")
-    def backtest(body: SeriesBody, bg: BackgroundTasks) -> dict:
+    def backtest(body: BacktestBody, bg: BackgroundTasks) -> dict:
         job_id = uuid.uuid4().hex[:12]
         jobs[job_id] = {"status": "running"}
-        bg.add_task(_run_backtest, job_id, body.category, body.symbol, body.timeframe)
+        bg.add_task(_run_backtest, job_id, body.category, body.symbol, body.timeframe,
+                    body.factors, body.params)
         return {"job_id": job_id}
 
     @app.get("/jobs/{job_id}")
@@ -500,6 +598,65 @@ def create_app(
         if job_id not in jobs:
             raise HTTPException(status_code=404, detail="job not found")
         return {"job_id": job_id, **jobs[job_id]}
+
+    # -- backtest history -------------------------------------------------
+    @app.get("/backtest/history")
+    def backtest_history_list() -> dict:
+        return {"runs": history_store.list()}
+
+    @app.get("/backtest/history/{run_id}")
+    def backtest_history_detail(run_id: str) -> dict:
+        entry = history_store.get(run_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="history run not found")
+        return entry
+
+    @app.delete("/backtest/history/{run_id}")
+    def backtest_history_delete(run_id: str) -> dict:
+        if not history_store.delete(run_id):
+            raise HTTPException(status_code=404, detail="history run not found")
+        return {"deleted": True}
+
+    # -- DL factor analysis ----------------------------------------------
+    def _num_or_none(v: float) -> float | None:  # noqa: ANN001
+        try:
+            f = float(v)
+            return None if f != f else f  # NaN -> None
+        except (TypeError, ValueError):
+            return None
+
+    @app.post("/dl/features")
+    def dl_features(body: FeaturesBody) -> dict:
+        df = _read(body.category, body.symbol, body.timeframe)
+        feats = compute_factors(df, body.factors)
+        if len(feats.columns) == 0:
+            raise HTTPException(status_code=422, detail="no factors selected")
+        close = df["close"]
+        label = (close.shift(-1) > close).astype("float64")
+        label.iloc[-1] = np.nan
+        out = []
+        for col in feats.columns:
+            x = feats[col]
+            mask = x.notna() & label.notna()
+            # Spearman = Pearson correlation of ranks — computed without scipy.
+            xs = x[mask].rank()
+            ys = label[mask].rank()
+            ic = _num_or_none(xs.corr(ys, method="pearson"))
+            out.append({
+                "id": col,
+                "ic": ic,
+                "ic_abs": abs(ic) if ic is not None else None,
+                "mean": _num_or_none(x.mean()),
+                "std": _num_or_none(x.std()),
+                "coverage": round(float(x.notna().mean()), 6),
+                "last_value": _num_or_none(x.iloc[-1]),
+            })
+        return {
+            "factors": out,
+            "n_rows": int(len(feats)),
+            "start": int(df["open_time"].iloc[0]),
+            "end": int(df["open_time"].iloc[-1]),
+        }
 
     # -- config ------------------------------------------------------------
     @app.get("/config")

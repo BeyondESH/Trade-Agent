@@ -55,6 +55,36 @@ def vegas(close: pd.Series) -> pd.DataFrame:
     )
 
 
+def rsi(close: pd.Series, n: int = 14) -> pd.Series:
+    """Wilder RSI. Returns NaN where there is insufficient history."""
+    delta = close.diff()
+    up = delta.clip(lower=0.0)
+    down = (-delta).clip(lower=0.0)
+    avg_up = up.ewm(alpha=1 / n, adjust=False).mean()
+    avg_down = down.ewm(alpha=1 / n, adjust=False).mean()
+    rs = avg_up / avg_down.replace(0, np.nan)
+    return 100.0 - 100.0 / (1.0 + rs)
+
+
+def atr(high: pd.Series, low: pd.Series, close: pd.Series, n: int = 14) -> pd.Series:
+    """Average True Range (Wilder). NaN until history accumulates."""
+    prev_close = close.shift(1)
+    tr = pd.concat(
+        [(high - low), (high - prev_close).abs(), (low - prev_close).abs()], axis=1
+    ).max(axis=1)
+    return tr.ewm(alpha=1 / n, adjust=False).mean()
+
+
+def vol_ratio(volume: pd.Series, n: int = 20) -> pd.Series:
+    """Volume over its rolling average — NaN before `n` bars accumulate."""
+    return volume / volume.rolling(n).mean()
+
+
+def mom(close: pd.Series, n: int = 10) -> pd.Series:
+    """N-bar momentum (pct change)."""
+    return close.pct_change(n)
+
+
 FIB_RATIOS = (0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0)
 
 

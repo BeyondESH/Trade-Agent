@@ -25,8 +25,11 @@ class ConfigStore:
                 "risk": asdict(RiskConfig()),
                 "system_prompt": None,
                 "manual_rules": [],
+                "factors": None,
             }
-        return json.loads(self.path.read_text(encoding="utf-8"))
+        data = json.loads(self.path.read_text(encoding="utf-8"))
+        data.setdefault("factors", None)
+        return data
 
     def save(self, data: dict) -> dict:
         """Validate then persist. Raises ValueError on invalid provider/risk."""
@@ -37,6 +40,7 @@ class ConfigStore:
             "risk": asdict(risk),
             "system_prompt": data.get("system_prompt"),
             "manual_rules": list(data.get("manual_rules", []) or []),
+            "factors": data.get("factors"),
         }
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -14,6 +14,7 @@ from market_data.dlquant import (
     LogisticRegressionNP,
     backtest,
     build_features,
+    run_pipeline,
     signals_from_proba,
     time_split,
     train_predict,
@@ -110,6 +111,86 @@ def test_backtest_position_shifted() -> None:
     signals[-1] = 1.0
     m = backtest(df, signals, fee=0.0, slippage=0.0)
     assert abs(m["total_return"]) < 1e-9
+
+
+# -- trade_list ------------------------------------------------------------
+def test_trade_list_fields_and_nolookahead() -> None:
+    closes = np.linspace(100, 100 + 4 * 5, 8)  # strictly rising closes
+    df = _df(closes)
+    # long signal on bars 0,1 -> position long on bars 1,2 -> flat again.
+    signals = np.array([1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    m = backtest(df, signals, fee=0.0, slippage=0.0)
+    assert len(m["trade_list"]) == 1
+    t = m["trade_list"][0]
+    assert {"side", "entry_time", "entry_price", "exit_time", "exit_price",
+            "bars", "gross_return", "net_return"} <= set(t)
+    assert t["side"] == "long"
+    # position takes effect on bar 1 -> entry price is close[0], exit close[2].
+    assert t["entry_time"] == int(df["open_time"].iloc[0])
+    assert t["entry_price"] == round(float(df["close"].iloc[0]), 8)
+    assert t["exit_time"] == int(df["open_time"].iloc[2])
+    assert t["exit_price"] == round(float(df["close"].iloc[2]), 8)
+    assert t["bars"] == 2
+    # strictly rising closes with zero costs -> strictly positive return.
+    assert t["gross_return"] > 0 and t["net_return"] > 0
+
+
+def test_trade_list_empty_when_flat() -> None:
+    closes = np.linspace(100, 120, 50)
+    df = _df(closes)
+    m = backtest(df, np.zeros(len(df)))
+    assert m["trade_list"] == []
+    assert m["total_return"] == 0.0 and m["trades"] == 0
+
+
+def test_trade_list_flip_charges_two_sides() -> None:
+    # Alternating 1/-1 signals flip position every bar; every trade after the
+    # first is a direct sign flip (entry_time == previous exit_time) and must
+    # pay entry+exit cost (2 * (fee+slippage)).
+    closes = np.linspace(100, 120, 40)
+    df = _df(closes)
+    signals = np.array([1.0 if i % 2 == 0 else -1.0 for i in range(len(df))])
+    cost = 0.0004 + 0.0005
+    m = backtest(df, signals, fee=0.0004, slippage=0.0005)
+    flips = [t for t, prev in zip(m["trade_list"][1:], m["trade_list"])
+             if t["entry_time"] == prev["exit_time"]]
+    assert len(flips) > 0
+    for t in flips:
+        # single-bar flip trade: net = gross - 2*cost exactly (modulo rounding).
+        assert abs(t["net_return"] - (t["gross_return"] - 2 * cost)) < 1e-6
+
+
+def test_trade_list_reconstructs_equity() -> None:
+    """Compounding trade net_returns must reproduce total_return exactly."""
+    for seed in range(5):
+        rng = np.random.default_rng(seed)
+        closes = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, 200)))
+        df = _df(closes)
+        signals = ((np.arange(len(closes)) % 5 == 0).astype(float)
+                   - (np.arange(len(closes)) % 5 == 1).astype(float))
+        m = backtest(df, signals, fee=0.0004, slippage=0.0005)
+        reconstructed = 1.0
+        for t in m["trade_list"]:
+            reconstructed *= 1.0 + t["net_return"]
+        assert abs(reconstructed - 1.0 - m["total_return"]) < 1e-5
+
+
+def test_run_pipeline_default_snapshot() -> None:
+    """Default 7-factor run keeps scalar metrics identical to pre-change."""
+    closes = 100 + np.cumsum(np.sin(np.arange(300) / 7))
+    df = _df(closes)
+    m = run_pipeline(df)
+    assert abs(m["total_return"] - 0.60278879) < 1e-6
+    assert abs(m["max_drawdown"] - 0.00167285) < 1e-6
+    assert abs(m["win_rate"] - 0.90361446) < 1e-6
+    assert m["trades"] == 7
+    assert m["bars"] == 84 and m["test_bars"] == 84
+    assert m["data_meta"] == {
+        "n_train": 196, "n_test": 84,
+        "start": 1700064500000, "end": 1700089400000,
+    }
+    assert len(m["trade_list"]) == 5
+    assert len(m["series"]["equity"]) == m["test_bars"]
 
 
 def _run_all() -> None:
