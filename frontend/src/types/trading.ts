@@ -57,6 +57,8 @@ export interface SymbolInfo {
   week52High?: number;
   week52Low?: number;
   technicalRating?: 'Strong Buy' | 'Buy' | 'Neutral' | 'Sell' | 'Strong Sell';
+  /** @internal raw exchange product category (e.g. "USDT-FUTURES", "SPOT"); used only for symbol-list dedup */
+  _productCategory?: string;
 }
 
 export type DrawingToolType =

@@ -181,6 +181,56 @@ describe("GlobalNewsClient", () => {
     expect(api.newsHistory).toHaveBeenCalledWith(2, 100, "crypto");
   });
 
+  it("loadMore(category) offsets by that category's buffered count, not the full list", async () => {
+    vi.mocked(api.newsHistory).mockResolvedValue({
+      items: [item("h1", "crypto"), item("h2", "crypto")],
+      total: 5,
+    });
+    const client = new GlobalNewsClient();
+    client.connect();
+    FakeEventSource.instances[0].emit("snapshot", {
+      items: [item("a", "crypto"), item("b", "crypto"), item("c", "crypto"), item("x", "macro")],
+      sources: {},
+      total: 20,
+    });
+
+    await client.loadMore("crypto");
+    // 3 crypto items buffered -> offset 3 (the full list has 4, which would
+    // wrongly slice past the category's filtered list).
+    expect(api.newsHistory).toHaveBeenCalledWith(3, 100, "crypto");
+    expect(client.hasMoreFor("crypto")).toBe(false); // 5 buffered == total 5
+    expect(client.hasMore).toBe(true); // full feed still pages (6 < 20)
+  });
+
+  it("loadMore(category) does not exhaust the full feed or other categories", async () => {
+    vi.mocked(api.newsHistory).mockResolvedValue({ items: [], total: 9 });
+    const client = new GlobalNewsClient();
+    client.connect();
+    FakeEventSource.instances[0].emit("snapshot", {
+      items: [item("a", "crypto"), item("b", "crypto"), item("m1", "macro"), item("m2", "macro")],
+      sources: {},
+      total: 30,
+    });
+
+    await client.loadMore("crypto"); // buffered 2 < total 9 -> more crypto remains
+    expect(client.hasMoreFor("crypto")).toBe(true);
+    expect(client.hasMoreFor("macro")).toBe(true); // falls back to global
+    expect(client.hasMore).toBe(true);
+  });
+
+  it("snapshot replay resets per-category hasMore to the fresh global flag", async () => {
+    vi.mocked(api.newsHistory).mockResolvedValue({ items: [], total: 3 });
+    const client = new GlobalNewsClient();
+    client.connect();
+    const es = FakeEventSource.instances[0];
+    es.emit("snapshot", { items: [item("a", "crypto"), item("b", "crypto")], sources: {}, total: 10 });
+    await client.loadMore("crypto"); // 2 buffered < 3 -> still more
+    expect(client.hasMoreFor("crypto")).toBe(true);
+
+    es.emit("snapshot", { items: [item("a", "crypto"), item("b", "crypto")], sources: {}, total: 2 });
+    expect(client.hasMoreFor("crypto")).toBe(false); // global exhausted -> fallback false
+  });
+
   it("exposes source health from the snapshot", () => {
     const client = new GlobalNewsClient();
     client.connect();

@@ -5,6 +5,9 @@ import type { Ticker } from "../api/types";
 import { categoryLabel } from "../api/types";
 import { useExchangeSocket } from "./useExchangeSocket";
 
+/** Preference for the same instId listed in several product categories. */
+const CATEGORY_PRIORITY: Record<string, number> = { "USDT-FUTURES": 0, SPOT: 1 };
+
 /** Map a backend ticker row to the template SymbolInfo shape. */
 export function tickerToSymbolInfo(t: Ticker): SymbolInfo {
   const num = (v: string | undefined): number => {
@@ -29,7 +32,28 @@ export function tickerToSymbolInfo(t: Ticker): SymbolInfo {
     baseAsset: (t.instId ?? t.symbol).replace(/USDT|USDC$/i, ""),
     quoteAsset: "USDT",
     description: `${t.symbol} ${t.category ?? "USDT-FUTURES"} contract`,
+    _productCategory: t.category,
   };
+}
+
+/**
+ * Collapse the per-category mirror into one entry per instId: the same
+ * instrument (e.g. ARIAUSDT) can be listed under SPOT and USDT-FUTURES at
+ * once, but downstream lists render with key={id} so ids must stay unique.
+ * Higher-priority product categories win; ties keep the first written entry.
+ */
+export function dedupeSymbols(byKey: Record<string, SymbolInfo>): SymbolInfo[] {
+  const byId = new Map<string, SymbolInfo>();
+  const rankOf = (s: SymbolInfo): number => CATEGORY_PRIORITY[s._productCategory ?? ""] ?? Infinity;
+  for (const s of Object.values(byKey)) {
+    const prev = byId.get(s.id);
+    if (!prev) {
+      byId.set(s.id, s);
+    } else if (rankOf(s) < rankOf(prev)) {
+      byId.set(s.id, s);
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function precisionOf(v: string | undefined): number {
@@ -116,10 +140,7 @@ export function useRealSymbols(): {
     }
   }, { category: "*" });
 
-  const symbols = useMemo(
-    () => Object.values(byKey).sort((a, b) => a.id.localeCompare(b.id)),
-    [byKey],
-  );
+  const symbols = useMemo(() => dedupeSymbols(byKey), [byKey]);
 
   const priceMap = useMemo(() => {
     const m: Record<string, number | undefined> = {};

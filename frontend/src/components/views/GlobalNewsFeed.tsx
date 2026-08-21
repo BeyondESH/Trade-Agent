@@ -113,7 +113,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
 
   const visible = selected ? items.filter((i) => i.category === selected) : items;
   const windowed = visible.slice(0, renderCount);
-  const hasOlder = visible.length > renderCount || hasMore;
+  const hasOlder = visible.length > renderCount || hasMore(selected ?? undefined);
 
   const revealMore = useCallback(() => {
     if (renderCount < visible.length) {
@@ -122,6 +122,8 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
     }
     void loadMore(selected ?? undefined).then(() => {
       setRenderCount((c) => c + REVEAL_CHUNK);
+    }).catch(() => {
+      /* load failure is silent; the sentinel retries on the next scroll */
     });
   }, [renderCount, visible.length, selected, loadMore]);
 

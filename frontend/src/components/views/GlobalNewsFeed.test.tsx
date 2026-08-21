@@ -24,7 +24,7 @@ vi.mock("../../lib/globalNews", () => ({
       state.items = [...out, ...state.items];
       return out;
     },
-    hasMore: state.hasMore,
+    hasMore: () => state.hasMore,
     loadMore: vi.fn().mockResolvedValue(undefined),
   }),
   fetchNewsCategories: vi.fn().mockResolvedValue(["crypto", "macro", "policy"]),

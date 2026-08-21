@@ -35,8 +35,8 @@
 
 Trade-Agent 是一个全栈的加密货币量化研究与交易终端：
 
-- **后端**（Python / FastAPI）：通过 Bitget 官方 MCP 服务抓取 K 线历史并落盘 Parquet，通过公共 WebSocket 实时推送行情；内置量化回测引擎、因子研究工作台、AI 交易智能体（决策 → 执行 → 复盘）、风控与模拟盘撮合，以及基于 AKShare / BlockBeats 的财经快讯管线。
-- **前端**（React 19 / Vite / TypeScript）：类 TradingView 的专业终端界面，包含行情仪表盘、市场总览、筛币器、热力图、新闻中心、AI 智能体工作台等页面，全中文界面、支持暗/亮主题。
+- **后端**（Python / FastAPI）：通过 Bitget 官方 MCP 服务抓取 K 线历史并落盘 Parquet，通过公共 WebSocket 实时推送行情；内置 QUANT LAB 交互式量化工作台（回测 / 参数扫描 / Walk-forward / 因子研究）、AI 交易智能体（决策 → 执行 → 复盘）、风控与模拟盘撮合，以及基于 AKShare / BlockBeats 的财经快讯管线。
+- **前端**（React 19 / Vite / TypeScript）：类 TradingView 的专业终端界面，包含行情仪表盘、市场总览、筛币器、热力图、社区观点、新闻中心、AI 智能体页面（QUANT LAB 量化工作台 + 行情分析）等，全中文界面、支持暗/亮主题。
 
 整个项目以 [OpenSpec](https://github.com/Fission-AI/OpenSpec) 规格驱动开发，历史功能均有对应规格与设计文档沉淀在 `openspec/`。
 
@@ -45,7 +45,7 @@ Trade-Agent 是一个全栈的加密货币量化研究与交易终端：
 - **专业 K 线终端**：`klinecharts-pro` 渲染，多周期 / 多图表联动、技术指标、SMC 结构分析、支撑阻力、绘图工具、价格预警线。
 - **实时行情**：Bitget 公共 WebSocket 推送 K 线 / 盘口 / Ticker，前端 WS 订阅协议（candle / books / ticker）。
 - **AI 交易智能体**：LLM 驱动的决策循环（分析 → 决策 → 执行 → 复盘），支持记忆注入与交易日志，工作台含决策面板、持仓、运行控制。
-- **量化回测与因子研究**：DL/ML 回测引擎（walk-forward 训练）、因子 IC 评估（`/dl/features`）、回测历史存档与可视化（月度收益 / 单笔盈亏 / 收益直方图 / 权益回撤）。
+- **量化回测与因子研究（QUANT LAB）**：sklearn + vectorbt 回测引擎，模型超参滑杆（lr / hgb）与 4 套预设模板、参数扫描（sweep）、Walk-forward 多折训练、信号 K 线（买卖点叠加）、模型诊断（ROC / AUC · 特征权重）、因子 IC 时序与表格、回测历史存档与可视化（权益/基准曲线 · 月度收益热力图 · 单笔盈亏 · 收益直方图 · 回撤）。
 - **模拟盘与风控**：Paper 撮合、仓位管理、止损/熔断、Kill Switch（一键停机）、订单二次确认。
 - **全球财经快讯**：AKShare 聚合东财 / 新浪 / 同花顺 / 财联社 7×24 快讯，SSE 实时推送，主题自动分类，瀑布流 UI，支持历史分页。
 - **BlockBeats 快讯/数据**：加密货币新闻流与数据缓存。
@@ -57,9 +57,9 @@ Trade-Agent 是一个全栈的加密货币量化研究与交易终端：
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Python ≥ 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · pydantic-settings · akshare |
+| 后端 | Python ≥ 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · scikit-learn · vectorbt · quantstats · pydantic-settings · akshare |
 | 数据接入 | Bitget Agent MCP（stdio）· Bitget 公共 WebSocket · REST v2/v3 |
-| 前端 | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Recharts · motion · lucide-react |
+| 前端 | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Recharts · Radix UI · motion · lucide-react · 自托管 Google Sans Flex / Noto Sans SC |
 | 测试 | pytest（三层测试）· Vitest + Testing Library · Playwright（E2E） |
 | 工程 | uv / pip · npm · OpenSpec 规格驱动开发 · GPL-3.0 |
 
@@ -67,19 +67,20 @@ Trade-Agent 是一个全栈的加密货币量化研究与交易终端：
 
 ```
 ┌────────────────────── 浏览器 · React 19 + Vite ──────────────────────┐
-│  Dashboard │ Markets │ Screener │ Heatmaps │ News │ AI Agent       │
-│  klinecharts-pro · Recharts · i18n(中文) · Tailwind v4 · dark/light │
+│  SuperCharts │ Markets │ Screener │ Heatmaps │ Community │ News     │
+│  AI Agent（QUANT LAB + 行情分析）· klinecharts-pro · Recharts       │
+│  i18n(中文) · Tailwind v4 · dark/light                              │
 └───────────────────────┬─────────────────────────┬──────────────────┘
                         │ /api (vite proxy)       │ /ws
 ┌───────────────────────▼─────────────────────────▼──────────────────┐
 │                     FastAPI · uvicorn (:8000)                      │
-│   REST：/candles /analyze /structure /backtest /agent /news /...   │
-│   WS：candle / ticker / books（行情推送）                           │
+│   REST：/candles /analyze /structure /backtest /sweep /agent /news  │
+│   WS：candle / ticker / books / trade / mark-price / funding-time  │
 │   SSE：/news/stream（全球快讯实时流）                               │
 ├────────────────────────────────────────────────────────────────────┤
 │  Bitget MCP (stdio) │ Bitget 公共 WS │ AKShare │ BlockBeats API    │
 │  K线抓取/回填        │ 实时bar/盘口    │ 快讯4源 │ 加密快讯/数据     │
-│  Parquet Store      │ 环形缓冲        │ 环形缓冲 │ 本地缓存          │
+│  Parquet Store      │ 环形缓冲        │ 环形缓冲 │ 每日本地缓存      │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -139,8 +140,14 @@ market-data pull --symbol BTCUSDT --timeframe 5m --start 2024-01-01 --end 2024-0
 market-data incremental --symbol BTCUSDT --timeframe 5m --start 2024-01-01 --end 2024-01-03
 # 数据缺口检查
 market-data gaps --symbol BTCUSDT --timeframe 5m
+# 指标 + 支撑阻力分析
+market-data analyze --symbol BTCUSDT --timeframe 1h
+# 跑一次量化回测
+market-data backtest --symbol BTCUSDT --timeframe 1h
 # 跑一次记忆增强的 AI Agent 循环（模拟盘）
 market-data orchestrate
+# 查看交易记忆 / 规则提炼
+market-data memory
 ```
 
 ## 环境变量
@@ -155,14 +162,19 @@ market-data orchestrate
 | `MD_SYMBOLS` | `BTCUSDT,ETHUSDT,SOLUSDT` | 默认抓取标的 |
 | `MD_TIMEFRAMES` | `1m,5m,…,1d` | 默认周期 |
 | `MD_CATEGORY` | `USDT-FUTURES` | 默认产品线 |
+| `MD_CATEGORIES` | `SPOT,USDT-FUTURES` | 交易所行情中枢覆盖的产品线列表 |
 | `MD_SCHEDULE_INTERVAL_SECONDS` | `300` | 定时增量拉取周期 |
 | `MD_MCP_COMMAND` / `MD_MCP_ARGS` | `npx` / `@bitget-ai/bitget-agent-mcp` | Bitget MCP 启动命令 |
 | `MD_CANDLE_PAGE_LIMIT` | `100` | 单请求 K 线页大小 |
 | `MD_REST_CANDLE_PAGE_LIMIT` | `500` | REST v2 深回填页大小 |
 | `MD_V3_CANDLE_PAGE_LIMIT` | `100` | REST v3 深回填页大小 |
+| `MD_BACKFILL_PAGE_DELAY` | `0.05` | 深回填页间节流延时（秒） |
 | `MD_NEWS_POLL_SECONDS` | `60` | 全球快讯轮询周期 |
 | `MD_NEWS_BUFFER_SIZE` | `500` | 快讯环形缓冲条数 |
 | `MD_WS_PUBLIC_URL` | Bitget 官方 | 公共 WebSocket 地址 |
+| `MD_WS_HEARTBEAT_SECONDS` | `30` | WS 心跳间隔 |
+| `MD_WS_RECONNECT_SECONDS` | `5` | WS 断线重连间隔 |
+| `MD_BLOCKBEATS_REFRESH_HOUR` / `MINUTE` | `12` / `0` | BlockBeats 数据缓存每日刷新时刻 |
 | `MD_LOG_LEVEL` | `INFO` | 日志级别 |
 
 ## 测试
@@ -192,20 +204,19 @@ cd frontend && npm run test && npm run typecheck
 │       ├── streamhub.py         # WS 订阅路由与推送
 │       ├── ingestion.py         # MCP / REST 历史抓取与回填
 │       ├── mcp_client.py        # Bitget Agent MCP 客户端
-│       ├── store.py             # Parquet 存储
-│       ├── dlquant.py           # 量化回测引擎
-│       ├── factors.py           # 因子库
-│       ├── indicators.py        # 技术指标
+│       ├── store.py / scheduler.py        # Parquet 存储 / 增量持久化调度
+│       ├── dlquant.py / factors.py / indicators.py  # 量化引擎(vectorbt) / 因子 / 指标
 │       ├── smc.py / structure.py / levels.py   # 结构与支撑阻力
-│       ├── agent.py / llm.py / memory.py       # AI 交易智能体
+│       ├── agent.py / llm.py / memory.py / orchestration.py  # AI 交易智能体
 │       ├── execution.py / risk.py              # 执行与风控
 │       ├── newsfeed.py / news_broker.py        # 全球快讯（AKShare → SSE）
-│       ├── blockbeats.py                        # BlockBeats 快讯/数据
-│       ├── backtest_history.py / chartstore.py  # 历史存档
+│       ├── blockbeats.py / blockbeats_cache.py # BlockBeats 快讯/数据 + 每日本地缓存
+│       ├── backtest_history.py / chartstore.py / alertstore.py  # 历史存档 / 图表 / 告警
 │       └── cli.py               # market-data 命令行
 ├── frontend/
 │   └── src/
-│       ├── components/views/    # 页面视图（Dashboard/Markets/News/Agent…）
+│       ├── components/views/    # 页面视图（SuperCharts/Markets/News/Agent…）
+│       │   └── agent/           # QUANT LAB + AI Agent 分析（QuantLabPanel/ModelPanel/…）
 │       ├── lib/                 # 数据层与工具（globalNews/useMasonry…）
 │       ├── api/client.ts        # REST 客户端
 │       ├── hooks/ types/ utils/ data/
@@ -222,11 +233,12 @@ cd frontend && npm run test && npm run typecheck
 ### 行情
 - `GET /health`、`GET /candles`、`GET /candles/recent`、`POST /candles/backfill`
 - `GET /analyze`、`GET /levels`、`GET /structure`
-- `GET /tickers`、`GET /books/{symbol}`、`GET /trades/{symbol}`、`GET /funding`、`GET /mark-price`、`GET /instruments`
-- `WS /ws`：`candle` / `ticker` / `books` 订阅推送
+- `GET /tickers`、`GET /books/{symbol}`、`GET /books/{category}/{symbol}`、`GET /trades/{symbol}`、`GET /trades/{category}/{symbol}`、`GET /funding`、`GET /mark-price`、`GET /instruments`
+- `WS /ws`：`candle` / `ticker` / `books` / `trade` / `mark-price` / `funding-time` 订阅推送
 
 ### 量化
 - `POST /backtest`、`GET /jobs/{id}`、`POST /dl/features`
+- `POST /backtest/sweep`（参数扫描）、`POST /backtest/walkforward`（Walk-forward）
 - `GET /backtest/history`、`GET /backtest/history/{id}`、`DELETE /backtest/history/{id}`
 
 ### AI 智能体
@@ -237,7 +249,7 @@ cd frontend && npm run test && npm run typecheck
 - `GET /news/categories`、`GET /news/history?offset=&limit=&category=`
 - `GET /news/stream`（SSE：快照 → 实时条目 → 心跳）
 - `GET /news/context?hours=&category=`、`GET /news/health`
-- `GET /blockbeats/newsflash/{type}`、`GET /blockbeats/data/{endpoint}`
+- `GET /blockbeats/newsflash/{type}`、`GET /blockbeats/data/{endpoint}`、`POST /blockbeats/data/refresh`
 
 ### 其他
 - `GET/PUT /config`、`GET/PUT /chart-config`、`GET/POST/PUT/DELETE /alerts`

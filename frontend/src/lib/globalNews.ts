@@ -61,6 +61,8 @@ export class GlobalNewsClient {
   private _state: NewsStreamState = "closed";
   private _sources: Record<string, NewsSourceHealth> = {};
   private _hasMore = true;
+  /** Per-category "more history available" flags (set by `loadMore(category)`). */
+  private _hasMoreByCategory = new Map<string, boolean>();
   private _loadingMore = false;
   private listeners = new Set<() => void>();
   private streamUrl: string;
@@ -87,6 +89,26 @@ export class GlobalNewsClient {
 
   get hasMore(): boolean {
     return this._hasMore;
+  }
+
+  /** Whether more history is available, scoped to `category` when given. */
+  hasMoreFor(category?: string): boolean {
+    if (!category) return this._hasMore;
+    if (this._hasMoreByCategory.has(category)) {
+      return this._hasMoreByCategory.get(category) ?? false;
+    }
+    // Unknown until the first paged load; fall back to the global flag (the
+    // full buffer is a superset, so a fully-loaded feed implies exhaustion).
+    return this._hasMore;
+  }
+
+  /** Items already buffered for `category` (all categories when omitted). */
+  private bufferedCountFor(category?: string): number {
+    if (!category) return this._items.length + this._pending.length;
+    let n = 0;
+    for (const it of this._pending) if (it.category === category) n++;
+    for (const it of this._items) if (it.category === category) n++;
+    return n;
   }
 
   connect(): void {
@@ -125,17 +147,25 @@ export class GlobalNewsClient {
 
   /** Page older history from `/news/history` when the client buffer is exhausted. */
   async loadMore(category?: string): Promise<void> {
-    if (this._loadingMore || !this._hasMore) return;
+    if (this._loadingMore || !this.hasMoreFor(category)) return;
     this._loadingMore = true;
     try {
-      const offset = this._items.length + this._pending.length;
+      // The backend slices the CATEGORY-filtered list, so the offset must be
+      // the count of that category's items already buffered, not the full list
+      // length (comparing full vs filtered would exhaust hasMore prematurely).
+      const offset = this.bufferedCountFor(category);
       const res = await api.newsHistory(offset, HISTORY_LIMIT, category);
       for (const item of res.items) {
         if (!item || !item.id || this.seen.has(item.id)) continue;
         this.seen.add(item.id);
         this._items.push(item); // history items are older -> append keeps newest-first
       }
-      this._hasMore = this._items.length < res.total;
+      const buffered = this.bufferedCountFor(category);
+      if (category) {
+        this._hasMoreByCategory.set(category, buffered < res.total);
+      } else {
+        this._hasMore = buffered < res.total;
+      }
       this.emit();
     } finally {
       this._loadingMore = false;
@@ -153,6 +183,9 @@ export class GlobalNewsClient {
       const stale = this._items.filter((i) => !snapIds.has(i.id));
       this._pending = [];
       this._items = [...snap, ...stale];
+      // The ring has rotated since the last paged load; reset per-category
+      // flags so they fall back to the (fresh) global hasMore until re-proven.
+      this._hasMoreByCategory.clear();
       if (typeof data.total === "number") {
         this._hasMore = this._items.length < data.total;
       }
@@ -193,7 +226,7 @@ export function useGlobalNewsStream(): {
   sources: Record<string, NewsSourceHealth>;
   pendingCount: number;
   flushPending: () => GlobalNewsItem[];
-  hasMore: boolean;
+  hasMore: (category?: string) => boolean;
   loadMore: (category?: string) => Promise<void>;
 } {
   const [client] = useState(() => new GlobalNewsClient());
@@ -213,8 +246,8 @@ export function useGlobalNewsStream(): {
     state: client.state,
     sources: client.sources,
     pendingCount: client.pendingCount,
-    flushPending: client.flushPending,
-    hasMore: client.hasMore,
-    loadMore: client.loadMore,
+    flushPending: () => client.flushPending(),
+    hasMore: (category?: string) => client.hasMoreFor(category),
+    loadMore: (category?: string) => client.loadMore(category),
   };
 }
