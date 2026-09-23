@@ -1,5 +1,7 @@
 node_modules/
-dist/
+# Vite build output only (vendored prebuilt bundles like
+# vendor/klinecharts-pro/dist are committed on purpose).
+/dist/
 *.local
 .env
 .env.*

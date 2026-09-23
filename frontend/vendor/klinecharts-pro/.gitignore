@@ -1,4 +1,5 @@
 /node_modules
-/dist
 /website
 /docs/.vitepress/cache
+# dist/ is committed on purpose: the app imports the prebuilt bundle directly
+# and CI/fresh clones need it without an extra build step.
