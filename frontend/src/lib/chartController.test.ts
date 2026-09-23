@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   AutoLayerController,
-  PRICE_LINE_GROUP_ID,
   alertLinesToDraw,
   isInsidePane,
+  PRICE_LINE_GROUP_ID,
   pixelToPrice,
   syncPriceLineOverlays,
 } from "./chartController";
@@ -57,7 +57,9 @@ describe("AutoLayerController", () => {
     expect(widget.createIndicator).toHaveBeenCalledWith(
       { name: "MACD" },
       false,
-      expect.objectContaining({ id: expect.stringContaining("indicator_pane_") }),
+      expect.objectContaining({
+        id: expect.stringContaining("indicator_pane_"),
+      }),
     );
     c.addIndicator({ name: "MA", pane: "candle" });
     expect(widget.createIndicator).toHaveBeenCalledWith({ name: "MA" }, true);
@@ -68,8 +70,16 @@ describe("AutoLayerController", () => {
     const c = new AutoLayerController();
     c.attach(widget as never);
     widget.createOverlay.mockReturnValueOnce("ov-1");
-    c.createOverlay({ name: "priceLine", points: [{ value: 100 }], groupId: "auto-sr" });
-    widget.getOverlayById.mockReturnValue({ name: "priceLine", groupId: "auto-sr", points: [] });
+    c.createOverlay({
+      name: "priceLine",
+      points: [{ value: 100 }],
+      groupId: "auto-sr",
+    });
+    widget.getOverlayById.mockReturnValue({
+      name: "priceLine",
+      groupId: "auto-sr",
+      points: [],
+    });
     c.removeOverlaysByGroup("auto-sr");
     expect(widget.removeOverlay).toHaveBeenCalledWith({ groupId: "auto-sr" });
   });
@@ -98,7 +108,9 @@ describe("syncPriceLineOverlays", () => {
   it("clears the group and redraws one overlay per line with groupId + alertId", () => {
     const widget = fakePriceWidget();
     syncPriceLineOverlays(widget as never, lines);
-    expect(widget.removeOverlay).toHaveBeenCalledWith({ groupId: PRICE_LINE_GROUP_ID });
+    expect(widget.removeOverlay).toHaveBeenCalledWith({
+      groupId: PRICE_LINE_GROUP_ID,
+    });
     expect(widget.createOverlay).toHaveBeenCalledTimes(2);
     const first = widget.createOverlay.mock.calls[0][0];
     expect(first).toMatchObject({
@@ -135,9 +147,33 @@ describe("syncPriceLineOverlays", () => {
 
 describe("alertLinesToDraw", () => {
   const alerts = [
-    { id: "a1", symbol: "BTCUSDT", condition: "above" as const, threshold: 100, enabled: true, triggered: false, createdAt: 1 },
-    { id: "a2", symbol: "BTCUSDT", condition: "below" as const, threshold: 90, enabled: false, triggered: false, createdAt: 1 },
-    { id: "a3", symbol: "ETHUSDT", condition: "above" as const, threshold: 200, enabled: true, triggered: false, createdAt: 1 },
+    {
+      id: "a1",
+      symbol: "BTCUSDT",
+      condition: "above" as const,
+      threshold: 100,
+      enabled: true,
+      triggered: false,
+      createdAt: 1,
+    },
+    {
+      id: "a2",
+      symbol: "BTCUSDT",
+      condition: "below" as const,
+      threshold: 90,
+      enabled: false,
+      triggered: false,
+      createdAt: 1,
+    },
+    {
+      id: "a3",
+      symbol: "ETHUSDT",
+      condition: "above" as const,
+      threshold: 200,
+      enabled: true,
+      triggered: false,
+      createdAt: 1,
+    },
   ];
 
   it("only includes the current symbol and derives semantic colors", () => {
@@ -165,10 +201,10 @@ describe("pixelToPrice / isInsidePane", () => {
     );
     widget.convertFromPixel.mockReturnValue({ value: 95000 });
     expect(pixelToPrice(widget as never, 400, 300)).toBe(95000);
-    expect(widget.convertFromPixel).toHaveBeenCalledWith(
-      [{ x: 400, y: 300 }],
-      { paneId: "candle_pane", absolute: true },
-    );
+    expect(widget.convertFromPixel).toHaveBeenCalledWith([{ x: 400, y: 300 }], {
+      paneId: "candle_pane",
+      absolute: true,
+    });
   });
 
   it("returns null when the chart, root dom, or price is missing", () => {
@@ -184,7 +220,9 @@ describe("pixelToPrice / isInsidePane", () => {
 
   it("hit-tests a pane by its main DOM rect", () => {
     const widget = fakePriceWidget();
-    widget.getDom.mockReturnValue({ getBoundingClientRect: () => fakeRect({ left: 10, top: 20, right: 810, bottom: 620 }) });
+    widget.getDom.mockReturnValue({
+      getBoundingClientRect: () => fakeRect({ left: 10, top: 20, right: 810, bottom: 620 }),
+    });
     expect(isInsidePane(widget as never, "candle_pane", 400, 300)).toBe(true);
     expect(isInsidePane(widget as never, "candle_pane", 5, 300)).toBe(false);
     expect(isInsidePane(null, "candle_pane", 400, 300)).toBe(false);

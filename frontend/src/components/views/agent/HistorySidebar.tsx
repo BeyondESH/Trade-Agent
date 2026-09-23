@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ThemeMode } from "../../../types/trading";
-import type { BacktestHistoryMeta } from "../../../api/types";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../api/client";
-import { Panel, cardCls, fmtPct, fmtTime } from "./ui";
+import type { BacktestHistoryMeta } from "../../../api/types";
+import type { ThemeMode } from "../../../types/trading";
+import { cardCls, fmtPct, fmtTime, Panel } from "./ui";
 
 interface Props {
   activeId: string | null;
@@ -88,7 +89,10 @@ export const HistorySidebar: React.FC<Props> = ({ activeId, onSelect, onDeleted,
                   </span>
                   <div className="flex items-center gap-2">
                     {r.legacy && (
-                      <span className="text-[10px] text-[#ff9800] font-semibold" title="旧引擎记录,字段口径不同,仅供查看">
+                      <span
+                        className="text-[10px] text-[#ff9800] font-semibold"
+                        title="旧引擎记录,字段口径不同,仅供查看"
+                      >
                         legacy
                       </span>
                     )}

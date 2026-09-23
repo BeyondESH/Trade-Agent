@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { ThemeMode } from "../../../types/trading";
+import type React from "react";
+import { useState } from "react";
 import type { FactorDef } from "../../../api/types";
-import { Panel, btnCls, inputCls, selectCls } from "./ui";
+import type { ThemeMode } from "../../../types/trading";
 import { FACTOR_CATALOG, newId } from "./factorCatalog";
+import { btnCls, inputCls, Panel, selectCls } from "./ui";
 
 interface Props {
   factors: FactorDef[];
@@ -70,7 +71,9 @@ export const FactorManager: React.FC<Props> = ({ factors, onChange, theme }) => 
       theme={theme}
     >
       <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
-        {factors.length === 0 && <span className="text-xs text-gray-500">暂无因子 — 使用下方目录或表达式添加</span>}
+        {factors.length === 0 && (
+          <span className="text-xs text-gray-500">暂无因子 — 使用下方目录或表达式添加</span>
+        )}
         {factors.map((f) => (
           <div key={f.id} className="flex items-center gap-2 text-xs">
             <input
@@ -82,7 +85,9 @@ export const FactorManager: React.FC<Props> = ({ factors, onChange, theme }) => 
             <span className="font-mono font-semibold flex-1 truncate" title={f.id}>
               {f.name}
             </span>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${theme === "dark" ? "bg-[#2a2e39] text-[#d1d4dc]" : "bg-[#f0f3fa] text-[#606470]"}`}>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${theme === "dark" ? "bg-[#2a2e39] text-[#d1d4dc]" : "bg-[#f0f3fa] text-[#606470]"}`}
+            >
               {f.kind === "preset" ? f.fn : f.expr}
             </span>
             <button
@@ -97,7 +102,11 @@ export const FactorManager: React.FC<Props> = ({ factors, onChange, theme }) => 
       </div>
 
       <div className="flex flex-wrap items-end gap-2 border-t pt-2 border-gray-500/20">
-        <select value={presetFn} onChange={(e) => setPresetFn(e.target.value)} className={selectCls(theme)}>
+        <select
+          value={presetFn}
+          onChange={(e) => setPresetFn(e.target.value)}
+          className={selectCls(theme)}
+        >
           {FACTOR_CATALOG.map((c) => (
             <option key={c.fn} value={c.fn}>
               {c.name} ({c.fn})
@@ -130,7 +139,10 @@ export const FactorManager: React.FC<Props> = ({ factors, onChange, theme }) => 
             + 添加表达式
           </button>
         </div>
-        <span className="text-[11px] text-gray-500">可用函数: sma/ema/std/pct/rsi/max/min/shift/log/abs/atr/vol_ratio · 列: open/high/low/close/volume 及指标列</span>
+        <span className="text-[11px] text-gray-500">
+          可用函数: sma/ema/std/pct/rsi/max/min/shift/log/abs/atr/vol_ratio · 列:
+          open/high/low/close/volume 及指标列
+        </span>
         {exprError && <span className="text-xs text-[#f23645]">✕ {exprError}</span>}
       </div>
     </Panel>

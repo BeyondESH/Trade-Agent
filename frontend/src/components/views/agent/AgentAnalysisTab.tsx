@@ -1,9 +1,10 @@
-import React, { useState } from "react";
-import { ThemeMode, SymbolInfo } from "../../../types/trading";
-import { DecisionPanel } from "./DecisionPanel";
-import { CyclePanel } from "./CyclePanel";
-import { PortfolioPanel } from "./PortfolioPanel";
+import type React from "react";
+import { useState } from "react";
+import type { SymbolInfo, ThemeMode } from "../../../types/trading";
 import { AgentConfigPanel } from "./AgentConfigPanel";
+import { CyclePanel } from "./CyclePanel";
+import { DecisionPanel } from "./DecisionPanel";
+import { PortfolioPanel } from "./PortfolioPanel";
 
 interface Props {
   symbols: SymbolInfo[];

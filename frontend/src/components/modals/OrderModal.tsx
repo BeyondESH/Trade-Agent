@@ -1,24 +1,25 @@
-import React, { useState } from 'react';
-import { SymbolInfo, Position, Order } from '../../types/trading';
-import { X, TrendingUp, TrendingDown, DollarSign, ShieldAlert } from 'lucide-react';
-import { t } from '../../lib/i18n';
+import { DollarSign, ShieldAlert, TrendingDown, TrendingUp, X } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { t } from "../../lib/i18n";
+import { Order, Position, type SymbolInfo } from "../../types/trading";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   symbol: SymbolInfo;
-  initialSide: 'BUY' | 'SELL';
+  initialSide: "BUY" | "SELL";
   onSubmitOrder: (orderData: {
     symbol: string;
-    side: 'BUY' | 'SELL';
-    type: 'MARKET' | 'LIMIT';
+    side: "BUY" | "SELL";
+    type: "MARKET" | "LIMIT";
     price: number;
     amount: number;
     leverage: number;
     tp?: number;
     sl?: number;
   }) => void;
-  theme: 'dark' | 'light';
+  theme: "dark" | "light";
 }
 
 export const OrderModal: React.FC<Props> = ({
@@ -29,21 +30,25 @@ export const OrderModal: React.FC<Props> = ({
   onSubmitOrder,
   theme,
 }) => {
-  const [side, setSide] = useState<'BUY' | 'SELL'>(initialSide);
-  const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT'>('MARKET');
+  const [side, setSide] = useState<"BUY" | "SELL">(initialSide);
+  const [orderType, setOrderType] = useState<"MARKET" | "LIMIT">("MARKET");
   const [price, setPrice] = useState<number>(Number(symbol.price.toFixed(symbol.digits)));
   const [amount, setAmount] = useState<number>(1);
   const [leverage, setLeverage] = useState<number>(10);
   const [enableTP, setEnableTP] = useState<boolean>(true);
   const [enableSL, setEnableSL] = useState<boolean>(true);
   const [tpPrice, setTpPrice] = useState<number>(
-    side === 'BUY' ? Number((symbol.price * 1.05).toFixed(symbol.digits)) : Number((symbol.price * 0.95).toFixed(symbol.digits))
+    side === "BUY"
+      ? Number((symbol.price * 1.05).toFixed(symbol.digits))
+      : Number((symbol.price * 0.95).toFixed(symbol.digits)),
   );
   const [slPrice, setSlPrice] = useState<number>(
-    side === 'BUY' ? Number((symbol.price * 0.97).toFixed(symbol.digits)) : Number((symbol.price * 1.03).toFixed(symbol.digits))
+    side === "BUY"
+      ? Number((symbol.price * 0.97).toFixed(symbol.digits))
+      : Number((symbol.price * 1.03).toFixed(symbol.digits)),
   );
 
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
 
   if (!isOpen) return null;
 
@@ -51,7 +56,7 @@ export const OrderModal: React.FC<Props> = ({
   const marginRequired = totalValue / leverage;
   const potentialProfit = Math.abs((tpPrice - price) * amount);
   const potentialLoss = Math.abs((price - slPrice) * amount);
-  const rrRatio = potentialLoss > 0 ? (potentialProfit / potentialLoss).toFixed(2) : '1.0';
+  const rrRatio = potentialLoss > 0 ? (potentialProfit / potentialLoss).toFixed(2) : "1.0";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,16 +79,26 @@ export const OrderModal: React.FC<Props> = ({
         onSubmit={handleSubmit}
         id="trading-order-modal"
         className={`w-full max-w-md rounded-xl shadow-2xl border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 ${
-          isDark ? 'bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]' : 'bg-white border-[#e0e3eb] text-[#131722]'
+          isDark
+            ? "bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]"
+            : "bg-white border-[#e0e3eb] text-[#131722]"
         }`}
       >
         {/* Header */}
-        <div className={`p-3 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
+        <div
+          className={`p-3 border-b flex items-center justify-between ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
+        >
           <div className="flex items-center gap-2">
             <span className="font-bold text-sm">{symbol.ticker}</span>
-            <span className="text-xs text-gray-400 font-mono">${symbol.price.toFixed(symbol.digits)}</span>
+            <span className="text-xs text-gray-400 font-mono">
+              ${symbol.price.toFixed(symbol.digits)}
+            </span>
           </div>
-          <button type="button" onClick={onClose} className="p-1 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -93,32 +108,32 @@ export const OrderModal: React.FC<Props> = ({
           <button
             type="button"
             data-testid="order-side-buy"
-            onClick={() => setSide('BUY')}
+            onClick={() => setSide("BUY")}
             className={`py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
-              side === 'BUY'
-                ? 'bg-[#089981] text-white shadow-md'
+              side === "BUY"
+                ? "bg-[#089981] text-white shadow-md"
                 : isDark
-                ? 'bg-[#131722] text-gray-400 hover:text-white'
-                : 'bg-gray-100 text-gray-600 hover:text-black'
+                  ? "bg-[#131722] text-gray-400 hover:text-white"
+                  : "bg-gray-100 text-gray-600 hover:text-black"
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            <span>{t('BUY / LONG')}</span>
+            <span>{t("BUY / LONG")}</span>
           </button>
           <button
             type="button"
             data-testid="order-side-sell"
-            onClick={() => setSide('SELL')}
+            onClick={() => setSide("SELL")}
             className={`py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
-              side === 'SELL'
-                ? 'bg-[#f23645] text-white shadow-md'
+              side === "SELL"
+                ? "bg-[#f23645] text-white shadow-md"
                 : isDark
-                ? 'bg-[#131722] text-gray-400 hover:text-white'
-                : 'bg-gray-100 text-gray-600 hover:text-black'
+                  ? "bg-[#131722] text-gray-400 hover:text-white"
+                  : "bg-gray-100 text-gray-600 hover:text-black"
             }`}
           >
             <TrendingDown className="w-4 h-4" />
-            <span>{t('SELL / SHORT')}</span>
+            <span>{t("SELL / SHORT")}</span>
           </button>
         </div>
 
@@ -126,17 +141,17 @@ export const OrderModal: React.FC<Props> = ({
         <div className="p-4 flex flex-col gap-3 text-xs">
           {/* Order Type */}
           <div className="flex gap-2">
-            {(['MARKET', 'LIMIT'] as const).map((t) => (
+            {(["MARKET", "LIMIT"] as const).map((t) => (
               <button
                 type="button"
                 key={t}
                 onClick={() => setOrderType(t)}
                 className={`flex-1 py-1.5 rounded text-xs font-semibold border transition-colors ${
                   orderType === t
-                    ? 'bg-[#2962ff] text-white border-[#2962ff]'
+                    ? "bg-[#2962ff] text-white border-[#2962ff]"
                     : isDark
-                    ? 'border-[#2a2e39] hover:bg-[#2a2e39]'
-                    : 'border-[#e0e3eb] hover:bg-gray-100'
+                      ? "border-[#2a2e39] hover:bg-[#2a2e39]"
+                      : "border-[#e0e3eb] hover:bg-gray-100"
                 }`}
               >
                 {t}
@@ -145,9 +160,11 @@ export const OrderModal: React.FC<Props> = ({
           </div>
 
           {/* Limit Price */}
-          {orderType === 'LIMIT' && (
+          {orderType === "LIMIT" && (
             <div>
-              <label className="text-gray-400 font-semibold mb-1 block">{t('Limit Price ($)')}</label>
+              <label className="text-gray-400 font-semibold mb-1 block">
+                {t("Limit Price ($)")}
+              </label>
               <input
                 type="number"
                 data-testid="order-price-input"
@@ -155,7 +172,9 @@ export const OrderModal: React.FC<Props> = ({
                 value={price}
                 onChange={(e) => setPrice(Number(e.target.value))}
                 className={`w-full p-2 rounded border outline-none font-mono font-bold ${
-                  isDark ? 'bg-[#131722] border-[#2a2e39] text-white' : 'bg-white border-[#e0e3eb] text-black'
+                  isDark
+                    ? "bg-[#131722] border-[#2a2e39] text-white"
+                    : "bg-white border-[#e0e3eb] text-black"
                 }`}
               />
             </div>
@@ -165,7 +184,12 @@ export const OrderModal: React.FC<Props> = ({
           <div>
             <div className="flex justify-between text-gray-400 font-semibold mb-1">
               <span>Order Size ({symbol.baseAsset})</span>
-              <span className="font-mono">Value: ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span className="font-mono">
+                Value: $
+                {totalValue.toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}
+              </span>
             </div>
             <input
               type="number"
@@ -176,7 +200,9 @@ export const OrderModal: React.FC<Props> = ({
               onChange={(e) => setAmount(Number(e.target.value))}
               required
               className={`w-full p-2 rounded border outline-none font-mono font-bold ${
-                isDark ? 'bg-[#131722] border-[#2a2e39] text-white' : 'bg-white border-[#e0e3eb] text-black'
+                isDark
+                  ? "bg-[#131722] border-[#2a2e39] text-white"
+                  : "bg-white border-[#e0e3eb] text-black"
               }`}
             />
           </div>
@@ -184,7 +210,7 @@ export const OrderModal: React.FC<Props> = ({
           {/* Leverage Slider */}
           <div>
             <div className="flex justify-between text-gray-400 font-semibold mb-1">
-              <span>{t('Leverage')}</span>
+              <span>{t("Leverage")}</span>
               <span className="font-mono text-[#2962ff] font-bold">{leverage}x</span>
             </div>
             <input
@@ -198,9 +224,11 @@ export const OrderModal: React.FC<Props> = ({
           </div>
 
           {/* TP / SL Group */}
-          <div className={`p-2.5 rounded-lg border flex flex-col gap-2 ${
-            isDark ? 'bg-[#131722] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'
-          }`}>
+          <div
+            className={`p-2.5 rounded-lg border flex flex-col gap-2 ${
+              isDark ? "bg-[#131722] border-[#2a2e39]" : "bg-[#f8fafc] border-[#e0e3eb]"
+            }`}
+          >
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-1.5 cursor-pointer text-[#089981] font-bold">
                 <input
@@ -209,7 +237,7 @@ export const OrderModal: React.FC<Props> = ({
                   onChange={(e) => setEnableTP(e.target.checked)}
                   className="accent-[#089981]"
                 />
-                <span>{t('Take Profit ($)')}</span>
+                <span>{t("Take Profit ($)")}</span>
               </label>
               {enableTP && (
                 <input
@@ -218,7 +246,9 @@ export const OrderModal: React.FC<Props> = ({
                   value={tpPrice}
                   onChange={(e) => setTpPrice(Number(e.target.value))}
                   className={`w-28 p-1 text-right rounded border font-mono ${
-                    isDark ? 'bg-[#1e222d] border-[#2a2e39] text-white' : 'bg-white border-gray-300 text-black'
+                    isDark
+                      ? "bg-[#1e222d] border-[#2a2e39] text-white"
+                      : "bg-white border-gray-300 text-black"
                   }`}
                 />
               )}
@@ -232,7 +262,7 @@ export const OrderModal: React.FC<Props> = ({
                   onChange={(e) => setEnableSL(e.target.checked)}
                   className="accent-[#f23645]"
                 />
-                <span>{t('Stop Loss ($)')}</span>
+                <span>{t("Stop Loss ($)")}</span>
               </label>
               {enableSL && (
                 <input
@@ -241,7 +271,9 @@ export const OrderModal: React.FC<Props> = ({
                   value={slPrice}
                   onChange={(e) => setSlPrice(Number(e.target.value))}
                   className={`w-28 p-1 text-right rounded border font-mono ${
-                    isDark ? 'bg-[#1e222d] border-[#2a2e39] text-white' : 'bg-white border-gray-300 text-black'
+                    isDark
+                      ? "bg-[#1e222d] border-[#2a2e39] text-white"
+                      : "bg-white border-gray-300 text-black"
                   }`}
                 />
               )}
@@ -249,25 +281,32 @@ export const OrderModal: React.FC<Props> = ({
 
             {enableTP && enableSL && (
               <div className="flex justify-between text-[11px] pt-1 text-gray-400 font-mono border-t border-gray-500/20">
-                <span>{t('R:R Ratio')}: <b className="text-white">{rrRatio}</b></span>
-                <span>{t('Est Profit')}: <b className="text-[#089981]">+${potentialProfit.toFixed(2)}</b></span>
+                <span>
+                  {t("R:R Ratio")}: <b className="text-white">{rrRatio}</b>
+                </span>
+                <span>
+                  {t("Est Profit")}:{" "}
+                  <b className="text-[#089981]">+${potentialProfit.toFixed(2)}</b>
+                </span>
               </div>
             )}
           </div>
 
           {/* Margin Summary */}
           <div className="flex justify-between text-[11px] text-gray-400 font-mono">
-            <span>{t('Required Margin:')}</span>
+            <span>{t("Required Margin:")}</span>
             <span className="font-bold text-white">${marginRequired.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className={`p-3 border-t flex justify-end gap-2 ${isDark ? 'border-[#2a2e39] bg-[#131722]' : 'border-[#e0e3eb] bg-gray-50'}`}>
+        <div
+          className={`p-3 border-t flex justify-end gap-2 ${isDark ? "border-[#2a2e39] bg-[#131722]" : "border-[#e0e3eb] bg-gray-50"}`}
+        >
           <button
             type="button"
             onClick={onClose}
-            className={`px-3 py-1.5 rounded text-xs font-semibold ${isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-200'}`}
+            className={`px-3 py-1.5 rounded text-xs font-semibold ${isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-200"}`}
           >
             Cancel
           </button>
@@ -275,7 +314,7 @@ export const OrderModal: React.FC<Props> = ({
             type="submit"
             data-testid="order-submit"
             className={`px-5 py-1.5 rounded text-xs font-bold text-white transition-all shadow-md ${
-              side === 'BUY' ? 'bg-[#089981] hover:bg-[#067a67]' : 'bg-[#f23645] hover:bg-[#d02534]'
+              side === "BUY" ? "bg-[#089981] hover:bg-[#067a67]" : "bg-[#f23645] hover:bg-[#d02534]"
             }`}
           >
             Place {side} Order (${marginRequired.toFixed(2)})

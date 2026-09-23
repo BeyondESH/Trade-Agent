@@ -1,3 +1,4 @@
+import type { GlobalNewsItem } from "../types/trading";
 import type {
   AgentDecision,
   AlertRecord,
@@ -21,12 +22,14 @@ import type {
   Ticker,
   WalkForwardResult,
 } from "./types";
-import type { GlobalNewsItem } from "../types/trading";
 
 const BASE = "/api";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -59,23 +62,18 @@ function qs(params: Record<string, string | number | undefined>): string {
 }
 
 export const api = {
-  health: () => request<{ status: string }>("/health"),
+  health: () => request<{ status: string; kill_switch: boolean; live_enabled: boolean }>("/health"),
 
-  tickers: (category?: string) =>
-    request<{ tickers: Ticker[] }>(`/tickers${qs({ category })}`),
+  tickers: (category?: string) => request<{ tickers: Ticker[] }>(`/tickers${qs({ category })}`),
 
   instruments: (category?: string) =>
     request<{ instruments: Instrument[] }>(`/instruments${qs({ category })}`),
 
   candles: (s: SeriesRef, start?: number, end?: number, limit = 500) =>
-    request<{ candles: Candle[]; count: number }>(
-      `/candles${qs({ ...s, start, end, limit })}`,
-    ),
+    request<{ candles: Candle[]; count: number }>(`/candles${qs({ ...s, start, end, limit })}`),
 
   candlesRecent: (s: SeriesRef, limit = 200) =>
-    request<{ candles: Candle[]; count: number }>(
-      `/candles/recent${qs({ ...s, limit })}`,
-    ),
+    request<{ candles: Candle[]; count: number }>(`/candles/recent${qs({ ...s, limit })}`),
 
   backfill: (s: SeriesRef, before: number) =>
     request<BackfillResponse>("/candles/backfill", {
@@ -84,14 +82,20 @@ export const api = {
     }),
 
   books: (s: { category: string; symbol: string }) =>
-    request<{ symbol: string; category: string; asks: [number, number][]; bids: [number, number][]; seq: number | null }>(
-      `/books/${s.category}/${s.symbol}`,
-    ),
+    request<{
+      symbol: string;
+      category: string;
+      asks: [number, number][];
+      bids: [number, number][];
+      seq: number | null;
+    }>(`/books/${s.category}/${s.symbol}`),
 
   trades: (s: { category: string; symbol: string }, limit = 50) =>
-    request<{ symbol: string; category: string; trades: Record<string, unknown>[] }>(
-      `/trades/${s.category}/${s.symbol}${qs({ limit })}`,
-    ),
+    request<{
+      symbol: string;
+      category: string;
+      trades: Record<string, unknown>[];
+    }>(`/trades/${s.category}/${s.symbol}${qs({ limit })}`),
 
   funding: (category?: string) =>
     request<{ funding: Record<string, unknown>[] }>(`/funding${qs({ category })}`),
@@ -99,18 +103,20 @@ export const api = {
   markPrice: (category?: string) =>
     request<{ mark_prices: Record<string, unknown>[] }>(`/mark-price${qs({ category })}`),
 
-  analyze: (s: SeriesRef, top = 8) =>
-    request<AnalyzeResponse>(`/analyze${qs({ ...s, top })}`),
+  analyze: (s: SeriesRef, top = 8) => request<AnalyzeResponse>(`/analyze${qs({ ...s, top })}`),
 
-  levels: (s: SeriesRef, top = 8) =>
-    request<{ levels: Level[] }>(`/levels${qs({ ...s, top })}`),
+  levels: (s: SeriesRef, top = 8) => request<{ levels: Level[] }>(`/levels${qs({ ...s, top })}`),
 
-  structure: (s: SeriesRef) =>
-    request<StructureResponse>(`/structure${qs({ ...s })}`),
+  structure: (s: SeriesRef) => request<StructureResponse>(`/structure${qs({ ...s })}`),
 
   backtest: (
     s: SeriesRef,
-    opts?: { factors?: FactorDef[]; params?: BacktestParams; start?: number; end?: number },
+    opts?: {
+      factors?: FactorDef[];
+      params?: BacktestParams;
+      start?: number;
+      end?: number;
+    },
   ) =>
     request<{ job_id: string }>("/backtest", {
       method: "POST",
@@ -118,13 +124,19 @@ export const api = {
     }),
 
   job: (id: string) =>
-    request<{ status: "running" | "done" | "error"; result?: BacktestJobResult; error?: string }>(`/jobs/${id}`),
+    request<{
+      status: "running" | "done" | "error";
+      result?: BacktestJobResult;
+      error?: string;
+    }>(`/jobs/${id}`),
 
   backtestHistory: () => request<{ runs: BacktestHistoryMeta[] }>("/backtest/history"),
   backtestHistoryDetail: (id: string) =>
     request<BacktestHistoryDetail>(`/backtest/history/${encodeURIComponent(id)}`),
   backtestHistoryDelete: (id: string) =>
-    request<{ deleted: boolean }>(`/backtest/history/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    request<{ deleted: boolean }>(`/backtest/history/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 
   dlFeatures: (s: SeriesRef, factors?: FactorDef[], start?: number, end?: number) =>
     request<DlFeaturesResponse>("/dl/features", {
@@ -204,13 +216,14 @@ export const api = {
     }),
 
   orderConfirm: (token: string) =>
-    request<{ approved: boolean; filled: boolean; reason: string; live: boolean }>(
-      "/order/confirm",
-      { method: "POST", body: JSON.stringify({ token }) },
-    ),
+    request<{
+      approved: boolean;
+      filled: boolean;
+      reason: string;
+      live: boolean;
+    }>("/order/confirm", { method: "POST", body: JSON.stringify({ token }) }),
 
-  chartConfig: (s: SeriesRef) =>
-    request<ChartConfig>(`/chart-config${qs({ ...s })}`),
+  chartConfig: (s: SeriesRef) => request<ChartConfig>(`/chart-config${qs({ ...s })}`),
 
   saveChartConfig: (s: SeriesRef, state: ChartConfig) =>
     request<ChartConfig>("/chart-config", {
@@ -222,14 +235,19 @@ export const api = {
   // writes and falls back to localStorage when the backend is unreachable.
   alerts: () => request<{ alerts: AlertRecord[] }>("/alerts"),
   saveAlert: (alert: AlertRecord) =>
-    request<{ ok: boolean; alert: AlertRecord }>("/alerts", { method: "POST", body: JSON.stringify(alert) }),
+    request<{ ok: boolean; alert: AlertRecord }>("/alerts", {
+      method: "POST",
+      body: JSON.stringify(alert),
+    }),
   updateAlert: (id: string, patch: Partial<Omit<AlertRecord, "id" | "createdAt">>) =>
     request<{ ok: boolean; alert: AlertRecord }>(`/alerts/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(patch),
     }),
   deleteAlert: (id: string) =>
-    request<{ ok: boolean }>(`/alerts/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    request<{ ok: boolean }>(`/alerts/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 
   // BlockBeats news/data (proxied server-side; key never leaves the backend).
   blockbeatsNews: (type: string, page = 1, size = 20, lang = "cn") =>

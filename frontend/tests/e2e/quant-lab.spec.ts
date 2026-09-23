@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 /**
  * QUANT LAB end-to-end journey: open the agent view, run a backtest through

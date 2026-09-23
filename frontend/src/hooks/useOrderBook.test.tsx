@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { WsFrame } from "./useExchangeSocket";
 import { useOrderBook } from "./useOrderBook";
 
-const listeners: Array<{ channel: string; symbol: string; fn: (f: WsFrame) => void }> = [];
+const listeners: Array<{
+  channel: string;
+  symbol: string;
+  fn: (f: WsFrame) => void;
+}> = [];
 
 vi.mock("./useExchangeSocket", () => ({
   useExchangeSocket: (channel: string, symbol: string, onFrame: (f: WsFrame) => void) => {
@@ -24,8 +28,20 @@ describe("useOrderBook", () => {
 
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
-        data: { asks: [[101, 5], [102, 3]], bids: [[100, 4], [99, 2]], seq: 10 },
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
+        data: {
+          asks: [
+            [101, 5],
+            [102, 3],
+          ],
+          bids: [
+            [100, 4],
+            [99, 2],
+          ],
+          seq: 10,
+        },
       });
     });
     expect(result.current.asks.map((l) => l.price)).toEqual([101, 102]);
@@ -35,8 +51,17 @@ describe("useOrderBook", () => {
 
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "update",
-        data: { asks: [[101, 6], [102, 0]], bids: [[100, 0]], seq: 11 },
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "update",
+        data: {
+          asks: [
+            [101, 6],
+            [102, 0],
+          ],
+          bids: [[100, 0]],
+          seq: 11,
+        },
       });
     });
     expect(result.current.asks.map((l) => [l.price, l.size])).toEqual([[101, 6]]);
@@ -48,7 +73,9 @@ describe("useOrderBook", () => {
     const { result } = renderHook(() => useOrderBook("ETHUSDT"));
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
         data: { asks: [[101, 5]], bids: [[100, 4]], seq: 1 },
       });
     });
@@ -60,15 +87,39 @@ describe("useOrderBook", () => {
     const { result } = renderHook(() => useOrderBook("BTCUSDT"));
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
-        data: { asks: [[101, 5], [102, 3]], bids: [[100, 4], [99, 2]], seq: 10 },
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
+        data: {
+          asks: [
+            [101, 5],
+            [102, 3],
+          ],
+          bids: [
+            [100, 4],
+            [99, 2],
+          ],
+          seq: 10,
+        },
       });
     });
     const ref = result.current;
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "update",
-        data: { asks: [[101, 5], [102, 3]], bids: [[100, 4], [99, 2]], seq: 11 },
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "update",
+        data: {
+          asks: [
+            [101, 5],
+            [102, 3],
+          ],
+          bids: [
+            [100, 4],
+            [99, 2],
+          ],
+          seq: 11,
+        },
       });
     });
     // identical levels -> same reference, no re-render churn
@@ -79,13 +130,17 @@ describe("useOrderBook", () => {
     const { result } = renderHook(() => useOrderBook("BTCUSDT"));
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
         data: { asks: [[101, 5]], bids: [[100, 4]], seq: 10 },
       });
     });
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "update",
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "update",
         data: { asks: [[101, 9]], bids: [], seq: 11 },
       });
     });
@@ -99,7 +154,9 @@ describe("useOrderBook", () => {
     );
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
         data: { asks: [[101, 5]], bids: [[100, 4]], seq: 10 },
       });
     });
@@ -120,14 +177,18 @@ describe("useOrderBook", () => {
     // first snapshot for BTC
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
         data: { asks: [[64000, 5]], bids: [[63990, 4]], seq: 1 },
       });
     });
     // a second snapshot for the same symbol that no longer contains the old levels
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
         data: { asks: [[64010, 7]], bids: [], seq: 2 },
       });
     });
@@ -142,18 +203,35 @@ describe("useOrderBook", () => {
     const { result } = renderHook(() => useOrderBook("BTCUSDT"));
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
-        data: { asks: [[101, 5], [102, 3]], bids: [[100, 4], [99, 2]], seq: 10 },
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
+        data: {
+          asks: [
+            [101, 5],
+            [102, 3],
+          ],
+          bids: [
+            [100, 4],
+            [99, 2],
+          ],
+          seq: 10,
+        },
       });
     });
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "update",
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "update",
         data: { asks: [[101, 8]], bids: [[100, 0]], seq: 11 },
       });
     });
     // update merges: size-0 removes, unchanged levels survive
-    expect(result.current.asks.map((l) => [l.price, l.size])).toEqual([[101, 8], [102, 3]]);
+    expect(result.current.asks.map((l) => [l.price, l.size])).toEqual([
+      [101, 8],
+      [102, 3],
+    ]);
     expect(result.current.bids.map((l) => l.price)).toEqual([99]);
   });
 
@@ -164,7 +242,9 @@ describe("useOrderBook", () => {
     );
     act(() => {
       emitFor("ETHUSDT", {
-        channel: "books", symbol: "ETHUSDT", action: "snapshot",
+        channel: "books",
+        symbol: "ETHUSDT",
+        action: "snapshot",
         data: { asks: [[3000, 5]], bids: [[2995, 4]], seq: 1 },
       });
     });
@@ -175,7 +255,9 @@ describe("useOrderBook", () => {
     });
     act(() => {
       emitFor("BTCUSDT", {
-        channel: "books", symbol: "BTCUSDT", action: "snapshot",
+        channel: "books",
+        symbol: "BTCUSDT",
+        action: "snapshot",
         data: { asks: [[64000, 7]], bids: [], seq: 2 },
       });
     });

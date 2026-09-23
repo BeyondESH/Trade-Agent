@@ -10,7 +10,11 @@ const m = vi.hoisted(() => ({
 
 vi.mock("../api/client", () => ({ api: { tickers: m.tickers } }));
 
-const listeners: Array<{ channel: string; symbol: string; fn: (f: WsFrame) => void }> = [];
+const listeners: Array<{
+  channel: string;
+  symbol: string;
+  fn: (f: WsFrame) => void;
+}> = [];
 
 vi.mock("./useExchangeSocket", () => ({
   useExchangeSocket: (channel: string, symbol: string, onFrame: (f: WsFrame) => void) => {
@@ -19,8 +23,20 @@ vi.mock("./useExchangeSocket", () => ({
 }));
 
 const TICKERS = [
-  { instId: "BTCUSDT", symbol: "BTCUSDT", lastPr: "60000", price24hPcnt: "-0.02", volume24h: "1000" },
-  { instId: "ETHUSDT", symbol: "ETHUSDT", lastPr: "3000", price24hPcnt: "0.05", volume24h: "2000" },
+  {
+    instId: "BTCUSDT",
+    symbol: "BTCUSDT",
+    lastPr: "60000",
+    price24hPcnt: "-0.02",
+    volume24h: "1000",
+  },
+  {
+    instId: "ETHUSDT",
+    symbol: "ETHUSDT",
+    lastPr: "3000",
+    price24hPcnt: "0.05",
+    volume24h: "2000",
+  },
 ];
 
 function emit(f: WsFrame): void {
@@ -48,9 +64,20 @@ describe("useTickerList", () => {
       await Promise.resolve();
     });
     act(() => {
-      emit({ channel: "ticker", symbol: "default", action: "update", data: [
-        { instId: "BTCUSDT", symbol: "BTCUSDT", lastPr: "61000", price24hPcnt: "0.01", volume24h: "1200" },
-      ] });
+      emit({
+        channel: "ticker",
+        symbol: "default",
+        action: "update",
+        data: [
+          {
+            instId: "BTCUSDT",
+            symbol: "BTCUSDT",
+            lastPr: "61000",
+            price24hPcnt: "0.01",
+            volume24h: "1200",
+          },
+        ],
+      });
     });
     const btc = result.current.tickers.find((t) => t.symbol === "BTCUSDT");
     expect(btc?.lastPr).toBe("61000");

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { ReplayEngine } from "./replayEngine";
 import type { Candle } from "../api/types";
+import { ReplayEngine } from "./replayEngine";
 
 function bars(n: number): Candle[] {
   return Array.from({ length: n }, (_, i) => ({

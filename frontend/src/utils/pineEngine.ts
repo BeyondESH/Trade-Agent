@@ -1,11 +1,11 @@
-import { Candle, BacktestResult } from '../types/trading';
-import { calculateEMA, calculateRSI } from './indicators';
+import type { BacktestResult, Candle } from "../types/trading";
+import { calculateEMA, calculateRSI } from "./indicators";
 
 // Sample Pine script snippets, consumed solely by the removed pine editor view.
 // Retained (unused) for a future strategy editor UI (do not delete).
 export const SAMPLE_PINE_SCRIPTS = [
   {
-    name: 'RSI Momentum Pullback Strategy',
+    name: "RSI Momentum Pullback Strategy",
     code: `//@version=5
 strategy("RSI Momentum Pullback", overlay=true, initial_capital=100000, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
 
@@ -31,7 +31,7 @@ plot(emaFast, color=color.blue, title="EMA 20")
 plot(emaSlow, color=color.orange, title="EMA 50")`,
   },
   {
-    name: 'Dual EMA Golden Cross Strategy',
+    name: "Dual EMA Golden Cross Strategy",
     code: `//@version=5
 strategy("Dual EMA Trend Rider", overlay=true, initial_capital=100000)
 
@@ -54,7 +54,7 @@ plot(fastEma, "Fast EMA", color=#2962FF, linewidth=2)
 plot(slowEma, "Slow EMA", color=#FF6D00, linewidth=2)`,
   },
   {
-    name: 'Bollinger Band Mean Reversion',
+    name: "Bollinger Band Mean Reversion",
     code: `//@version=5
 strategy("Bollinger Mean Reversion", overlay=true, initial_capital=100000)
 
@@ -80,16 +80,19 @@ plot(lower, "Lower", color=color.teal)`,
   },
 ];
 
-export function runPineBacktest(candles: Candle[], scriptName: string = 'RSI Momentum'): BacktestResult {
+export function runPineBacktest(
+  candles: Candle[],
+  scriptName: string = "RSI Momentum",
+): BacktestResult {
   const initialCapital = 100000;
   let capital = initialCapital;
   let inPosition = false;
   let entryPrice = 0;
   let entryIndex = 0;
-  let entryTime = '';
+  let entryTime = "";
   let positionSize = 0;
 
-  const trades: BacktestResult['trades'] = [];
+  const trades: BacktestResult["trades"] = [];
   const equityCurve: Array<{ time: string; equity: number }> = [];
 
   const rsi = calculateRSI(candles, 14);
@@ -105,12 +108,17 @@ export function runPineBacktest(candles: Candle[], scriptName: string = 'RSI Mom
     const prevRsi = rsi[i - 1] ?? 50;
     const currRsi = rsi[i] ?? 50;
     const currEma = ema20[i] ?? c.close;
-    const dateStr = new Date(c.time * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const dateStr = new Date(c.time * 1000).toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+    });
 
     // Entry signal: RSI crossing above 38 and price above EMA 20
     const buySignal = prevRsi < 38 && currRsi >= 38 && c.close >= currEma;
     // Exit signal: RSI above 68 or take profit / stop loss
-    const exitSignal = currRsi > 68 || (inPosition && (c.close < entryPrice * 0.965 || c.close > entryPrice * 1.055));
+    const exitSignal =
+      currRsi > 68 ||
+      (inPosition && (c.close < entryPrice * 0.965 || c.close > entryPrice * 1.055));
 
     if (!inPosition && buySignal) {
       inPosition = true;
@@ -130,7 +138,7 @@ export function runPineBacktest(candles: Candle[], scriptName: string = 'RSI Mom
 
       trades.push({
         id: `T-${trades.length + 1}`,
-        type: 'LONG',
+        type: "LONG",
         entryTime,
         exitTime: dateStr,
         entryPrice,
@@ -138,7 +146,7 @@ export function runPineBacktest(candles: Candle[], scriptName: string = 'RSI Mom
         pnl: tradePnl,
         pnlPercent: pnlPct,
         size: positionSize,
-        reason: currRsi > 68 ? 'RSI Target' : tradePnl > 0 ? 'Take Profit' : 'Stop Loss',
+        reason: currRsi > 68 ? "RSI Target" : tradePnl > 0 ? "Take Profit" : "Stop Loss",
       });
 
       equityCurve.push({
@@ -155,7 +163,8 @@ export function runPineBacktest(candles: Candle[], scriptName: string = 'RSI Mom
 
   const totalGains = trades.filter((t) => t.pnl > 0).reduce((acc, t) => acc + t.pnl, 0);
   const totalLosses = Math.abs(trades.filter((t) => t.pnl < 0).reduce((acc, t) => acc + t.pnl, 0));
-  const profitFactor = totalLosses > 0 ? Number((totalGains / totalLosses).toFixed(2)) : totalGains > 0 ? 3.5 : 1.0;
+  const profitFactor =
+    totalLosses > 0 ? Number((totalGains / totalLosses).toFixed(2)) : totalGains > 0 ? 3.5 : 1.0;
 
   const netProfit = Number((capital - initialCapital).toFixed(2));
   const netProfitPercent = Number((((capital - initialCapital) / initialCapital) * 100).toFixed(2));

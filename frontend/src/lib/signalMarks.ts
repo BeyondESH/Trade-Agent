@@ -58,7 +58,11 @@ export function signalMarkToOverlay(mark: SignalMark, index: number): SignalOver
     extendData: { text: mark.side === "long" ? "多" : "空", dir, color },
     createPointFigures: ({ coordinates, overlay }): OverlayFigure[] => {
       const p = coordinates[0];
-      const ed = (overlay.extendData ?? {}) as { text: string; dir: number; color: string };
+      const ed = (overlay.extendData ?? {}) as {
+        text: string;
+        dir: number;
+        color: string;
+      };
       const d = ed.dir >= 0 ? 1 : -1;
       const y0 = p.y + d * gap;
       const y1 = y0 - d * arrowLen;
@@ -66,7 +70,12 @@ export function signalMarkToOverlay(mark: SignalMark, index: number): SignalOver
       return [
         {
           type: "line",
-          attrs: { coordinates: [{ x: p.x, y: y0 }, { x: p.x, y: y1 }] },
+          attrs: {
+            coordinates: [
+              { x: p.x, y: y0 },
+              { x: p.x, y: y1 },
+            ],
+          },
           styles: { color: ed.color },
           ignoreEvent: true,
         },

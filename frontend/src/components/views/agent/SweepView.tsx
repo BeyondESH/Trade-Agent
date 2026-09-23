@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
-import { ThemeMode } from "../../../types/trading";
+import type React from "react";
+import { useMemo, useState } from "react";
 import type { SweepResult, SweepRow } from "../../../api/types";
-import { Panel, btnCls, fmtPct, inputCls } from "./ui";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip";
+import type { ThemeMode } from "../../../types/trading";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip";
+import { btnCls, fmtPct, inputCls, Panel } from "./ui";
 
 interface Props {
   running: boolean;
@@ -90,9 +91,7 @@ export const SweepView: React.FC<Props> = ({ running, result, onRun, theme }) =>
     const rows = result.results;
     return thresholds.map((th) =>
       fees.map((fee) => {
-        const match = rows.find(
-          (r) => r.threshold === th && r.fee === fee,
-        );
+        const match = rows.find((r) => r.threshold === th && r.fee === fee);
         return match ?? null;
       }),
     );
@@ -138,7 +137,9 @@ export const SweepView: React.FC<Props> = ({ running, result, onRun, theme }) =>
             点击「运行参数扫描」以阈值×费用网格评估模型参数稳定性
           </div>
         )}
-        {running && <div className="text-sm text-gray-400 py-4 text-center">正在扫描,请稍候...</div>}
+        {running && (
+          <div className="text-sm text-gray-400 py-4 text-center">正在扫描,请稍候...</div>
+        )}
         {matrix && !running && (
           <TooltipProvider delayDuration={100}>
             <div className="flex flex-col gap-1.5">
@@ -164,7 +165,9 @@ export const SweepView: React.FC<Props> = ({ running, result, onRun, theme }) =>
                               <PopoverTrigger asChild>
                                 <button
                                   className="h-10 w-full rounded-md border border-border/50 hover:opacity-80 transition-opacity"
-                                  style={{ backgroundColor: heatColor(cell.total_return) }}
+                                  style={{
+                                    backgroundColor: heatColor(cell.total_return),
+                                  }}
                                 >
                                   <span className="text-[10px] font-mono font-bold text-white drop-shadow">
                                     {fmtPct(cell.total_return)}
@@ -178,7 +181,10 @@ export const SweepView: React.FC<Props> = ({ running, result, onRun, theme }) =>
                           </TooltipTrigger>
                           <TooltipContent>
                             <div className="flex flex-col gap-0.5 font-mono">
-                              <span>阈值 {cell.threshold.toFixed(2)} · 费用 {(cell.fee * 100).toFixed(2)}%</span>
+                              <span>
+                                阈值 {cell.threshold.toFixed(2)} · 费用{" "}
+                                {(cell.fee * 100).toFixed(2)}%
+                              </span>
                               <span>收益 {fmtPct(cell.total_return)}</span>
                             </div>
                           </TooltipContent>
@@ -192,9 +198,13 @@ export const SweepView: React.FC<Props> = ({ running, result, onRun, theme }) =>
               ))}
               <div className="flex items-center gap-2 pt-1 text-[10px] text-gray-400">
                 <span>收益色阶:</span>
-                <span className="font-mono" style={{ color: heatColor(-0.05) }}>亏损</span>
+                <span className="font-mono" style={{ color: heatColor(-0.05) }}>
+                  亏损
+                </span>
                 <span className="text-gray-400">→</span>
-                <span className="font-mono" style={{ color: heatColor(0.05) }}>盈利</span>
+                <span className="font-mono" style={{ color: heatColor(0.05) }}>
+                  盈利
+                </span>
               </div>
             </div>
           </TooltipProvider>

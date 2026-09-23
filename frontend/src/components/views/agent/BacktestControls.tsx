@@ -1,14 +1,32 @@
-import React from "react";
-import { ThemeMode, SymbolInfo } from "../../../types/trading";
+import type React from "react";
 import type { BacktestParams } from "../../../api/types";
-import { Panel, Field, btnCls, inputCls, selectCls } from "./ui";
+import type { SymbolInfo, ThemeMode } from "../../../types/trading";
 import { Slider } from "../../ui/slider";
+import { btnCls, Field, inputCls, Panel, selectCls } from "./ui";
 
 /** All valid persistence timeframes (mirrors backend models.VALID_TIMEFRAMES). */
 export const DL_TIMEFRAMES = [
-  "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d", "3d", "1w", "1mo",
+  "1m",
+  "3m",
+  "5m",
+  "15m",
+  "30m",
+  "1h",
+  "2h",
+  "4h",
+  "6h",
+  "12h",
+  "1d",
+  "3d",
+  "1w",
+  "1mo",
 ] as const;
-export const DEFAULT_PARAMS: BacktestParams = { train_ratio: 0.7, thresh: 0.55, fee: 0.0004, slippage: 0.0005 };
+export const DEFAULT_PARAMS: BacktestParams = {
+  train_ratio: 0.7,
+  thresh: 0.55,
+  fee: 0.0004,
+  slippage: 0.0005,
+};
 
 export interface TimeRange {
   start?: number;
@@ -142,7 +160,11 @@ export const BacktestControls: React.FC<Props> = ({
           </select>
         </Field>
         <Field label="周期">
-          <select value={timeframe} onChange={(e) => onTimeframe(e.target.value)} className={selectCls(theme)}>
+          <select
+            value={timeframe}
+            onChange={(e) => onTimeframe(e.target.value)}
+            className={selectCls(theme)}
+          >
             {DL_TIMEFRAMES.map((tf) => (
               <option key={tf} value={tf}>
                 {tf}
@@ -169,14 +191,58 @@ export const BacktestControls: React.FC<Props> = ({
                 </option>
               ))}
             </select>
-            <DateInput label="起" value={range.start} onChange={(v) => onRange({ ...range, start: v })} theme={theme} />
-            <DateInput label="止" value={range.end} onChange={(v) => onRange({ ...range, end: v })} theme={theme} />
+            <DateInput
+              label="起"
+              value={range.start}
+              onChange={(v) => onRange({ ...range, start: v })}
+              theme={theme}
+            />
+            <DateInput
+              label="止"
+              value={range.end}
+              onChange={(v) => onRange({ ...range, end: v })}
+              theme={theme}
+            />
           </div>
         </Field>
-        <SliderField label="训练比例" value={params.train_ratio} min={0.1} max={0.9} step={0.05} onChange={(v) => onParams({ ...params, train_ratio: v })} theme={theme} />
-        <SliderField label="信号阈值" value={params.thresh} min={0.5} max={0.9} step={0.05} onChange={(v) => onParams({ ...params, thresh: v })} theme={theme} />
-        <SliderField label="手续费" value={params.fee} min={0} max={0.01} step={0.0001} onChange={(v) => onParams({ ...params, fee: v })} theme={theme} fmt={(v) => (v * 100).toFixed(2) + "%"} />
-        <SliderField label="滑点" value={params.slippage} min={0} max={0.01} step={0.0001} onChange={(v) => onParams({ ...params, slippage: v })} theme={theme} fmt={(v) => (v * 100).toFixed(2) + "%"} />
+        <SliderField
+          label="训练比例"
+          value={params.train_ratio}
+          min={0.1}
+          max={0.9}
+          step={0.05}
+          onChange={(v) => onParams({ ...params, train_ratio: v })}
+          theme={theme}
+        />
+        <SliderField
+          label="信号阈值"
+          value={params.thresh}
+          min={0.5}
+          max={0.9}
+          step={0.05}
+          onChange={(v) => onParams({ ...params, thresh: v })}
+          theme={theme}
+        />
+        <SliderField
+          label="手续费"
+          value={params.fee}
+          min={0}
+          max={0.01}
+          step={0.0001}
+          onChange={(v) => onParams({ ...params, fee: v })}
+          theme={theme}
+          fmt={(v) => (v * 100).toFixed(2) + "%"}
+        />
+        <SliderField
+          label="滑点"
+          value={params.slippage}
+          min={0}
+          max={0.01}
+          step={0.0001}
+          onChange={(v) => onParams({ ...params, slippage: v })}
+          theme={theme}
+          fmt={(v) => (v * 100).toFixed(2) + "%"}
+        />
         <button onClick={onRun} disabled={running} className={btnCls(theme)}>
           {running ? "运行中..." : "Run Backtest"}
         </button>

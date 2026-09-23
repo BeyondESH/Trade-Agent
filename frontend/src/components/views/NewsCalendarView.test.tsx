@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
+
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { NewsCalendarView } from "./NewsCalendarView";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchNewsflashPage } from "../../lib/newsfeed";
 import type { NewsItem } from "../../types/trading";
+import { NewsCalendarView } from "./NewsCalendarView";
 
 vi.mock("../../lib/newsfeed", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../../lib/newsfeed")>();
@@ -39,7 +40,11 @@ beforeEach(() => {
 
 describe("NewsCalendarView infinite scroll", () => {
   it("loads the first page on mount", async () => {
-    mockedFetch.mockResolvedValue({ items: mkItems(0, 20), page: 1, hasMore: true });
+    mockedFetch.mockResolvedValue({
+      items: mkItems(0, 20),
+      page: 1,
+      hasMore: true,
+    });
     renderView();
     expect(await screen.findByText("news-0")).toBeTruthy();
     expect(mockedFetch).toHaveBeenCalledWith("all", 1, 20);
@@ -48,7 +53,11 @@ describe("NewsCalendarView infinite scroll", () => {
   it("appends the next page when scrolled to the bottom", async () => {
     mockedFetch
       .mockResolvedValueOnce({ items: mkItems(0, 20), page: 1, hasMore: true })
-      .mockResolvedValueOnce({ items: mkItems(20, 20), page: 2, hasMore: false });
+      .mockResolvedValueOnce({
+        items: mkItems(20, 20),
+        page: 2,
+        hasMore: false,
+      });
     renderView();
     expect(await screen.findByText("news-0")).toBeTruthy();
 
@@ -79,12 +88,20 @@ describe("NewsCalendarView infinite scroll", () => {
   });
 
   it("resets the list and page when switching category", async () => {
-    mockedFetch.mockResolvedValue({ items: mkItems(0, 20), page: 1, hasMore: true });
+    mockedFetch.mockResolvedValue({
+      items: mkItems(0, 20),
+      page: 1,
+      hasMore: true,
+    });
     renderView();
     expect(await screen.findByText("news-0")).toBeTruthy();
 
     mockedFetch.mockClear();
-    mockedFetch.mockResolvedValue({ items: mkItems(100, 20), page: 1, hasMore: true });
+    mockedFetch.mockResolvedValue({
+      items: mkItems(100, 20),
+      page: 1,
+      hasMore: true,
+    });
     fireEvent.click(screen.getByText("24H"));
     expect(await screen.findByText("news-100")).toBeTruthy();
     expect(mockedFetch).toHaveBeenCalledWith("24h", 1, 20);
@@ -94,7 +111,11 @@ describe("NewsCalendarView infinite scroll", () => {
   it("stops loading when hasMore is false", async () => {
     mockedFetch
       .mockResolvedValueOnce({ items: mkItems(0, 20), page: 1, hasMore: false })
-      .mockResolvedValueOnce({ items: mkItems(20, 20), page: 2, hasMore: false });
+      .mockResolvedValueOnce({
+        items: mkItems(20, 20),
+        page: 2,
+        hasMore: false,
+      });
     renderView();
     expect(await screen.findByText("news-0")).toBeTruthy();
 
@@ -107,7 +128,11 @@ describe("NewsCalendarView infinite scroll", () => {
   });
 
   it("switches to the global news feed segment and back", async () => {
-    mockedFetch.mockResolvedValue({ items: mkItems(0, 20), page: 1, hasMore: true });
+    mockedFetch.mockResolvedValue({
+      items: mkItems(0, 20),
+      page: 1,
+      hasMore: true,
+    });
     renderView();
     expect(await screen.findByText("news-0")).toBeTruthy();
 

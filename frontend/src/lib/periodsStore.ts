@@ -11,15 +11,7 @@
  */
 
 /** Default pinned timeframes (internal identifiers), used when no record exists. */
-export const DEFAULT_PINNED_TIMEFRAMES: string[] = [
-  "1m",
-  "15m",
-  "1h",
-  "6h",
-  "1d",
-  "1w",
-  "1mo",
-];
+export const DEFAULT_PINNED_TIMEFRAMES: string[] = ["1m", "15m", "1h", "6h", "1d", "1w", "1mo"];
 
 const STORAGE_KEY = "raibro.pinnedTimeframes";
 
@@ -42,9 +34,7 @@ export function loadPinnedTimeframes(): string[] {
     if (raw == null) return [...DEFAULT_PINNED_TIMEFRAMES];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [...DEFAULT_PINNED_TIMEFRAMES];
-    const valid = parsed.filter(
-      (x): x is string => typeof x === "string" && x.length > 0,
-    );
+    const valid = parsed.filter((x): x is string => typeof x === "string" && x.length > 0);
     return valid;
   } catch {
     return [...DEFAULT_PINNED_TIMEFRAMES];

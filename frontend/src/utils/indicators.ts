@@ -1,4 +1,4 @@
-import { Candle } from '../types/trading';
+import type { Candle } from "../types/trading";
 
 export function calculateSMA(candles: Candle[], period: number): (number | null)[] {
   const result: (number | null)[] = [];
@@ -38,7 +38,11 @@ export function calculateEMA(candles: Candle[], period: number): (number | null)
   return result;
 }
 
-export function calculateBollingerBands(candles: Candle[], period: number = 20, stdDevMultiplier: number = 2) {
+export function calculateBollingerBands(
+  candles: Candle[],
+  period: number = 20,
+  stdDevMultiplier: number = 2,
+) {
   const upper: (number | null)[] = [];
   const middle: (number | null)[] = [];
   const lower: (number | null)[] = [];
@@ -59,7 +63,7 @@ export function calculateBollingerBands(candles: Candle[], period: number = 20, 
 
     let varianceSum = 0;
     for (let j = 0; j < period; j++) {
-      varianceSum += Math.pow(candles[i - j].close - sma, 2);
+      varianceSum += (candles[i - j].close - sma) ** 2;
     }
     const stdDev = Math.sqrt(varianceSum / period);
 
@@ -92,8 +96,8 @@ export function calculateRSI(candles: Candle[], period: number = 14): (number | 
       gains += gain;
       losses += loss;
       if (i === period) {
-        let avgGain = gains / period;
-        let avgLoss = losses / period;
+        const avgGain = gains / period;
+        const avgLoss = losses / period;
         if (avgLoss === 0) {
           result.push(100);
         } else {
@@ -125,7 +129,7 @@ export function calculateMACD(
   candles: Candle[],
   fastPeriod: number = 12,
   slowPeriod: number = 26,
-  signalPeriod: number = 9
+  signalPeriod: number = 9,
 ) {
   const fastEMA = calculateEMA(candles, fastPeriod);
   const slowEMA = calculateEMA(candles, slowPeriod);
@@ -179,9 +183,13 @@ export function calculateMACD(
   return { macdLine, signalLine, histogram };
 }
 
-export function calculateSuperTrend(candles: Candle[], period: number = 10, multiplier: number = 3) {
+export function calculateSuperTrend(
+  candles: Candle[],
+  period: number = 10,
+  multiplier: number = 3,
+) {
   const supertrend: (number | null)[] = [];
-  const direction: ('UP' | 'DOWN')[] = [];
+  const direction: ("UP" | "DOWN")[] = [];
 
   // Calculate ATR
   const atr: number[] = [];
@@ -193,7 +201,7 @@ export function calculateSuperTrend(candles: Candle[], period: number = 10, mult
     const tr = Math.max(
       candles[i].high - candles[i].low,
       Math.abs(candles[i].high - candles[i - 1].close),
-      Math.abs(candles[i].low - candles[i - 1].close)
+      Math.abs(candles[i].low - candles[i - 1].close),
     );
     const prevAtr = atr[i - 1];
     atr.push((prevAtr * (period - 1) + tr) / period);
@@ -206,7 +214,7 @@ export function calculateSuperTrend(candles: Candle[], period: number = 10, mult
   for (let i = 0; i < candles.length; i++) {
     if (i < period) {
       supertrend.push(null);
-      direction.push('UP');
+      direction.push("UP");
       continue;
     }
 
@@ -218,8 +226,10 @@ export function calculateSuperTrend(candles: Candle[], period: number = 10, mult
       upperBand = basicUpper;
       lowerBand = basicLower;
     } else {
-      upperBand = basicUpper < upperBand || candles[i - 1].close > upperBand ? basicUpper : upperBand;
-      lowerBand = basicLower > lowerBand || candles[i - 1].close < lowerBand ? basicLower : lowerBand;
+      upperBand =
+        basicUpper < upperBand || candles[i - 1].close > upperBand ? basicUpper : upperBand;
+      lowerBand =
+        basicLower > lowerBand || candles[i - 1].close < lowerBand ? basicLower : lowerBand;
     }
 
     if (candles[i].close > upperBand) {
@@ -229,7 +239,7 @@ export function calculateSuperTrend(candles: Candle[], period: number = 10, mult
     }
 
     supertrend.push(isUp ? lowerBand : upperBand);
-    direction.push(isUp ? 'UP' : 'DOWN');
+    direction.push(isUp ? "UP" : "DOWN");
   }
 
   return { supertrend, direction };

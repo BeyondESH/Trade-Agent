@@ -20,21 +20,33 @@ afterEach(() => {
 describe("api client", () => {
   it("parses JSON on 2xx", async () => {
     mockFetch(200, { price: 100, indicators: {}, levels: [] });
-    const r = await api.analyze({ category: "USDT-FUTURES", symbol: "BTCUSDT", timeframe: "5m" });
+    const r = await api.analyze({
+      category: "USDT-FUTURES",
+      symbol: "BTCUSDT",
+      timeframe: "5m",
+    });
     expect(r.price).toBe(100);
   });
 
   it("throws ApiError on non-2xx with detail", async () => {
     mockFetch(422, { detail: "insufficient data" });
     await expect(
-      api.analyze({ category: "USDT-FUTURES", symbol: "BTCUSDT", timeframe: "5m" }),
+      api.analyze({
+        category: "USDT-FUTURES",
+        symbol: "BTCUSDT",
+        timeframe: "5m",
+      }),
     ).rejects.toMatchObject({ status: 422, message: "insufficient data" });
   });
 
   it("order returns a token", async () => {
     mockFetch(200, { token: "abc", preview: { margin: 50 } });
     const r = await api.order({
-      category: "USDT-FUTURES", symbol: "BTCUSDT", side: "long", leverage: 100, price: 100,
+      category: "USDT-FUTURES",
+      symbol: "BTCUSDT",
+      side: "long",
+      leverage: 100,
+      price: 100,
     });
     expect(r.token).toBe("abc");
   });

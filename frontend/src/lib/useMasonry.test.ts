@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+
 import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { MIGRATION_THRESHOLD, useMasonry } from "./useMasonry";
 
 interface Item {
@@ -38,12 +39,7 @@ describe("useMasonry", () => {
   });
 
   it("keeps each column newest-first after placement", () => {
-    const items = [
-      mk("n0", 3, 3),
-      mk("n1", 2, 3),
-      mk("n2", 1, 3),
-      mk("n3", 0, 3),
-    ];
+    const items = [mk("n0", 3, 3), mk("n1", 2, 3), mk("n2", 1, 3), mk("n3", 0, 3)];
     const { result } = renderHook(() => useMasonry(items, estimate));
     for (const col of result.current.columns) {
       const ts = col.map((i) => i.ts);
@@ -132,11 +128,7 @@ describe("useMasonry", () => {
   });
 
   it("prunes columns when items disappear (topic filter)", () => {
-    const items = [
-      mk("a", 3, 3),
-      mk("b", 2, 3),
-      mk("c", 1, 3),
-    ];
+    const items = [mk("a", 3, 3), mk("b", 2, 3), mk("c", 1, 3)];
     const { result, rerender } = renderHook(({ items }) => useMasonry(items, estimate), {
       initialProps: { items },
     });

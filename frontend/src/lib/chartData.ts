@@ -102,10 +102,7 @@ export interface EquityBenchPoint {
 }
 
 /** Zip equity with the (optional) benchmark lane for charting. */
-export function equityVsBenchmark(
-  equity: number[],
-  benchmark?: number[],
-): EquityBenchPoint[] {
+export function equityVsBenchmark(equity: number[], benchmark?: number[]): EquityBenchPoint[] {
   const bench = benchmark ?? [];
   return equity.map((v, i) => ({ i, equity: v, benchmark: bench[i] ?? null }));
 }

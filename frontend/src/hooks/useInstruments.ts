@@ -44,10 +44,7 @@ export function useInstruments(): UseInstrumentsState {
     return m;
   }, [instruments]);
 
-  const symbols = useMemo(
-    () => Object.keys(byKey).sort((a, b) => a.localeCompare(b)),
-    [byKey],
-  );
+  const symbols = useMemo(() => Object.keys(byKey).sort((a, b) => a.localeCompare(b)), [byKey]);
 
   return { instruments, symbols, byKey, loading, error, reload };
 }

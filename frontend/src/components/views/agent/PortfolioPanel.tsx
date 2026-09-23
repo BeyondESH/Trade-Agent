@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ThemeMode } from "../../../types/trading";
-import type { Portfolio } from "../../../api/types";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../api/client";
-import { Panel, btnCls, cardCls, fmtNum } from "./ui";
+import type { Portfolio } from "../../../api/types";
+import type { ThemeMode } from "../../../types/trading";
+import { btnCls, cardCls, fmtNum, Panel } from "./ui";
 
 interface Props {
   theme: ThemeMode;
@@ -84,9 +85,13 @@ export const PortfolioPanel: React.FC<Props> = ({ theme }) => {
         </div>
       )}
       <div className="overflow-x-auto">
-        <table className={`w-full text-xs ${theme === "dark" ? "text-[#d1d4dc]" : "text-[#131722]"}`}>
+        <table
+          className={`w-full text-xs ${theme === "dark" ? "text-[#d1d4dc]" : "text-[#131722]"}`}
+        >
           <thead>
-            <tr className={`border-b ${theme === "dark" ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}>
+            <tr
+              className={`border-b ${theme === "dark" ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
+            >
               <th className="px-2 py-1 text-left font-semibold">标的</th>
               <th className="px-2 py-1 text-left font-semibold">方向</th>
               <th className="px-2 py-1 text-left font-semibold">开仓价</th>
@@ -104,12 +109,21 @@ export const PortfolioPanel: React.FC<Props> = ({ theme }) => {
               </tr>
             )}
             {trades.slice(0, 50).map((t, i) => (
-              <tr key={t.id ?? i} className={`border-b ${theme === "dark" ? "border-[#2a2e39]/60" : "border-[#e0e3eb]/60"}`}>
+              <tr
+                key={t.id ?? i}
+                className={`border-b ${theme === "dark" ? "border-[#2a2e39]/60" : "border-[#e0e3eb]/60"}`}
+              >
                 <td className="px-2 py-1 font-mono">{t.symbol ?? "—"}</td>
                 <td className="px-2 py-1">{t.side ?? "—"}</td>
-                <td className="px-2 py-1 font-mono">{t.entry_price != null ? fmtNum(t.entry_price) : "—"}</td>
-                <td className="px-2 py-1 font-mono">{t.exit_price != null ? fmtNum(t.exit_price) : "—"}</td>
-                <td className={`px-2 py-1 font-mono ${(t.pnl ?? 0) >= 0 ? "text-[#089981]" : "text-[#f23645]"}`}>
+                <td className="px-2 py-1 font-mono">
+                  {t.entry_price != null ? fmtNum(t.entry_price) : "—"}
+                </td>
+                <td className="px-2 py-1 font-mono">
+                  {t.exit_price != null ? fmtNum(t.exit_price) : "—"}
+                </td>
+                <td
+                  className={`px-2 py-1 font-mono ${(t.pnl ?? 0) >= 0 ? "text-[#089981]" : "text-[#f23645]"}`}
+                >
                   {t.pnl != null ? `$${fmtNum(t.pnl)}` : "—"}
                 </td>
                 <td className="px-2 py-1 text-gray-400">{t.reflection ?? "—"}</td>

@@ -2,11 +2,12 @@
 // Regression tests for the global-news SSE stream that exercise the REAL
 // useGlobalNewsStream hook (no module mock) so lost-`this` binding bugs in
 // GlobalNewsClient surface as failures instead of white-screening the page.
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act, fireEvent } from "@testing-library/react";
-import { GlobalNewsFeed } from "./GlobalNewsFeed";
+
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api/client";
 import type { GlobalNewsItem } from "../../types/trading";
+import { GlobalNewsFeed } from "./GlobalNewsFeed";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../../api/client")>();
@@ -55,7 +56,15 @@ function item(
   title = `标题-${id}`,
   category: GlobalNewsItem["category"] = "crypto",
 ): GlobalNewsItem {
-  return { id, source: "em", category, title, content: "", url: null, ts: 1_700_000_000 };
+  return {
+    id,
+    source: "em",
+    category,
+    title,
+    content: "",
+    url: null,
+    ts: 1_700_000_000,
+  };
 }
 
 describe("GlobalNewsFeed real stream integration", () => {

@@ -1,14 +1,20 @@
 // @vitest-environment jsdom
-import { StrictMode } from "react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+
+import type { Datafeed, Period, SymbolInfo } from "@klinecharts/pro";
 import { render } from "@testing-library/react";
-import { act } from "react";
-import { KLineChartProView } from "./KLineChartProView";
-import type { Period, SymbolInfo, Datafeed } from "@klinecharts/pro";
+import { act, createRef, StrictMode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { KLineChartProView, type KLineChartProHandle } from "./KLineChartProView";
 
 // Mock the vendor KLineChartPro so we can assert instance creation count and
 // simulate the chart without a real canvas.
 let mockInstances: Array<{ opts: unknown; destroyed: boolean }> = [];
+
+const chartApi = vi.hoisted(() => ({
+  scrollToRealTime: vi.fn(),
+  getDataList: () => [],
+  getDom: () => null,
+}));
 
 vi.mock("@klinecharts/pro", () => {
   class MockKLineChartPro {
@@ -19,10 +25,7 @@ vi.mock("@klinecharts/pro", () => {
       mockInstances.push(this);
     }
     getChart() {
-      return {
-        getDataList: () => [],
-        getDom: () => null,
-      };
+      return chartApi;
     }
     setTheme() {}
     setLocale() {}
@@ -110,7 +113,7 @@ describe("KLineChartProView mount lifecycle under StrictMode", () => {
       await new Promise((r) => setTimeout(r, 10));
     });
     // A fresh mount (e.g. remounting the component) creates a new instance.
-      let unmount2: () => void;
+    let unmount2: () => void;
     await act(async () => {
       const r2 = renderInStrictMode(makeDatafeed());
       unmount2 = r2.unmount;
@@ -131,5 +134,62 @@ describe("KLineChartProView mount lifecycle under StrictMode", () => {
     await act(async () => {
       unmount();
     });
+  });
+});
+
+describe("KLineChartProView pro-chrome bridge", () => {
+  function renderWithRef() {
+    const ref = createRef<KLineChartProHandle>();
+    const { unmount } = render(
+      <KLineChartProView ref={ref} symbol={SYMBOL} period={PERIOD} datafeed={makeDatafeed()} />,
+    );
+    return { ref, unmount };
+  }
+
+  /** Append a fake native period bar with the 5 tool buttons, in vendor order. */
+  function seedPeriodBar(root: HTMLElement): HTMLElement[] {
+    const bar = document.createElement("div");
+    bar.className = "klinecharts-pro-period-bar";
+    const tools: HTMLElement[] = [];
+    for (let i = 0; i < 5; i++) {
+      const btn = document.createElement("div");
+      btn.className = "item tools";
+      bar.appendChild(btn);
+      tools.push(btn);
+    }
+    root.appendChild(bar);
+    return tools;
+  }
+
+  it("openIndicatorPicker clicks the native indicator chrome button", () => {
+    const { ref, unmount } = renderWithRef();
+    const tools = seedPeriodBar(ref.current!.getRoot()!);
+    const clicks: number[] = [];
+    tools.forEach((el, i) => {
+      el.addEventListener("click", () => clicks.push(i));
+    });
+    act(() => ref.current!.openIndicatorPicker());
+    expect(clicks).toEqual([0]);
+    unmount();
+  });
+
+  it("openSettings clicks the native settings chrome button", () => {
+    const { ref, unmount } = renderWithRef();
+    const tools = seedPeriodBar(ref.current!.getRoot()!);
+    const clicks: number[] = [];
+    tools.forEach((el, i) => {
+      el.addEventListener("click", () => clicks.push(i));
+    });
+    act(() => ref.current!.openSettings());
+    expect(clicks).toEqual([2]);
+    unmount();
+  });
+
+  it("resetView re-anchors the chart to real time", () => {
+    const { ref, unmount } = renderWithRef();
+    chartApi.scrollToRealTime.mockClear();
+    act(() => ref.current!.resetView());
+    expect(chartApi.scrollToRealTime).toHaveBeenCalledTimes(1);
+    unmount();
   });
 });

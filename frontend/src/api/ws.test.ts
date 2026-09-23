@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Snapshot } from "./types";
 import type { ConnStatus } from "./ws";
 import { connectSnapshot } from "./ws";
-import type { Snapshot } from "./types";
 
 type Handler<T = Event> = ((ev: T) => void) | null;
 
@@ -64,7 +64,16 @@ describe("connectSnapshot reconnect", () => {
 
     const first = FakeWebSocket.instances[0];
     first.emitOpen();
-    first.emitMessage({ last_candle: { open_time: 1, open: 1, high: 2, low: 0, close: 3, volume: 1 } });
+    first.emitMessage({
+      last_candle: {
+        open_time: 1,
+        open: 1,
+        high: 2,
+        low: 0,
+        close: 3,
+        volume: 1,
+      },
+    });
     expect(onMsg).toHaveBeenCalledTimes(1);
 
     first.emitClose();
@@ -73,7 +82,16 @@ describe("connectSnapshot reconnect", () => {
 
     const second = FakeWebSocket.instances[1];
     second.emitOpen();
-    second.emitMessage({ last_candle: { open_time: 2, open: 1, high: 2, low: 0, close: 4, volume: 1 } });
+    second.emitMessage({
+      last_candle: {
+        open_time: 2,
+        open: 1,
+        high: 2,
+        low: 0,
+        close: 4,
+        volume: 1,
+      },
+    });
     expect(onMsg).toHaveBeenCalledTimes(2);
 
     conn.close();
@@ -119,7 +137,12 @@ describe("connectSnapshot reconnect", () => {
 
   it("reports status transitions live / reconnecting / closed", () => {
     const states: ConnStatus[] = [];
-    const conn = connectSnapshot(SERIES, () => {}, 5, (s) => states.push(s));
+    const conn = connectSnapshot(
+      SERIES,
+      () => {},
+      5,
+      (s) => states.push(s),
+    );
     FakeWebSocket.instances[0].emitOpen();
     FakeWebSocket.instances[0].emitClose();
     vi.advanceTimersByTime(500);

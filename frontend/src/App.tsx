@@ -1,117 +1,138 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  SymbolInfo,
-  IndicatorConfig,
-  AlertItem,
-  EconomicEvent,
+import type { Period, SymbolInfo as ProSymbolInfo } from "@klinecharts/pro";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { periodFromTimeframe, periodToTimeframe } from "./api/datafeed";
+import type { SeriesRef } from "./api/types";
+import { INITIAL_CALENDAR } from "./data/marketData";
+import { useCandles } from "./hooks/useCandles";
+import { type BookLevel, useOrderBook } from "./hooks/useOrderBook";
+import { useRealSymbols } from "./hooks/useRealSymbols";
+import { useTrades } from "./hooks/useTrades";
+import type {
   AccountState,
-  Position,
-  Order,
+  AlertItem,
   BacktestResult,
   Candle,
-  ThemeMode,
   DesktopTab,
   DesktopViewMode,
-} from './types/trading';
-import { INITIAL_CALENDAR } from './data/marketData';
-import { useRealSymbols } from './hooks/useRealSymbols';
-import { useOrderBook, type BookLevel } from './hooks/useOrderBook';
-import { useTrades } from './hooks/useTrades';
-import { useCandles } from './hooks/useCandles';
-import type { OrderBookEntry } from './types/trading';
-import type { SeriesRef } from './api/types';
-import type { Period, SymbolInfo as ProSymbolInfo } from '@klinecharts/pro';
-import { periodFromTimeframe, periodToTimeframe } from './api/datafeed';
+  EconomicEvent,
+  IndicatorConfig,
+  Order,
+  OrderBookEntry,
+  Position,
+  SymbolInfo,
+  ThemeMode,
+} from "./types/trading";
 
 const DEFAULT_SYMBOL: SymbolInfo = {
-  id: 'BTCUSDT',
-  ticker: 'BTCUSDT',
-  name: 'Bitcoin / Tether Perpetual',
-  exchange: 'USDT-FUTURES',
-  category: 'crypto',
+  id: "BTCUSDT",
+  ticker: "BTCUSDT",
+  name: "Bitcoin / Tether Perpetual",
+  exchange: "USDT-FUTURES",
+  category: "crypto",
   price: 0,
   change24h: 0,
   change24hPercent: 0,
   high24h: 0,
   low24h: 0,
-  volume24h: '-',
+  volume24h: "-",
   digits: 2,
-  baseAsset: 'BTC',
-  quoteAsset: 'USDT',
-  description: 'Bitcoin perpetual contract',
+  baseAsset: "BTC",
+  quoteAsset: "USDT",
+  description: "Bitcoin perpetual contract",
 };
 
-// Desktop Shell Components
-import { DesktopTitleBar } from './components/desktop/DesktopTitleBar';
-import { GlobalNavRail } from './components/desktop/GlobalNavRail';
+import { api } from "./api/client";
+import { BottomDock } from "./components/bottom/BottomDock";
 
 // SuperCharts Components
-import { NativeChart } from './components/chart/NativeChart';
-import { RightDock } from './components/sidebar/RightDock';
-import { BottomTimebar } from './components/timebar/BottomTimebar';
-import { BottomDock } from './components/bottom/BottomDock';
-
-// Dedicated Desktop Full Views
-import { DashboardView } from './components/views/DashboardView';
-import { MarketsView } from './components/views/MarketsView';
-import { ScreenerView } from './components/views/ScreenerView';
-import { HeatmapsView } from './components/views/HeatmapsView';
-import { CommunityIdeasView } from './components/views/CommunityIdeasView';
-import { NewsCalendarView } from './components/views/NewsCalendarView';
-import { AgentView } from './components/views/AgentView';
-
+import { NativeChart } from "./components/chart/NativeChart";
+// Desktop Shell Components
+import { DesktopTitleBar } from "./components/desktop/DesktopTitleBar";
+import { GlobalNavRail } from "./components/desktop/GlobalNavRail";
+import { CommandPaletteModal } from "./components/modals/CommandPaletteModal";
 // Modals & Overlays
-import { CreateAlertModal } from './components/modals/CreateAlertModal';
-import { OrderModal } from './components/modals/OrderModal';
-import { CommandPaletteModal } from './components/modals/CommandPaletteModal';
-import { KeyboardShortcutsModal } from './components/modals/KeyboardShortcutsModal';
-import { DesktopSettingsModal } from './components/modals/DesktopSettingsModal';
+import { CreateAlertModal } from "./components/modals/CreateAlertModal";
+import { DesktopSettingsModal } from "./components/modals/DesktopSettingsModal";
+import { KeyboardShortcutsModal } from "./components/modals/KeyboardShortcutsModal";
+import { OrderModal } from "./components/modals/OrderModal";
+import { RightDock } from "./components/sidebar/RightDock";
+import { ToastHost } from "./components/ToastHost";
+import { BottomTimebar } from "./components/timebar/BottomTimebar";
+import { AgentView } from "./components/views/AgentView";
+import { CommunityIdeasView } from "./components/views/CommunityIdeasView";
+// Dedicated Desktop Full Views
+import { DashboardView } from "./components/views/DashboardView";
+import { HeatmapsView } from "./components/views/HeatmapsView";
+import { MarketsView } from "./components/views/MarketsView";
+import { NewsCalendarView } from "./components/views/NewsCalendarView";
+import { ScreenerView } from "./components/views/ScreenerView";
 import {
-  syncAlertsFromServer,
+  isNotifyEnabled,
+  notifyAlert,
+  setNotifyEnabled as persistNotifyEnabled,
+  requestNotifyPermission,
+} from "./lib/alertNotify";
+import {
+  type Alert,
+  evaluateAlerts,
+  loadAlerts,
   mirrorAlertCreate,
   mirrorAlertDelete,
+  mirrorAlertUpdate,
   removeAlert,
+  resetAlert,
+  setAlertEnabled,
   subscribeAlerts,
+  syncAlertsFromServer,
+  updateAlert,
   upsertAlert,
-  loadAlerts,
-  type Alert,
-} from './lib/alertsStore';
-import { api } from './api/client';
+} from "./lib/alertsStore";
+import { t } from "./lib/i18n";
+import { pushToast } from "./lib/toastStore";
 
 /** Map a store Alert to the sidebar AlertItem shape. */
 function alertToItem(a: Alert): AlertItem {
   return {
     id: a.id,
     symbol: a.symbol,
-    condition: a.condition === 'below' ? 'Less Than' : 'Greater Than',
+    condition: a.condition === "below" ? "Less Than" : "Greater Than",
     targetPrice: a.threshold,
     createdAt: new Date(a.createdAt).toISOString().slice(0, 16),
+    enabled: a.enabled,
     triggered: a.triggered,
-    note: '',
-    frequency: 'Every Time',
+    triggerTime: a.triggerTime,
+    note: "",
+    frequency: "Every Time",
   };
 }
 
 export default function App() {
   // 1. Desktop Multi-Tab System
   const [tabs, setTabs] = useState<DesktopTab[]>([
-    { id: 'tab-1', title: 'BTCUSDT.P', type: 'chart', symbol: 'BTCUSDT.P', isPinned: false },
-    { id: 'tab-2', title: 'Markets', type: 'markets', isPinned: false },
-    { id: 'tab-3', title: 'Screener 2.0', type: 'screener', isPinned: false },
+    {
+      id: "tab-1",
+      title: "BTCUSDT.P",
+      type: "chart",
+      symbol: "BTCUSDT.P",
+      isPinned: false,
+    },
+    { id: "tab-2", title: "Markets", type: "markets", isPinned: false },
+    { id: "tab-3", title: "Screener 2.0", type: "screener", isPinned: false },
   ]);
-  const [activeTabId, setActiveTabId] = useState<string>('tab-1');
+  const [activeTabId, setActiveTabId] = useState<string>("tab-1");
 
   // Active workspace derived from active tab
   const currentTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
-  const isDashboard = currentTab?.type === 'dashboard';
-  const activeView: DesktopViewMode = currentTab && currentTab.type !== 'dashboard' ? currentTab.type : 'chart';
+  const isDashboard = currentTab?.type === "dashboard";
+  const activeView: DesktopViewMode =
+    currentTab && currentTab.type !== "dashboard" ? currentTab.type : "chart";
 
   // 2. Symbol & Market State
   const { symbols: realSymbols, priceMap } = useRealSymbols();
   const [symbols, setSymbols] = useState<SymbolInfo[]>([]);
   const [activeSymbol, setActiveSymbol] = useState<SymbolInfo>(DEFAULT_SYMBOL);
-  const [timeframe, setTimeframe] = useState<string>('1h');
-  const [selectedRange, setSelectedRange] = useState<string>('1D');
+  const [timeframe, setTimeframe] = useState<string>("1h");
+  const [selectedRange, setSelectedRange] = useState<string>("1D");
 
   // Chart Scale Settings
   const [isLogScale, setIsLogScale] = useState<boolean>(false);
@@ -122,7 +143,7 @@ export default function App() {
   const activeSeries: SeriesRef | null = useMemo(() => {
     if (!activeSymbol || activeSymbol === DEFAULT_SYMBOL) return null;
     return {
-      category: 'USDT-FUTURES',
+      category: "USDT-FUTURES",
       symbol: activeSymbol.id,
       timeframe: periodToTimeframe(periodFromTimeframe(timeframe)),
     };
@@ -177,7 +198,7 @@ export default function App() {
   // Default active symbol to the first real one (BTCUSDT usually).
   useEffect(() => {
     if (activeSymbol === DEFAULT_SYMBOL && realSymbols.length > 0) {
-      setActiveSymbol(realSymbols.find((s) => s.id === 'BTCUSDT') ?? realSymbols[0]);
+      setActiveSymbol(realSymbols.find((s) => s.id === "BTCUSDT") ?? realSymbols[0]);
     }
   }, [activeSymbol, realSymbols]);
 
@@ -195,13 +216,17 @@ export default function App() {
   const [indicators] = useState<IndicatorConfig[]>([]);
 
   // 5. Theme
-  const [theme, setTheme] = useState<ThemeMode>('dark');
+  const [theme, setTheme] = useState<ThemeMode>("dark");
 
   // 7. Secondary Layouts & Panels
   const [events] = useState<EconomicEvent[]>(INITIAL_CALENDAR);
-  const rawBook = useOrderBook(activeSymbol?.id ?? 'BTCUSDT', 'USDT-FUTURES');
-  const trades = useTrades(activeSymbol?.id ?? 'BTCUSDT', 'USDT-FUTURES');
-  const orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[]; spread: number | null } = useMemo(() => {
+  const rawBook = useOrderBook(activeSymbol?.id ?? "BTCUSDT", "USDT-FUTURES");
+  const trades = useTrades(activeSymbol?.id ?? "BTCUSDT", "USDT-FUTURES");
+  const orderBook: {
+    bids: OrderBookEntry[];
+    asks: OrderBookEntry[];
+    spread: number | null;
+  } = useMemo(() => {
     const toEntries = (levels: BookLevel[], desc: boolean): OrderBookEntry[] => {
       const sorted = [...levels].sort((a, b) => (desc ? b.price - a.price : a.price - b.price));
       let total = 0;
@@ -234,6 +259,80 @@ export default function App() {
     return off;
   }, []);
 
+  // Trigger evaluation: run enabled, untriggered alerts against the shared
+  // realtime ticker map. A hit is marked locally + mirrored, then toasted
+  // (always) and pushed as a browser notification only when the user opted in.
+  const priceMapRef = useRef(priceMap);
+  useEffect(() => {
+    priceMapRef.current = priceMap;
+  }, [priceMap]);
+
+  const applyTriggerHits = useCallback((prices: Record<string, number | undefined>) => {
+    const hits = evaluateAlerts(loadAlerts(), prices);
+    if (hits.length === 0) return;
+    for (const hit of hits) {
+      const alert = loadAlerts().find((a) => a.id === hit.id);
+      if (!alert) continue;
+      updateAlert(hit.id, { triggered: true, triggerTime: hit.triggerTime });
+      mirrorAlertUpdate(hit.id, {
+        triggered: true,
+        triggerTime: hit.triggerTime,
+      });
+      const label = `${alert.symbol} ${alert.condition === "above" ? "\u2265" : "\u2264"} ${alert.threshold}`;
+      const title = t("Price Alert Triggered");
+      pushToast({ id: `alert-${hit.id}`, title, message: label });
+      notifyAlert(title, label);
+    }
+  }, []);
+
+  useEffect(() => {
+    applyTriggerHits(priceMap);
+  }, [priceMap, applyTriggerHits]);
+
+  // Fallback: symbols the realtime feed does not cover (WS gap / no ticker)
+  // are refreshed from the low-frequency REST snapshot.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const stale = loadAlerts().some(
+        (a) => a.enabled && !a.triggered && priceMapRef.current[a.symbol] == null,
+      );
+      if (!stale) return;
+      void api
+        .tickers()
+        .then(({ tickers }) => {
+          const prices: Record<string, number | undefined> = {
+            ...priceMapRef.current,
+          };
+          for (const tk of tickers) {
+            const key = tk.instId ?? tk.symbol;
+            if (key) prices[key] = Number(tk.lastPr);
+          }
+          applyTriggerHits(prices);
+        })
+        .catch(() => {
+          /* offline: keep waiting for the WS feed */
+        });
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [applyTriggerHits]);
+
+  // Enable/disable + reset: the store helpers persist and mirror the change.
+  const handleToggleAlert = useCallback((id: string, enabled: boolean) => {
+    setAlertEnabled(id, enabled);
+  }, []);
+  const handleResetAlert = useCallback((id: string) => {
+    resetAlert(id);
+  }, []);
+
+  const [notifyEnabled, setNotifyEnabledState] = useState<boolean>(() => isNotifyEnabled());
+  // Permission is requested inside this click handler (a user gesture), never on mount.
+  const handleToggleNotifications = useCallback(() => {
+    const next = !notifyEnabled;
+    setNotifyEnabledState(next);
+    persistNotifyEnabled(next);
+    if (next) void requestNotifyPermission();
+  }, [notifyEnabled]);
+
   // 8. Simulated Paper Trading State
   const [account, setAccount] = useState<AccountState>({
     balance: 50000,
@@ -246,9 +345,9 @@ export default function App() {
 
   const [positions, setPositions] = useState<Position[]>([
     {
-      id: 'pos-1',
-      symbol: 'BTCUSDT.P',
-      side: 'LONG',
+      id: "pos-1",
+      symbol: "BTCUSDT.P",
+      side: "LONG",
       amount: 0.5,
       entryPrice: 95200.0,
       currentPrice: 96482.5,
@@ -261,9 +360,9 @@ export default function App() {
       timestamp: Date.now() - 3600000,
     },
     {
-      id: 'pos-2',
-      symbol: 'NVDA',
-      side: 'LONG',
+      id: "pos-2",
+      symbol: "NVDA",
+      side: "LONG",
       amount: 50,
       entryPrice: 135.2,
       currentPrice: 138.65,
@@ -277,14 +376,14 @@ export default function App() {
 
   const [orders, setOrders] = useState<Order[]>([
     {
-      id: 'ord-1',
-      symbol: 'SOLUSDT',
-      side: 'BUY',
-      type: 'LIMIT',
+      id: "ord-1",
+      symbol: "SOLUSDT",
+      side: "BUY",
+      type: "LIMIT",
       price: 188.0,
       amount: 10,
       filled: 0,
-      status: 'WORKING',
+      status: "WORKING",
       leverage: 10,
       timestamp: Date.now() - 600000,
     },
@@ -292,7 +391,7 @@ export default function App() {
 
   // 9. Strategy Backtest Result
   const [backtestResult, setBacktestResult] = useState<BacktestResult>({
-    strategyName: 'SuperTrend Dynamic Strategy v5',
+    strategyName: "SuperTrend Dynamic Strategy v5",
     netProfit: 14820.5,
     netProfitPercent: 29.64,
     totalTrades: 84,
@@ -304,17 +403,50 @@ export default function App() {
     maxDrawdownPercent: 3.68,
     sharpeRatio: 1.88,
     trades: [
-      { id: 't1', type: 'LONG', entryTime: '2025-02-10 14:00', exitTime: '2025-02-11 09:30', entryPrice: 94200, exitPrice: 96100, pnl: 950, pnlPercent: 2.01, size: 0.5, reason: 'Take Profit' },
-      { id: 't2', type: 'SHORT', entryTime: '2025-02-12 16:00', exitTime: '2025-02-13 11:15', entryPrice: 96400, exitPrice: 95300, pnl: 550, pnlPercent: 1.14, size: 0.5, reason: 'SuperTrend Reversal' },
-      { id: 't3', type: 'LONG', entryTime: '2025-02-14 08:00', exitTime: '2025-02-14 15:45', entryPrice: 95100, exitPrice: 94800, pnl: -150, pnlPercent: -0.31, size: 0.5, reason: 'Trailing Stop' },
+      {
+        id: "t1",
+        type: "LONG",
+        entryTime: "2025-02-10 14:00",
+        exitTime: "2025-02-11 09:30",
+        entryPrice: 94200,
+        exitPrice: 96100,
+        pnl: 950,
+        pnlPercent: 2.01,
+        size: 0.5,
+        reason: "Take Profit",
+      },
+      {
+        id: "t2",
+        type: "SHORT",
+        entryTime: "2025-02-12 16:00",
+        exitTime: "2025-02-13 11:15",
+        entryPrice: 96400,
+        exitPrice: 95300,
+        pnl: 550,
+        pnlPercent: 1.14,
+        size: 0.5,
+        reason: "SuperTrend Reversal",
+      },
+      {
+        id: "t3",
+        type: "LONG",
+        entryTime: "2025-02-14 08:00",
+        exitTime: "2025-02-14 15:45",
+        entryPrice: 95100,
+        exitPrice: 94800,
+        pnl: -150,
+        pnlPercent: -0.31,
+        size: 0.5,
+        reason: "Trailing Stop",
+      },
     ],
     equityCurve: [
-      { time: 'Day 1', equity: 100000 },
-      { time: 'Day 5', equity: 102400 },
-      { time: 'Day 10', equity: 101800 },
-      { time: 'Day 15', equity: 106500 },
-      { time: 'Day 20', equity: 109200 },
-      { time: 'Day 25', equity: 114820 },
+      { time: "Day 1", equity: 100000 },
+      { time: "Day 5", equity: 102400 },
+      { time: "Day 10", equity: 101800 },
+      { time: "Day 15", equity: 106500 },
+      { time: "Day 20", equity: 109200 },
+      { time: "Day 25", equity: 114820 },
     ],
   });
 
@@ -330,9 +462,12 @@ export default function App() {
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isDesktopSettingsOpen, setIsDesktopSettingsOpen] = useState(false);
 
-  const [orderModal, setOrderModal] = useState<{ isOpen: boolean; side: 'BUY' | 'SELL' }>({
+  const [orderModal, setOrderModal] = useState<{
+    isOpen: boolean;
+    side: "BUY" | "SELL";
+  }>({
     isOpen: false,
-    side: 'BUY',
+    side: "BUY",
   });
 
   // Tab Management Handlers
@@ -354,23 +489,23 @@ export default function App() {
     }
   };
 
-  const handleNewTab = (type: DesktopViewMode | 'dashboard', symbolTicker?: string) => {
+  const handleNewTab = (type: DesktopViewMode | "dashboard", symbolTicker?: string) => {
     const newId = `tab-${Date.now()}`;
-    let title = 'SuperCharts';
-    if (type === 'chart') title = symbolTicker || activeSymbol.ticker;
-    else if (type === 'markets') title = 'Markets';
-    else if (type === 'screener') title = 'Screener';
-    else if (type === 'heatmaps') title = 'Heatmaps';
-    else if (type === 'community') title = 'Community';
-    else if (type === 'news') title = 'News';
-    else if (type === 'agent') title = 'AI Agent';
-    else if (type === 'dashboard') title = 'Dashboard';
+    let title = "SuperCharts";
+    if (type === "chart") title = symbolTicker || activeSymbol.ticker;
+    else if (type === "markets") title = "Markets";
+    else if (type === "screener") title = "Screener";
+    else if (type === "heatmaps") title = "Heatmaps";
+    else if (type === "community") title = "Community";
+    else if (type === "news") title = "News";
+    else if (type === "agent") title = "AI Agent";
+    else if (type === "dashboard") title = "Dashboard";
 
     const newTab: DesktopTab = {
       id: newId,
       title,
       type,
-      symbol: symbolTicker || (type === 'chart' ? activeSymbol.ticker : undefined),
+      symbol: symbolTicker || (type === "chart" ? activeSymbol.ticker : undefined),
       isPinned: false,
     };
 
@@ -389,23 +524,23 @@ export default function App() {
               ...t,
               type,
               title:
-                type === 'chart'
+                type === "chart"
                   ? t.symbol || activeSymbol.ticker
-                  : type === 'markets'
-                  ? 'Markets'
-                  : type === 'screener'
-                  ? 'Screener'
-                  : type === 'heatmaps'
-                  ? 'Heatmaps'
-                  : type === 'community'
-                  ? 'Community'
-                  : type === 'agent'
-                  ? 'AI Agent'
-                  : 'News',
-              symbol: type === 'chart' ? t.symbol || activeSymbol.ticker : undefined,
+                  : type === "markets"
+                    ? "Markets"
+                    : type === "screener"
+                      ? "Screener"
+                      : type === "heatmaps"
+                        ? "Heatmaps"
+                        : type === "community"
+                          ? "Community"
+                          : type === "agent"
+                            ? "AI Agent"
+                            : "News",
+              symbol: type === "chart" ? t.symbol || activeSymbol.ticker : undefined,
             }
-          : t
-      )
+          : t,
+      ),
     );
   };
 
@@ -420,28 +555,32 @@ export default function App() {
   };
 
   const handlePinTab = (id: string) => {
-    setTabs((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, isPinned: !t.isPinned } : t))
-    );
+    setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, isPinned: !t.isPinned } : t)));
   };
 
   // Open Chart with specific Symbol from other views
   const handleOpenChartWithSymbol = (sym: SymbolInfo) => {
     setActiveSymbol(sym);
     // Find chart tab or update current tab
-    const chartTab = tabs.find((t) => t.type === 'chart');
+    const chartTab = tabs.find((t) => t.type === "chart");
     if (chartTab) {
       setTabs((prev) =>
-        prev.map((t) => (t.id === chartTab.id ? { ...t, title: sym.ticker, symbol: sym.ticker } : t))
+        prev.map((t) =>
+          t.id === chartTab.id ? { ...t, title: sym.ticker, symbol: sym.ticker } : t,
+        ),
       );
       setActiveTabId(chartTab.id);
     } else {
-      handleNewTab('chart', sym.ticker);
+      handleNewTab("chart", sym.ticker);
     }
   };
 
   const handleOpenChartWithTicker = (ticker: string) => {
-    const match = symbols.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase() || s.id.toUpperCase() === ticker.toUpperCase());
+    const match = symbols.find(
+      (s) =>
+        s.ticker.toUpperCase() === ticker.toUpperCase() ||
+        s.id.toUpperCase() === ticker.toUpperCase(),
+    );
     if (match) {
       handleOpenChartWithSymbol(match);
     } else {
@@ -450,17 +589,17 @@ export default function App() {
         id: ticker.toUpperCase(),
         ticker: ticker.toUpperCase(),
         name: `${ticker.toUpperCase()} Asset`,
-        exchange: 'GLOBAL',
-        category: 'crypto',
+        exchange: "GLOBAL",
+        category: "crypto",
         price: 100.0,
         change24h: 2.5,
         change24hPercent: 2.5,
         high24h: 105.0,
         low24h: 98.0,
-        volume24h: '$120M',
+        volume24h: "$120M",
         digits: 2,
         baseAsset: ticker.toUpperCase(),
-        quoteAsset: 'USD',
+        quoteAsset: "USD",
         description: `${ticker.toUpperCase()} spot trading instrument on global markets`,
       };
       setSymbols((prev) => [newSym, ...prev]);
@@ -472,36 +611,36 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't intercept if typing in an input/textarea
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName)) {
         return;
       }
 
       // Command Palette (⌘K / Ctrl+K)
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
       }
 
       // New Tab (⌘T / Ctrl+T)
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 't') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "t") {
         e.preventDefault();
-        handleNewTab('chart');
+        handleNewTab("chart");
       }
 
       // Close Tab (⌘W / Ctrl+W)
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'w') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "w") {
         e.preventDefault();
         handleCloseTab(activeTabId);
       }
 
       // Question Mark (?) -> Shortcuts Modal
-      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+      if (e.key === "?" && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setIsShortcutsOpen((prev) => !prev);
       }
 
       // Space -> Next Symbol in watchlist
-      if (e.key === ' ' && !e.shiftKey) {
+      if (e.key === " " && !e.shiftKey) {
         e.preventDefault();
         const currIdx = symbols.findIndex((s) => s.id === activeSymbol.id);
         const nextIdx = (currIdx + 1) % symbols.length;
@@ -509,7 +648,7 @@ export default function App() {
       }
 
       // Shift + Space -> Prev Symbol
-      if (e.key === ' ' && e.shiftKey) {
+      if (e.key === " " && e.shiftKey) {
         e.preventDefault();
         const currIdx = symbols.findIndex((s) => s.id === activeSymbol.id);
         const prevIdx = (currIdx - 1 + symbols.length) % symbols.length;
@@ -517,49 +656,56 @@ export default function App() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeSymbol.id, symbols, activeTabId]);
 
   // Handlers
   const handleSelectSymbol = (sym: SymbolInfo) => {
     setActiveSymbol(sym);
     setTabs((prev) =>
-      prev.map((t) => (t.id === activeTabId && t.type === 'chart' ? { ...t, title: sym.ticker, symbol: sym.ticker } : t))
+      prev.map((t) =>
+        t.id === activeTabId && t.type === "chart"
+          ? { ...t, title: sym.ticker, symbol: sym.ticker }
+          : t,
+      ),
     );
   };
 
   // Native klinecharts-pro symbol change (from its built-in symbol search):
   // map the pro SymbolInfo back to the shell SymbolInfo so the right dock
   // (order book / trades / data window) follows the chart.
-  const handleNativeSymbolChange = useCallback((ps: ProSymbolInfo) => {
-    const ticker = ps.ticker;
-    setActiveSymbol((prev) => {
-      if (prev && prev.id === ticker) return prev;
-      return {
-        id: ticker,
-        ticker,
-        name: ps.name ?? ticker,
-        exchange: ps.exchange ?? ps.market ?? 'USDT-FUTURES',
-        category: 'crypto',
-        price: 0,
-        change24h: 0,
-        change24hPercent: 0,
-        high24h: 0,
-        low24h: 0,
-        volume24h: '-',
-        digits: ps.pricePrecision ?? 2,
-        baseAsset: ticker.replace(/USDT|USDC$/, ''),
-        quoteAsset: 'USDT',
-        description: '',
-      };
-    });
-    setTabs((prev) =>
-      prev.map((t) =>
-        t.id === activeTabId && t.type === 'chart' ? { ...t, title: ticker, symbol: ticker } : t
-      )
-    );
-  }, [activeTabId]);
+  const handleNativeSymbolChange = useCallback(
+    (ps: ProSymbolInfo) => {
+      const ticker = ps.ticker;
+      setActiveSymbol((prev) => {
+        if (prev && prev.id === ticker) return prev;
+        return {
+          id: ticker,
+          ticker,
+          name: ps.name ?? ticker,
+          exchange: ps.exchange ?? ps.market ?? "USDT-FUTURES",
+          category: "crypto",
+          price: 0,
+          change24h: 0,
+          change24hPercent: 0,
+          high24h: 0,
+          low24h: 0,
+          volume24h: "-",
+          digits: ps.pricePrecision ?? 2,
+          baseAsset: ticker.replace(/USDT|USDC$/, ""),
+          quoteAsset: "USDT",
+          description: "",
+        };
+      });
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === activeTabId && t.type === "chart" ? { ...t, title: ticker, symbol: ticker } : t,
+        ),
+      );
+    },
+    [activeTabId],
+  );
 
   // Native period-bar change -> keep shell timeframe in sync (DataWindow etc.).
   const handleNativePeriodChange = useCallback((p: Period) => {
@@ -585,8 +731,8 @@ export default function App() {
 
   const handlePlaceOrder = (orderData: {
     symbol: string;
-    side: 'BUY' | 'SELL';
-    type: 'MARKET' | 'LIMIT';
+    side: "BUY" | "SELL";
+    type: "MARKET" | "LIMIT";
     price: number;
     amount: number;
     leverage: number;
@@ -594,20 +740,26 @@ export default function App() {
     sl?: number;
   }) => {
     const symbol = activeSymbol.id || orderData.symbol;
-    const side = orderData.side === 'BUY' ? 'long' : 'short';
+    const side = orderData.side === "BUY" ? "long" : "short";
     const orderCost = (orderData.price * orderData.amount) / orderData.leverage;
 
     // Two-phase order flow through the backend risk gate (paper broker).
     api
-      .order({ category: 'USDT-FUTURES', symbol, side, leverage: orderData.leverage, price: orderData.price })
+      .order({
+        category: "USDT-FUTURES",
+        symbol,
+        side,
+        leverage: orderData.leverage,
+        price: orderData.price,
+      })
       .then(({ token }) => api.orderConfirm(token))
       .then((res) => {
         if (!res.approved) return;
-        if (orderData.type === 'MARKET') {
+        if (orderData.type === "MARKET") {
           const newPos: Position = {
             id: `pos-${Date.now()}`,
             symbol,
-            side: orderData.side === 'BUY' ? 'LONG' : 'SHORT',
+            side: orderData.side === "BUY" ? "LONG" : "SHORT",
             amount: orderData.amount,
             entryPrice: orderData.price,
             currentPrice: orderData.price,
@@ -630,11 +782,11 @@ export default function App() {
             id: `ord-${Date.now()}`,
             symbol,
             side: orderData.side,
-            type: 'LIMIT',
+            type: "LIMIT",
             price: orderData.price,
             amount: orderData.amount,
             filled: 0,
-            status: 'WORKING',
+            status: "WORKING",
             leverage: orderData.leverage,
             timestamp: Date.now(),
           };
@@ -646,8 +798,8 @@ export default function App() {
       });
   };
 
-  // Resets the simulated paper account to its initial state. Its only caller was the
-  // brokers view, which was removed; retained for a future paper-trading UI (do not delete).
+  // Resets the simulated paper account to its initial state. Wired to the
+  // Reset Funds button in the bottom-dock TradingPanel (wire-kill-switch-and-reset).
   const handleResetPaperAccount = () => {
     setAccount({
       balance: 50000,
@@ -659,56 +811,6 @@ export default function App() {
     });
     setPositions([]);
     setOrders([]);
-  };
-
-  // Backend strategy backtest trigger (POST /backtest + GET /jobs/{job_id} polling).
-  // Pine Studio & bottom-dock Pine editor views were removed; this function currently
-  // has NO callers but is retained as the backend backtest entry point for a future
-  // strategy configuration UI (do not delete).
-  const handleRunStrategy = (_scriptCode: string, scriptName: string) => {
-    const symbol = activeSymbol.id || 'BTCUSDT';
-    const series: SeriesRef = { category: 'USDT-FUTURES', symbol, timeframe: '1h' };
-    api
-      .backtest(series)
-      .then(async ({ job_id }) => {
-        // Poll the background job until done/error.
-        let result: Record<string, unknown> | null = null;
-        for (let i = 0; i < 60; i++) {
-          await new Promise((r) => setTimeout(r, 500));
-          const job = await api.job(job_id);
-          if (job.status === 'done') {
-            result = job.result as Record<string, unknown>;
-            break;
-          }
-          if (job.status === 'error') break;
-        }
-        const metrics = (result?.metrics ?? result ?? {}) as Record<string, number | string>;
-        const toNum = (v: unknown, d = 0): number => {
-          const n = Number(v);
-          return Number.isNaN(n) ? d : n;
-        };
-        const totalTrades = Math.round(toNum(metrics.trades, 0));
-        const winRate = toNum(metrics.win_rate, 0) * 100;
-        const winningTrades = Math.round((totalTrades * winRate) / 100);
-        setBacktestResult({
-          strategyName: scriptName || 'DL Quant Strategy',
-          netProfit: toNum(metrics.net_profit, 0),
-          netProfitPercent: toNum(metrics.net_profit_pct, 0),
-          totalTrades,
-          winningTrades,
-          losingTrades: totalTrades - winningTrades,
-          winRate,
-          profitFactor: toNum(metrics.profit_factor, 1),
-          maxDrawdown: toNum(metrics.max_drawdown, 0),
-          maxDrawdownPercent: toNum(metrics.max_drawdown_pct, 0),
-          sharpeRatio: toNum(metrics.sharpe, 0),
-          trades: [],
-          equityCurve: [],
-        });
-      })
-      .catch(() => {
-        /* backend backtest unavailable; leave last result unchanged */
-      });
   };
 
   const activeCandle = candles[candles.length - 1] || null;
@@ -733,7 +835,7 @@ export default function App() {
     <div
       id="tradingview-desktop-root"
       className={`flex flex-col h-screen w-screen overflow-hidden font-sans select-none ${
-        theme === 'dark' ? 'bg-[#131722] text-[#d1d4dc]' : 'bg-[#f0f3fa] text-[#131722]'
+        theme === "dark" ? "bg-[#131722] text-[#d1d4dc]" : "bg-[#f0f3fa] text-[#131722]"
       }`}
     >
       {/* 1. BeyondEther Desktop Top TitleBar & Multi-Tab Manager */}
@@ -745,10 +847,11 @@ export default function App() {
         onNewTab={handleNewTab}
         onPinTab={handlePinTab}
         theme={theme}
-        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenDesktopSettings={() => setIsDesktopSettingsOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsOpen(true)}
+        triggeredAlerts={alerts.filter((a) => a.triggered)}
       />
 
       {/* 2. Main Desktop Client Body: Global Left Rail + Active Workspace View */}
@@ -758,7 +861,7 @@ export default function App() {
           activeView={activeView}
           onSelectView={handleSelectGlobalRailView}
           theme={theme}
-          onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenShortcuts={() => setIsShortcutsOpen(true)}
           onOpenSettings={() => setIsDesktopSettingsOpen(true)}
@@ -768,24 +871,19 @@ export default function App() {
 
         {/* Dynamic Workspace Router */}
         <main className="flex flex-col flex-1 h-full overflow-hidden relative">
-          {isDashboard && (
-            <DashboardView
-              theme={theme}
-              onOpen={(type) => handlePromoteTab(type)}
-            />
-          )}
+          {isDashboard && <DashboardView theme={theme} onOpen={(type) => handlePromoteTab(type)} />}
 
-          {!isDashboard && activeView === 'chart' && (
+          {!isDashboard && activeView === "chart" && (
             <div
               ref={chartWorkspaceRef}
               className={`flex flex-col h-full w-full ${
-                bottomOpen ? 'overflow-y-auto overflow-x-hidden' : 'overflow-hidden'
+                bottomOpen ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"
               }`}
             >
               {/* Chart Main Layout Area */}
               <div
                 className={`flex w-full overflow-hidden relative transition-all ${
-                  bottomOpen ? 'min-h-full flex-none' : 'flex-1'
+                  bottomOpen ? "min-h-full flex-none" : "flex-1"
                 }`}
               >
                 {/* Central native klinecharts-pro chart */}
@@ -818,15 +916,19 @@ export default function App() {
                   symbols={symbols}
                   activeSymbol={activeSymbol}
                   onSelectSymbol={handleSelectSymbol}
-                  onAddSymbol={() => {}}
+                  onAddSymbol={() => setIsCommandPaletteOpen(true)}
                   activeCandle={activeCandle}
                   indicators={indicators}
                   alerts={alerts}
                   onRemoveAlert={(id) => {
-  setAlerts((prev) => prev.filter((a) => a.id !== id));
-  removeAlert(id);
-  mirrorAlertDelete(id);
-}}
+                    setAlerts((prev) => prev.filter((a) => a.id !== id));
+                    removeAlert(id);
+                    mirrorAlertDelete(id);
+                  }}
+                  onToggleAlert={handleToggleAlert}
+                  onResetAlert={handleResetAlert}
+                  notifyEnabled={notifyEnabled}
+                  onToggleNotifications={handleToggleNotifications}
                   onOpenCreateAlert={() => setIsAlertOpen(true)}
                   events={events}
                   orderBook={orderBook}
@@ -846,6 +948,7 @@ export default function App() {
                 onClosePosition={handleClosePosition}
                 onCancelOrder={handleCancelOrder}
                 onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
+                onResetAccount={handleResetPaperAccount}
                 backtestResult={backtestResult}
                 onOpenChange={setBottomOpen}
                 theme={theme}
@@ -853,13 +956,9 @@ export default function App() {
             </div>
           )}
 
-          {activeView === 'markets' && (
-            <MarketsView
-              theme={theme}
-            />
-          )}
+          {activeView === "markets" && <MarketsView theme={theme} />}
 
-          {activeView === 'screener' && (
+          {activeView === "screener" && (
             <ScreenerView
               symbols={symbols}
               onOpenChartWithTicker={handleOpenChartWithTicker}
@@ -867,44 +966,32 @@ export default function App() {
             />
           )}
 
-          {activeView === 'heatmaps' && (
-            <HeatmapsView
-              onOpenChartWithTicker={handleOpenChartWithTicker}
-              theme={theme}
-            />
+          {activeView === "heatmaps" && (
+            <HeatmapsView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
           )}
 
-          {activeView === 'community' && (
-            <CommunityIdeasView
-              onOpenChartWithTicker={handleOpenChartWithTicker}
-              theme={theme}
-            />
+          {activeView === "community" && (
+            <CommunityIdeasView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
           )}
 
-          {activeView === 'news' && (
-            <NewsCalendarView
-              onOpenChartWithTicker={handleOpenChartWithTicker}
-              theme={theme}
-            />
+          {activeView === "news" && (
+            <NewsCalendarView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
           )}
 
-          {activeView === 'agent' && (
-            <AgentView
-              symbols={symbols}
-              theme={theme}
-            />
-          )}
+          {activeView === "agent" && <AgentView symbols={symbols} theme={theme} />}
         </main>
       </div>
 
       {/* 3. Global Modals & Overlays */}
+      <ToastHost theme={theme} />
+
       <CommandPaletteModal
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         symbols={symbols}
         onSelectSymbol={handleSelectSymbol}
         onSelectView={handleSelectGlobalRailView}
-        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
         onOpenSettings={() => setIsDesktopSettingsOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         theme={theme}
@@ -920,32 +1007,32 @@ export default function App() {
         isOpen={isDesktopSettingsOpen}
         onClose={() => setIsDesktopSettingsOpen(false)}
         theme={theme}
-        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
       />
 
       {isAlertOpen && (
         <CreateAlertModal
           isOpen={isAlertOpen}
           onClose={() => {
-  setIsAlertOpen(false);
-  setAlertPrefillPrice(null);
-}}
+            setIsAlertOpen(false);
+            setAlertPrefillPrice(null);
+          }}
           symbol={activeSymbol}
           initialPrice={alertPrefillPrice ?? undefined}
           onAddAlert={(newAlt) => {
-  setAlerts((prev) => [newAlt, ...prev]);
-  const mapped: Alert = {
-    id: newAlt.id,
-    symbol: newAlt.symbol,
-    condition: newAlt.condition.includes('Less') ? 'below' : 'above',
-    threshold: newAlt.targetPrice,
-    enabled: true,
-    triggered: false,
-    createdAt: Date.now(),
-  };
-  upsertAlert(mapped);
-  mirrorAlertCreate(mapped);
-}}
+            setAlerts((prev) => [newAlt, ...prev]);
+            const mapped: Alert = {
+              id: newAlt.id,
+              symbol: newAlt.symbol,
+              condition: newAlt.condition.includes("Less") ? "below" : "above",
+              threshold: newAlt.targetPrice,
+              enabled: true,
+              triggered: false,
+              createdAt: Date.now(),
+            };
+            upsertAlert(mapped);
+            mirrorAlertCreate(mapped);
+          }}
           theme={theme}
         />
       )}

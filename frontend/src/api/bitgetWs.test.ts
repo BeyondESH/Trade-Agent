@@ -90,12 +90,21 @@ describe("BitgetWsClient single shared socket", () => {
     c.subscribe(B, () => {});
     expect(FakeWebSocket.instances).toHaveLength(1);
     FakeWebSocket.instances[0].emitOpen();
-    const subs = FakeWebSocket.instances[0]
-      .frames()
-      .filter((f) => f.op === "subscribe") as Array<{ op: string; args: unknown[] }>;
+    const subs = FakeWebSocket.instances[0].frames().filter((f) => f.op === "subscribe") as Array<{
+      op: string;
+      args: unknown[];
+    }>;
     expect(subs).toHaveLength(2);
-    expect(subs[0].args[0]).toMatchObject({ channel: "candle", symbol: "BTCUSDT", timeframe: "5m" });
-    expect(subs[1].args[0]).toMatchObject({ channel: "candle", symbol: "ETHUSDT", timeframe: "1h" });
+    expect(subs[0].args[0]).toMatchObject({
+      channel: "candle",
+      symbol: "BTCUSDT",
+      timeframe: "5m",
+    });
+    expect(subs[1].args[0]).toMatchObject({
+      channel: "candle",
+      symbol: "ETHUSDT",
+      timeframe: "1h",
+    });
   });
 
   it("dedupes listeners on the same series into one subscription", () => {
@@ -107,7 +116,9 @@ describe("BitgetWsClient single shared socket", () => {
     FakeWebSocket.instances[0].emitOpen();
     const subs = FakeWebSocket.instances[0].frames().filter((f) => f.op === "subscribe");
     expect(subs).toHaveLength(1);
-    FakeWebSocket.instances[0].emitMessage(candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000)));
+    FakeWebSocket.instances[0].emitMessage(
+      candleFrame("BTCUSDT", "USDT-FUTURES", "5m", candle(1000)),
+    );
     expect(l1).toHaveBeenCalledTimes(1);
     expect(l2).toHaveBeenCalledTimes(1);
   });
@@ -120,9 +131,13 @@ describe("BitgetWsClient single shared socket", () => {
     const h2 = c.subscribe(A, l2);
     FakeWebSocket.instances[0].emitOpen();
     h1.close();
-    expect(FakeWebSocket.instances[0].frames().filter((f) => f.op === "unsubscribe")).toHaveLength(0);
+    expect(FakeWebSocket.instances[0].frames().filter((f) => f.op === "unsubscribe")).toHaveLength(
+      0,
+    );
     h2.close();
-    expect(FakeWebSocket.instances[0].frames().filter((f) => f.op === "unsubscribe")).toHaveLength(1);
+    expect(FakeWebSocket.instances[0].frames().filter((f) => f.op === "unsubscribe")).toHaveLength(
+      1,
+    );
   });
 });
 
@@ -179,8 +194,13 @@ describe("BitgetWsClient delivery", () => {
     const sock = FakeWebSocket.instances[0];
     sock.emitOpen();
     // missing timeframe -> cannot route safely -> ignored
-    sock.emitMessage({ channel: "candle", symbol: "BTCUSDT", category: "USDT-FUTURES",
-                       action: "update", data: { last_candle: candle(1000) } });
+    sock.emitMessage({
+      channel: "candle",
+      symbol: "BTCUSDT",
+      category: "USDT-FUTURES",
+      action: "update",
+      data: { last_candle: candle(1000) },
+    });
     expect(cb).not.toHaveBeenCalled();
   });
 
@@ -191,8 +211,13 @@ describe("BitgetWsClient delivery", () => {
     const sock = FakeWebSocket.instances[0];
     sock.emitOpen();
     sock.emitMessage({ channel: "ticker", symbol: "BTCUSDT", data: {} });
-    sock.emitMessage({ channel: "candle", symbol: "BTCUSDT", category: "USDT-FUTURES",
-                       timeframe: "5m", data: {} });
+    sock.emitMessage({
+      channel: "candle",
+      symbol: "BTCUSDT",
+      category: "USDT-FUTURES",
+      timeframe: "5m",
+      data: {},
+    });
     expect(cb).not.toHaveBeenCalled();
   });
 });

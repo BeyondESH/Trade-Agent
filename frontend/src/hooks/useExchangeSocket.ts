@@ -66,7 +66,10 @@ export class ExchangeSocket {
   }
 
   private open(): void {
-    if (this.sock && (this.sock.readyState === WebSocket.OPEN || this.sock.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.sock &&
+      (this.sock.readyState === WebSocket.OPEN || this.sock.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
     const proto = window.location.protocol === "https:" ? "wss" : "ws";

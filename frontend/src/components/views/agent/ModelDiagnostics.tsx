@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import {
   Bar,
   BarChart,
@@ -11,8 +11,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ThemeMode } from "../../../types/trading";
 import type { BacktestJobResult } from "../../../api/types";
+import type { ThemeMode } from "../../../types/trading";
 import { Panel } from "./ui";
 
 const ACCENT = "#2962ff";
@@ -31,10 +31,10 @@ const Empty: React.FC<{ label: string }> = ({ label }) => (
 );
 
 /** Model diagnostics: ROC curve (with AUC) and feature-weight bar chart. */
-export const ModelDiagnostics: React.FC<{ result: BacktestJobResult; theme: ThemeMode }> = ({
-  result,
-  theme,
-}) => {
+export const ModelDiagnostics: React.FC<{
+  result: BacktestJobResult;
+  theme: ThemeMode;
+}> = ({ result, theme }) => {
   const tick = axisTick(theme);
   const grid = gridStroke(theme);
 
@@ -55,9 +55,7 @@ export const ModelDiagnostics: React.FC<{ result: BacktestJobResult; theme: Them
           <div className="flex flex-col gap-1">
             <div className="text-xs font-mono text-gray-400">
               AUC:{" "}
-              <span className="font-bold text-[#2962ff]">
-                {auc != null ? auc.toFixed(4) : "—"}
-              </span>
+              <span className="font-bold text-[#2962ff]">{auc != null ? auc.toFixed(4) : "—"}</span>
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={rocData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
@@ -78,13 +76,7 @@ export const ModelDiagnostics: React.FC<{ result: BacktestJobResult; theme: Them
                   axisLine={false}
                 />
                 <Tooltip formatter={(v) => Number(v).toFixed(4)} />
-                <Line
-                  type="monotone"
-                  dataKey="tpr"
-                  stroke={ACCENT}
-                  dot={false}
-                  strokeWidth={1.5}
-                />
+                <Line type="monotone" dataKey="tpr" stroke={ACCENT} dot={false} strokeWidth={1.5} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -94,9 +86,7 @@ export const ModelDiagnostics: React.FC<{ result: BacktestJobResult; theme: Them
       </Panel>
 
       <Panel
-        title={
-          fw?.kind === "coef" ? "特征权重 (逻辑回归系数)" : "特征权重 (特征重要性)"
-        }
+        title={fw?.kind === "coef" ? "特征权重 (逻辑回归系数)" : "特征权重 (特征重要性)"}
         theme={theme}
       >
         {weightData.length > 0 ? (
@@ -119,10 +109,7 @@ export const ModelDiagnostics: React.FC<{ result: BacktestJobResult; theme: Them
               <Tooltip />
               <Bar dataKey="value" radius={[0, 3, 3, 0]}>
                 {weightData.map((d, i) => (
-                  <Cell
-                    key={i}
-                    fill={fw?.kind === "coef" ? (d.value >= 0 ? WIN : LOSS) : ACCENT}
-                  />
+                  <Cell key={i} fill={fw?.kind === "coef" ? (d.value >= 0 ? WIN : LOSS) : ACCENT} />
                 ))}
               </Bar>
             </BarChart>

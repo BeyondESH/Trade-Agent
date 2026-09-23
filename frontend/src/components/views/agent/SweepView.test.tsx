@@ -1,15 +1,48 @@
 // @vitest-environment jsdom
+
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { SweepView, heatColor, parseGridInput } from "./SweepView";
 import type { SweepResult } from "../../../api/types";
+import { heatColor, parseGridInput, SweepView } from "./SweepView";
 
 const sweepResult: SweepResult = {
   results: [
-    { threshold: 0.5, fee: 0.0004, slippage: 0.0005, total_return: 0.04, max_drawdown: -0.02, win_rate: 0.55, trades: 10 },
-    { threshold: 0.5, fee: 0.001, slippage: 0.0005, total_return: -0.01, max_drawdown: -0.03, win_rate: 0.4, trades: 6 },
-    { threshold: 0.6, fee: 0.0004, slippage: 0.0005, total_return: 0.02, max_drawdown: -0.01, win_rate: 0.6, trades: 8 },
-    { threshold: 0.6, fee: 0.001, slippage: 0.0005, total_return: 0.01, max_drawdown: -0.015, win_rate: 0.5, trades: 7 },
+    {
+      threshold: 0.5,
+      fee: 0.0004,
+      slippage: 0.0005,
+      total_return: 0.04,
+      max_drawdown: -0.02,
+      win_rate: 0.55,
+      trades: 10,
+    },
+    {
+      threshold: 0.5,
+      fee: 0.001,
+      slippage: 0.0005,
+      total_return: -0.01,
+      max_drawdown: -0.03,
+      win_rate: 0.4,
+      trades: 6,
+    },
+    {
+      threshold: 0.6,
+      fee: 0.0004,
+      slippage: 0.0005,
+      total_return: 0.02,
+      max_drawdown: -0.01,
+      win_rate: 0.6,
+      trades: 8,
+    },
+    {
+      threshold: 0.6,
+      fee: 0.001,
+      slippage: 0.0005,
+      total_return: 0.01,
+      max_drawdown: -0.015,
+      win_rate: 0.5,
+      trades: 7,
+    },
   ],
   data_meta: { n_train: 100, n_test: 50, start: 1, end: 2 },
 };

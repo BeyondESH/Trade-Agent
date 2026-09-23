@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 
 export interface SeriesLane {
   name: string;
@@ -29,8 +29,7 @@ export const SeriesChart: React.FC<{
         const range = max - min || 1;
         const pts = lane.values
           .map(
-            (v, i) =>
-              `${(i / (n - 1)) * 100},${li * per + per - ((v - min) / range) * (per - 2)}`,
+            (v, i) => `${(i / (n - 1)) * 100},${li * per + per - ((v - min) / range) * (per - 2)}`,
           )
           .join(" ");
         const fillPts = `${pts} 100,${li * per + per} 0,${li * per + per}`;
@@ -38,13 +37,7 @@ export const SeriesChart: React.FC<{
           <g key={lane.name}>
             {lane.fill && <polygon points={fillPts} fill={lane.color} opacity={0.12} />}
             <polyline points={pts} fill="none" stroke={lane.color} strokeWidth={1.2} />
-            <text
-              x={1}
-              y={li * per + 10}
-              fontSize={4}
-              fill={lane.color}
-              fontWeight={600}
-            >
+            <text x={1} y={li * per + 10} fontSize={4} fill={lane.color} fontWeight={600}>
               {lane.name}
             </text>
           </g>

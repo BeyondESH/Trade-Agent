@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { bitgetWs } from "../api/bitgetWs";
 import { api } from "../api/client";
 import type { Candle, SeriesRef } from "../api/types";
-import { bitgetWs } from "../api/bitgetWs";
 
 export interface UseCandlesState {
   candles: Candle[];

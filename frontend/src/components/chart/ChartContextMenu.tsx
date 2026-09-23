@@ -1,3 +1,4 @@
+import { Bell, Copy, RotateCcw, Settings, SlidersHorizontal } from "lucide-react";
 import { useEffect } from "react";
 import type { ThemeMode } from "../../types/trading";
 
@@ -7,8 +8,11 @@ interface Props {
   price: number;
   symbol: string;
   theme: ThemeMode;
-  onAddPriceLine: (price: number) => void;
   onCreateAlertAt: (price: number) => void;
+  onAddIndicator: () => void;
+  onCopyPrice: (price: number) => void;
+  onOpenSettings: () => void;
+  onResetView: () => void;
   onClose: () => void;
 }
 
@@ -23,23 +27,76 @@ export const ChartContextMenu: React.FC<Props> = ({
   price,
   symbol,
   theme,
-  onAddPriceLine,
   onCreateAlertAt,
+  onAddIndicator,
+  onCopyPrice,
+  onOpenSettings,
+  onResetView,
   onClose,
 }) => {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === "a") onCreateAlertAt(price);
+      else if (key === "i") onAddIndicator();
+      else if (key === "c") onCopyPrice(price);
+      else if (key === "s") onOpenSettings();
+      else if (key === "r") onResetView();
+      else return;
+      e.preventDefault();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, onCreateAlertAt, onAddIndicator, onCopyPrice, onOpenSettings, onResetView, price]);
 
   const style: React.CSSProperties = {
     left: Math.min(x, (typeof window !== "undefined" ? window.innerWidth : 0) - 220),
-    top: Math.min(y, (typeof window !== "undefined" ? window.innerHeight : 0) - 140),
+    top: Math.min(y, (typeof window !== "undefined" ? window.innerHeight : 0) - 240),
   };
   const isDark = theme === "dark";
+
+  const items = [
+    {
+      testId: "menu-create-alert",
+      label: "在此创建价格警报",
+      icon: Bell,
+      shortcut: "A",
+      run: () => onCreateAlertAt(price),
+    },
+    {
+      testId: "menu-add-indicator",
+      label: "添加指标",
+      icon: SlidersHorizontal,
+      shortcut: "I",
+      run: onAddIndicator,
+    },
+    {
+      testId: "menu-copy-price",
+      label: "复制价格",
+      icon: Copy,
+      shortcut: "C",
+      run: () => onCopyPrice(price),
+    },
+    {
+      testId: "menu-open-settings",
+      label: "设置",
+      icon: Settings,
+      shortcut: "S",
+      run: onOpenSettings,
+    },
+    {
+      testId: "menu-reset-view",
+      label: "重置视图",
+      icon: RotateCcw,
+      shortcut: "R",
+      run: onResetView,
+    },
+  ];
 
   return (
     <div
@@ -66,28 +123,30 @@ export const ChartContextMenu: React.FC<Props> = ({
         >
           {symbol} · {formatPrice(price)}
         </div>
-        <button
-          type="button"
-          role="menuitem"
-          data-testid="menu-add-price-line"
-          onClick={() => onAddPriceLine(price)}
-          className={`w-full text-left px-3 py-2 cursor-pointer ${
-            isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
-          }`}
-        >
-          在此添加价格线
-        </button>
-        <button
-          type="button"
-          role="menuitem"
-          data-testid="menu-set-alert"
-          onClick={() => onCreateAlertAt(price)}
-          className={`w-full text-left px-3 py-2 cursor-pointer ${
-            isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
-          }`}
-        >
-          在此设置价格警报
-        </button>
+        {items.map(({ testId, label, icon: Icon, shortcut, run }) => (
+          <button
+            key={testId}
+            type="button"
+            role="menuitem"
+            data-testid={testId}
+            onClick={run}
+            className={`w-full flex items-center justify-between gap-3 px-3 py-2 cursor-pointer ${
+              isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Icon className="w-3.5 h-3.5 opacity-70" />
+              <span>{label}</span>
+            </span>
+            <kbd
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                isDark ? "bg-[#131722] text-gray-500" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {shortcut}
+            </kbd>
+          </button>
+        ))}
       </div>
     </div>
   );

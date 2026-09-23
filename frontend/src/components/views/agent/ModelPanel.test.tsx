@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+
 import { fireEvent, render, screen } from "@testing-library/react";
-import { ModelPanel, matchPreset, MODEL_PRESETS } from "./ModelPanel";
+import { describe, expect, it, vi } from "vitest";
 import type { BacktestParams } from "../../../api/types";
+import { MODEL_PRESETS, ModelPanel, matchPreset } from "./ModelPanel";
 
 class ResizeObserverMock {
   observe() {}
@@ -35,7 +36,12 @@ describe("matchPreset", () => {
 });
 
 describe("ModelPanel", () => {
-  const base: BacktestParams = { train_ratio: 0.7, thresh: 0.55, fee: 0.0004, slippage: 0.0005 };
+  const base: BacktestParams = {
+    train_ratio: 0.7,
+    thresh: 0.55,
+    fee: 0.0004,
+    slippage: 0.0005,
+  };
 
   it("renders preset buttons and model switch", () => {
     render(<ModelPanel params={base} onChange={() => {}} theme="dark" />);
@@ -60,7 +66,12 @@ describe("ModelPanel", () => {
 
   it("switching model clears the other model's hyperparameters", () => {
     const onChange = vi.fn();
-    const withHgb: BacktestParams = { ...base, model: "hgb", max_depth: 4, learning_rate: 0.1 };
+    const withHgb: BacktestParams = {
+      ...base,
+      model: "hgb",
+      max_depth: 4,
+      learning_rate: 0.1,
+    };
     render(<ModelPanel params={withHgb} onChange={onChange} theme="dark" />);
     fireEvent.click(screen.getByText("逻辑回归 (lr)"));
     const next = onChange.mock.calls[0][0] as BacktestParams;

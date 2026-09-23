@@ -1,8 +1,8 @@
-import React from "react";
-import { ThemeMode } from "../../../types/trading";
+import type React from "react";
 import type { BacktestParams } from "../../../api/types";
-import { Panel, inputCls, selectCls, btnCls } from "./ui";
+import type { ThemeMode } from "../../../types/trading";
 import { Slider } from "../../ui/slider";
+import { btnCls, inputCls, Panel, selectCls } from "./ui";
 
 export type ModelPresetId = "conservative-lr" | "aggressive-lr" | "hgb-fast" | "custom";
 
@@ -20,9 +20,17 @@ export const MODEL_PRESETS: ModelPreset[] = [
     label: "稳健 lr",
     model: "lr",
     params: {
-      model: "lr", scale: true, C: 1.0, max_iter: 200, solver: "lbfgs",
-      train_ratio: 0.7, thresh: 0.6, fee: 0.0004, slippage: 0.0005,
-      init_cash: 100_000, size: 1,
+      model: "lr",
+      scale: true,
+      C: 1.0,
+      max_iter: 200,
+      solver: "lbfgs",
+      train_ratio: 0.7,
+      thresh: 0.6,
+      fee: 0.0004,
+      slippage: 0.0005,
+      init_cash: 100_000,
+      size: 1,
     },
   },
   {
@@ -30,9 +38,17 @@ export const MODEL_PRESETS: ModelPreset[] = [
     label: "激进 lr",
     model: "lr",
     params: {
-      model: "lr", scale: true, C: 0.1, max_iter: 500, solver: "lbfgs",
-      train_ratio: 0.6, thresh: 0.5, fee: 0.0004, slippage: 0.0005,
-      init_cash: 100_000, size: 1,
+      model: "lr",
+      scale: true,
+      C: 0.1,
+      max_iter: 500,
+      solver: "lbfgs",
+      train_ratio: 0.6,
+      thresh: 0.5,
+      fee: 0.0004,
+      slippage: 0.0005,
+      init_cash: 100_000,
+      size: 1,
     },
   },
   {
@@ -40,9 +56,18 @@ export const MODEL_PRESETS: ModelPreset[] = [
     label: "HGB 快速",
     model: "hgb",
     params: {
-      model: "hgb", scale: false, max_depth: 4, learning_rate: 0.1,
-      min_samples_leaf: 10, max_iter: 300, train_ratio: 0.7, thresh: 0.55,
-      fee: 0.0004, slippage: 0.0005, init_cash: 100_000, size: 1,
+      model: "hgb",
+      scale: false,
+      max_depth: 4,
+      learning_rate: 0.1,
+      min_samples_leaf: 10,
+      max_iter: 300,
+      train_ratio: 0.7,
+      thresh: 0.55,
+      fee: 0.0004,
+      slippage: 0.0005,
+      init_cash: 100_000,
+      size: 1,
     },
   },
   { id: "custom", label: "自定义", model: "lr", params: {} },
@@ -168,7 +193,9 @@ export const ModelPanel: React.FC<Props> = ({ params, onChange, theme }) => {
               key={p.id}
               onClick={() => applyPreset(p)}
               disabled={p.id === "custom"}
-              className={btnCls(theme, active === p.id ? "primary" : "ghost") + " !px-2 !py-1 text-xs"}
+              className={
+                btnCls(theme, active === p.id ? "primary" : "ghost") + " !px-2 !py-1 text-xs"
+              }
               title={p.id === "custom" ? "修改任一参数即为自定义" : undefined}
             >
               {p.label}

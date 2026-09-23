@@ -55,10 +55,26 @@ export function buildMetricCards(result: BacktestJobResult): MetricCardDef[] {
   });
 
   const stats = result.stats ?? {};
-  cards.push({ group: "risk", label: "Sharpe", value: fmtNum(stats.sharpe_ratio) });
-  cards.push({ group: "risk", label: "Sortino", value: fmtNum(stats.sortino_ratio) });
-  cards.push({ group: "risk", label: "Calmar", value: fmtNum(stats.calmar_ratio) });
-  cards.push({ group: "risk", label: "Profit Factor", value: fmtNum(stats.profit_factor) });
+  cards.push({
+    group: "risk",
+    label: "Sharpe",
+    value: fmtNum(stats.sharpe_ratio),
+  });
+  cards.push({
+    group: "risk",
+    label: "Sortino",
+    value: fmtNum(stats.sortino_ratio),
+  });
+  cards.push({
+    group: "risk",
+    label: "Calmar",
+    value: fmtNum(stats.calmar_ratio),
+  });
+  cards.push({
+    group: "risk",
+    label: "Profit Factor",
+    value: fmtNum(stats.profit_factor),
+  });
 
   const mm = result.model_metrics ?? {};
   cards.push({

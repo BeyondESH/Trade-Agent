@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { ThemeMode } from "../../../types/trading";
-import type { AppConfig } from "../../../api/types";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../../api/client";
-import { Panel, Field, btnCls, inputCls, selectCls } from "./ui";
+import type { AppConfig } from "../../../api/types";
+import type { ThemeMode } from "../../../types/trading";
+import { btnCls, Field, inputCls, Panel, selectCls } from "./ui";
 
 interface Props {
   theme: ThemeMode;
@@ -74,7 +75,12 @@ export const AgentConfigPanel: React.FC<Props> = ({ theme }) => {
           <Field label="kind">
             <select
               value={cfg.provider.kind}
-              onChange={(e) => setCfg({ ...cfg, provider: { ...cfg.provider, kind: e.target.value } })}
+              onChange={(e) =>
+                setCfg({
+                  ...cfg,
+                  provider: { ...cfg.provider, kind: e.target.value },
+                })
+              }
               className={selectCls(theme)}
             >
               <option value="rule">rule</option>
@@ -85,14 +91,24 @@ export const AgentConfigPanel: React.FC<Props> = ({ theme }) => {
           <Field label="model">
             <input
               value={cfg.provider.model}
-              onChange={(e) => setCfg({ ...cfg, provider: { ...cfg.provider, model: e.target.value } })}
+              onChange={(e) =>
+                setCfg({
+                  ...cfg,
+                  provider: { ...cfg.provider, model: e.target.value },
+                })
+              }
               className={inputCls(theme)}
             />
           </Field>
           <Field label="base_url">
             <input
               value={cfg.provider.base_url}
-              onChange={(e) => setCfg({ ...cfg, provider: { ...cfg.provider, base_url: e.target.value } })}
+              onChange={(e) =>
+                setCfg({
+                  ...cfg,
+                  provider: { ...cfg.provider, base_url: e.target.value },
+                })
+              }
               className={inputCls(theme)}
             />
           </Field>
@@ -103,7 +119,13 @@ export const AgentConfigPanel: React.FC<Props> = ({ theme }) => {
                 step="any"
                 value={cfg.provider[key] as number}
                 onChange={(e) =>
-                  setCfg({ ...cfg, provider: { ...cfg.provider, [key]: Number(e.target.value) } })
+                  setCfg({
+                    ...cfg,
+                    provider: {
+                      ...cfg.provider,
+                      [key]: Number(e.target.value),
+                    },
+                  })
                 }
                 className={inputCls(theme)}
               />
@@ -119,7 +141,12 @@ export const AgentConfigPanel: React.FC<Props> = ({ theme }) => {
                 type="number"
                 step="any"
                 value={cfg.risk[key] as number}
-                onChange={(e) => setCfg({ ...cfg, risk: { ...cfg.risk, [key]: Number(e.target.value) } })}
+                onChange={(e) =>
+                  setCfg({
+                    ...cfg,
+                    risk: { ...cfg.risk, [key]: Number(e.target.value) },
+                  })
+                }
                 className={inputCls(theme)}
               />
             </Field>
@@ -138,7 +165,10 @@ export const AgentConfigPanel: React.FC<Props> = ({ theme }) => {
               rows={3}
               value={(cfg.manual_rules ?? []).join("\n")}
               onChange={(e) =>
-                setCfg({ ...cfg, manual_rules: e.target.value.split("\n").filter((l) => l.trim()) })
+                setCfg({
+                  ...cfg,
+                  manual_rules: e.target.value.split("\n").filter((l) => l.trim()),
+                })
               }
               className={`${inputCls(theme)} font-mono text-xs`}
             />

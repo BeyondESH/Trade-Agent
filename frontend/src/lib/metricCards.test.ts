@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildMetricCards } from "./metricCards";
 import type { BacktestJobResult } from "../api/types";
+import { buildMetricCards } from "./metricCards";
 
 const base: BacktestJobResult = {
   total_return: 0.12,
@@ -21,7 +21,10 @@ describe("buildMetricCards", () => {
   });
 
   it("maps stats to risk-adjusted cards", () => {
-    const cards = buildMetricCards({ ...base, stats: { sharpe_ratio: 1.42, sortino_ratio: 1.1 } });
+    const cards = buildMetricCards({
+      ...base,
+      stats: { sharpe_ratio: 1.42, sortino_ratio: 1.1 },
+    });
     expect(cards.find((c) => c.label === "Sharpe")?.value).toBe("1.42");
     expect(cards.find((c) => c.label === "Sortino")?.value).toBe("1.1");
     // Missing stats fields fall back to placeholder (null).
@@ -30,7 +33,10 @@ describe("buildMetricCards", () => {
   });
 
   it("maps model_metrics to AUC/LogLoss cards", () => {
-    const cards = buildMetricCards({ ...base, model_metrics: { roc_auc: 0.72, log_loss: 0.61 } });
+    const cards = buildMetricCards({
+      ...base,
+      model_metrics: { roc_auc: 0.72, log_loss: 0.61 },
+    });
     expect(cards.find((c) => c.label === "AUC")?.value).toBe("0.72");
     expect(cards.find((c) => c.label === "LogLoss")?.value).toBe("0.61");
   });

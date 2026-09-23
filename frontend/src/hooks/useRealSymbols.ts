@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { SymbolInfo } from "../types/trading";
 import { api } from "../api/client";
 import type { Ticker } from "../api/types";
 import { categoryLabel } from "../api/types";
+import type { SymbolInfo } from "../types/trading";
 import { useExchangeSocket } from "./useExchangeSocket";
 
 /** Preference for the same instId listed in several product categories. */
-const CATEGORY_PRIORITY: Record<string, number> = { "USDT-FUTURES": 0, SPOT: 1 };
+const CATEGORY_PRIORITY: Record<string, number> = {
+  "USDT-FUTURES": 0,
+  SPOT: 1,
+};
 
 /** Map a backend ticker row to the template SymbolInfo shape. */
 export function tickerToSymbolInfo(t: Ticker): SymbolInfo {
@@ -100,45 +103,53 @@ export function useRealSymbols(): {
 
   // Subscribe to the ticker across all categories (backend wildcard), so
   // watchlist/screener prices stay live regardless of product line.
-  useExchangeSocket("ticker", "default", (frame) => {
-    if (frame.action !== "snapshot" && frame.action !== "update") return;
-    const data = frame.data as Record<string, Ticker> | Ticker[] | undefined;
-    if (!data) return;
-    const batch = Array.isArray(data) ? data : Object.values(data);
-    if (!batch.length) return;
-    for (const t of batch) {
-      if (t && t.instId) pending.current[`${t.category ?? "USDT-FUTURES"}:${t.instId}`] = t;
-    }
-    if (!flushScheduled.current) {
-      flushScheduled.current = true;
-      requestAnimationFrame(() => {
-        flushScheduled.current = false;
-        const buf = pending.current;
-        pending.current = {};
-        const entries = Object.values(buf);
-        if (entries.length === 0) return;
-        setByKey((prev) => {
-          const next = { ...prev };
-          let changed = false;
-          for (const t of entries) {
-            const key = `${t.category ?? "USDT-FUTURES"}:${t.instId}`;
-            const updated = tickerToSymbolInfo(t);
-            const existing = next[key];
-            // Only write + flag a change when the quote actually differs, so an
-            // unchanged frame does not allocate a new map / new symbol refs.
-            if (existing && existing.price === updated.price
-                && existing.change24hPercent === updated.change24hPercent
-                && existing.volume24h === updated.volume24h) {
-              continue;
+  useExchangeSocket(
+    "ticker",
+    "default",
+    (frame) => {
+      if (frame.action !== "snapshot" && frame.action !== "update") return;
+      const data = frame.data as Record<string, Ticker> | Ticker[] | undefined;
+      if (!data) return;
+      const batch = Array.isArray(data) ? data : Object.values(data);
+      if (!batch.length) return;
+      for (const t of batch) {
+        if (t && t.instId) pending.current[`${t.category ?? "USDT-FUTURES"}:${t.instId}`] = t;
+      }
+      if (!flushScheduled.current) {
+        flushScheduled.current = true;
+        requestAnimationFrame(() => {
+          flushScheduled.current = false;
+          const buf = pending.current;
+          pending.current = {};
+          const entries = Object.values(buf);
+          if (entries.length === 0) return;
+          setByKey((prev) => {
+            const next = { ...prev };
+            let changed = false;
+            for (const t of entries) {
+              const key = `${t.category ?? "USDT-FUTURES"}:${t.instId}`;
+              const updated = tickerToSymbolInfo(t);
+              const existing = next[key];
+              // Only write + flag a change when the quote actually differs, so an
+              // unchanged frame does not allocate a new map / new symbol refs.
+              if (
+                existing &&
+                existing.price === updated.price &&
+                existing.change24hPercent === updated.change24hPercent &&
+                existing.volume24h === updated.volume24h
+              ) {
+                continue;
+              }
+              next[key] = updated;
+              changed = true;
             }
-            next[key] = updated;
-            changed = true;
-          }
-          return changed ? next : prev;
+            return changed ? next : prev;
+          });
         });
-      });
-    }
-  }, { category: "*" });
+      }
+    },
+    { category: "*" },
+  );
 
   const symbols = useMemo(() => dedupeSymbols(byKey), [byKey]);
 

@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { ThemeMode } from "../../../types/trading";
-import type { DataWindow, SeriesRef } from "../../../api/types";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../../api/client";
+import type { DataWindow, SeriesRef } from "../../../api/types";
+import type { ThemeMode } from "../../../types/trading";
 import { cardCls, fmtTime } from "./ui";
 
 interface Props {
@@ -21,7 +22,12 @@ const SPARSE_THRESHOLD = 500;
 
 /** Fetches a cheap sample of the selected series (within the window) and surfaces data availability. */
 export const DataAvailability: React.FC<Props> = ({ series, range, theme }) => {
-  const [state, setState] = useState<Availability>({ count: 0, start: null, end: null, loading: true });
+  const [state, setState] = useState<Availability>({
+    count: 0,
+    start: null,
+    end: null,
+    loading: true,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +71,9 @@ export const DataAvailability: React.FC<Props> = ({ series, range, theme }) => {
             {state.end ? fmtTime(state.end) : "-"}
           </span>
           {sparse && (
-            <span className="text-[#ff9800]">⚠️ 数据稀疏(不足 {SPARSE_THRESHOLD} 根),回测效果有限,建议先回填</span>
+            <span className="text-[#ff9800]">
+              ⚠️ 数据稀疏(不足 {SPARSE_THRESHOLD} 根),回测效果有限,建议先回填
+            </span>
           )}
         </>
       )}

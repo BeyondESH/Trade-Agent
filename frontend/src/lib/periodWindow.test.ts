@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { Period } from "@klinecharts/pro";
+import { describe, expect, it } from "vitest";
 
 /**
  * Mirror of klinecharts-pro's N1 window computation (see vendor dist) used as a

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Box, Candle, Level, Trendline } from "../api/types";
 import {
   boxToRect,
-  candleToKLine,
   candlesToKLineData,
+  candleToKLine,
   levelsToPriceLines,
   priceLineToOverlay,
   trendlineToSegment,
@@ -24,8 +24,22 @@ describe("candlesToKLineData", () => {
 
 describe("candleToKLine", () => {
   it("maps a single API candle to klinecharts KLineData (ms)", () => {
-    const k = candleToKLine({ open_time: 5000, open: 1, high: 2, low: 0, close: 1, volume: 9 });
-    expect(k).toEqual({ timestamp: 5000, open: 1, high: 2, low: 0, close: 1, volume: 9 });
+    const k = candleToKLine({
+      open_time: 5000,
+      open: 1,
+      high: 2,
+      low: 0,
+      close: 1,
+      volume: 9,
+    });
+    expect(k).toEqual({
+      timestamp: 5000,
+      open: 1,
+      high: 2,
+      low: 0,
+      close: 1,
+      volume: 9,
+    });
   });
 });
 
@@ -44,14 +58,23 @@ describe("levelsToPriceLines", () => {
 
 describe("priceLineToOverlay", () => {
   it("builds a klinecharts priceLine overlay", () => {
-    const o = priceLineToOverlay({ price: 100, kind: "support", color: "#26a69a", title: "s" });
+    const o = priceLineToOverlay({
+      price: 100,
+      kind: "support",
+      color: "#26a69a",
+      title: "s",
+    });
     expect(o.name).toBe("priceLine");
     expect(o.points).toEqual([{ value: 100 }]);
     expect(o.styles?.line?.color).toBe("#26a69a");
   });
 
   it("carries the alertId in extendData when provided", () => {
-    const o = priceLineToOverlay({ price: 100, color: "#ff9800", alertId: "alt-1" });
+    const o = priceLineToOverlay({
+      price: 100,
+      color: "#ff9800",
+      alertId: "alt-1",
+    });
     expect(o.extendData).toMatchObject({ alertId: "alt-1", title: undefined });
   });
 
@@ -63,7 +86,12 @@ describe("priceLineToOverlay", () => {
 
 describe("trendlineToSegment", () => {
   it("projects slope/intercept at both endpoints (ms)", () => {
-    const line: Trendline = { kind: "support", slope: 2, intercept: 10, projection: 0 };
+    const line: Trendline = {
+      kind: "support",
+      slope: 2,
+      intercept: 10,
+      projection: 0,
+    };
     const seg = trendlineToSegment(line, 1000, 2000);
     expect(seg.name).toBe("segment");
     expect(seg.points?.[0]?.value).toBe(2 * 1000 + 10);

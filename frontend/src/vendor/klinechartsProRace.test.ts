@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+// biome-ignore-all lint/suspicious/noDuplicateTestHooks: `before()`/`after()` in
+// this file are local source-slicing helpers (they cut the vendored bundle text),
+// not vitest lifecycle hooks -- Biome misreads the names as duplicate hooks.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
 
 const distPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

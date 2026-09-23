@@ -1,30 +1,43 @@
-import React, { useState } from 'react';
-import { CommunityIdea, ThemeMode } from '../../types/trading';
-import { COMMUNITY_IDEAS_DATA } from '../../data/marketData';
-import { t } from '../../lib/i18n';
 import {
-  Users,
-  ThumbsUp,
-  MessageSquare,
-  Share2,
-  TrendingUp,
-  TrendingDown,
+  Award,
   ChevronRight,
   Filter,
   Flame,
-  Award,
-} from 'lucide-react';
+  ThumbsUp,
+  TrendingDown,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { COMMUNITY_IDEAS_DATA } from "../../data/marketData";
+import { t } from "../../lib/i18n";
+import type { CommunityIdea, ThemeMode } from "../../types/trading";
+
+type IdeaFilter = "all" | "crypto" | "stocks" | "forex";
 
 interface Props {
   onOpenChartWithTicker: (ticker: string) => void;
   theme: ThemeMode;
 }
 
+/** Classify a static idea by its instrument so the filter really filters. */
+function ideaCategory(symbol: string): "crypto" | "stocks" | "forex" {
+  const s = symbol.toUpperCase();
+  if (s.includes("USDT")) return "crypto";
+  if (s.endsWith("USD")) return "forex";
+  return "stocks";
+}
+
 export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, theme }) => {
   const [ideas, setIdeas] = useState<CommunityIdea[]>(COMMUNITY_IDEAS_DATA);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'crypto' | 'stocks' | 'forex'>('all');
+  const [activeFilter, setActiveFilter] = useState<IdeaFilter>("all");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
+
+  const visibleIdeas = ideas.filter(
+    (idea) => activeFilter === "all" || ideaCategory(idea.symbol) === activeFilter,
+  );
 
   const handleLike = (id: string) => {
     setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -35,7 +48,7 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
           return { ...idea, likes: isLiked ? idea.likes - 1 : idea.likes + 1 };
         }
         return idea;
-      })
+      }),
     );
   };
 
@@ -43,7 +56,7 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
     <div
       id="community-ideas-view"
       className={`flex-1 h-full overflow-y-auto p-4 select-none font-sans flex flex-col ${
-        isDark ? 'bg-[#131722] text-[#d1d4dc]' : 'bg-[#f0f3fa] text-[#131722]'
+        isDark ? "bg-[#131722] text-[#d1d4dc]" : "bg-[#f0f3fa] text-[#131722]"
       }`}
     >
       {/* Top Header */}
@@ -51,25 +64,28 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Users className="w-5 h-5 text-[#9c27b0]" />
-            <span>{t('Community Trade Ideas & Market Analysis')}</span>
+            <span>{t("Community Trade Ideas & Market Analysis")}</span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
-            Discover trading strategies, harmonic patterns, and price action insights published by top global traders.
+            {t(
+              "Discover trading strategies, harmonic patterns, and price action insights published by top global traders.",
+            )}
           </p>
         </div>
 
         {/* Filter Tabs */}
         <div className="flex items-center gap-1 bg-black/20 p-1 rounded-lg border border-gray-500/20 text-xs font-semibold">
-          {(['all', 'crypto', 'stocks', 'forex'] as const).map((f) => (
+          {(["all", "crypto", "stocks", "forex"] as const).map((f) => (
             <button
               key={f}
+              data-testid={`community-filter-${f}`}
               onClick={() => setActiveFilter(f)}
               className={`px-3 py-1 rounded-md uppercase tracking-wider transition-colors ${
                 activeFilter === f
-                  ? 'bg-[#2962ff] text-white shadow-xs'
+                  ? "bg-[#2962ff] text-white shadow-xs"
                   : isDark
-                  ? 'text-gray-400 hover:text-white'
-                  : 'text-gray-600 hover:text-black'
+                    ? "text-gray-400 hover:text-white"
+                    : "text-gray-600 hover:text-black"
               }`}
             >
               {f}
@@ -80,15 +96,16 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
 
       {/* Ideas Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {ideas.map((idea) => {
-          const isLong = idea.sentiment === 'LONG';
+        {visibleIdeas.map((idea) => {
+          const isLong = idea.sentiment === "LONG";
           const isLiked = likedIds[idea.id];
 
           return (
             <div
               key={idea.id}
+              data-testid={`community-idea-${idea.id}`}
               className={`p-4 rounded-xl border flex flex-col justify-between transition-all hover:border-[#2962ff] ${
-                isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-white border-[#e0e3eb]'
+                isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
               }`}
             >
               <div>
@@ -105,7 +122,9 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
                         <span>{idea.author}</span>
                         <Award className="w-3 h-3 text-[#ff9800]" />
                       </div>
-                      <div className="text-[10px] text-gray-400">{idea.authorRank} • {idea.time}</div>
+                      <div className="text-[10px] text-gray-400">
+                        {idea.authorRank} • {idea.time}
+                      </div>
                     </div>
                   </div>
 
@@ -116,10 +135,14 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
                     </span>
                     <span
                       className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1 ${
-                        isLong ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'
+                        isLong ? "bg-[#089981]/20 text-[#089981]" : "bg-[#f23645]/20 text-[#f23645]"
                       }`}
                     >
-                      {isLong ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {isLong ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
                       <span>{idea.sentiment}</span>
                     </span>
                   </div>
@@ -157,20 +180,11 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
                   <button
                     onClick={() => handleLike(idea.id)}
                     className={`flex items-center gap-1 transition-colors ${
-                      isLiked ? 'text-[#2962ff] font-bold' : 'hover:text-white'
+                      isLiked ? "text-[#2962ff] font-bold" : "hover:text-white"
                     }`}
                   >
                     <ThumbsUp className="w-3.5 h-3.5" />
                     <span>{idea.likes}</span>
-                  </button>
-
-                  <button className="flex items-center gap-1 hover:text-white transition-colors">
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>{idea.comments}</span>
-                  </button>
-
-                  <button className="flex items-center gap-1 hover:text-white transition-colors">
-                    <Share2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
@@ -178,7 +192,9 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
                   onClick={() => onOpenChartWithTicker(idea.symbol)}
                   className="px-3 py-1 rounded bg-[#2962ff] text-white hover:bg-[#1e53e5] font-semibold flex items-center gap-1 shadow-xs transition-colors"
                 >
-                  <span>Open {idea.symbol} Chart</span>
+                  <span>
+                    {t("Open")} {idea.symbol} {t("Chart")}
+                  </span>
                   <ChevronRight className="w-3 h-3" />
                 </button>
               </div>

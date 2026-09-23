@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import {
   Area,
   AreaChart,
@@ -14,7 +15,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ThemeMode } from "../../../types/trading";
 import type { BacktestJobResult } from "../../../api/types";
 import {
   equityVsBenchmark,
@@ -24,7 +24,8 @@ import {
   returnsHistogram,
   tradePnl,
 } from "../../../lib/chartData";
-import { Panel, btnCls } from "./ui";
+import type { ThemeMode } from "../../../types/trading";
+import { btnCls, Panel } from "./ui";
 
 const WIN = "#089981";
 const LOSS = "#f23645";
@@ -42,10 +43,10 @@ const Empty: React.FC<{ label: string }> = ({ label }) => (
 );
 
 /** TradingView-style year x month return heatmap. */
-const MonthlyHeatmap: React.FC<{ cells: ReturnType<typeof monthlyHeatmap>; theme: ThemeMode }> = ({
-  cells,
-  theme,
-}) => {
+const MonthlyHeatmap: React.FC<{
+  cells: ReturnType<typeof monthlyHeatmap>;
+  theme: ThemeMode;
+}> = ({ cells, theme }) => {
   const { years, cells: items } = cells;
   const cellColor = (v: number) => {
     const t = Math.max(-0.1, Math.min(0.1, v));
@@ -79,10 +80,17 @@ const MonthlyHeatmap: React.FC<{ cells: ReturnType<typeof monthlyHeatmap>; theme
               <div
                 key={mi}
                 className="flex-1 h-6 rounded-sm flex items-center justify-center border border-black/5"
-                style={{ backgroundColor: cell ? cellColor(cell.value) : "transparent" }}
+                style={{
+                  backgroundColor: cell ? cellColor(cell.value) : "transparent",
+                }}
                 title={cell ? `${y}-${mi + 1}: ${(cell.value * 100).toFixed(2)}%` : undefined}
               >
-                {cell ? <span className="text-white drop-shadow">{cell.value >= 0 ? "+" : ""}{(cell.value * 100).toFixed(1)}%</span> : null}
+                {cell ? (
+                  <span className="text-white drop-shadow">
+                    {cell.value >= 0 ? "+" : ""}
+                    {(cell.value * 100).toFixed(1)}%
+                  </span>
+                ) : null}
               </div>
             );
           })}
@@ -90,10 +98,16 @@ const MonthlyHeatmap: React.FC<{ cells: ReturnType<typeof monthlyHeatmap>; theme
       ))}
       <div className="flex items-center gap-2 pt-1 text-gray-400">
         <span className="text-[10px]">月度收益色阶:</span>
-        <span className="text-[10px]" style={{ color: LOSS }}>亏损</span>
+        <span className="text-[10px]" style={{ color: LOSS }}>
+          亏损
+        </span>
         <span className="text-[10px] text-gray-400">→</span>
-        <span className="text-[10px]" style={{ color: WIN }}>盈利</span>
-        <span className="ml-auto text-[10px]">{theme === "dark" ? "深色底" : "浅色底"} · 点击切换视图</span>
+        <span className="text-[10px]" style={{ color: WIN }}>
+          盈利
+        </span>
+        <span className="ml-auto text-[10px]">
+          {theme === "dark" ? "深色底" : "浅色底"} · 点击切换视图
+        </span>
       </div>
     </div>
   );
@@ -111,7 +125,10 @@ export const EconCharts: React.FC<{
   const openTime = sr?.open_time ?? [];
 
   const equityData = equityVsBenchmark(equity, sr?.benchmark);
-  const drawdownData = (sr?.drawdown ?? []).map((v, i) => ({ i, drawdown: v * 100 }));
+  const drawdownData = (sr?.drawdown ?? []).map((v, i) => ({
+    i,
+    drawdown: v * 100,
+  }));
   const monthly = monthlyReturns(equity, openTime);
   const heatmap = monthlyHeatmap(monthly);
   const pnl = tradePnl(result.trade_list ?? []);
@@ -131,7 +148,13 @@ export const EconCharts: React.FC<{
               <XAxis dataKey="i" tick={tick} tickLine={false} axisLine={{ stroke: grid }} />
               <YAxis tick={tick} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
               <Tooltip />
-              <Area type="monotone" dataKey="equity" stroke={ACCENT} fill={ACCENT} fillOpacity={0.12} />
+              <Area
+                type="monotone"
+                dataKey="equity"
+                stroke={ACCENT}
+                fill={ACCENT}
+                fillOpacity={0.12}
+              />
               <Line
                 type="monotone"
                 dataKey="benchmark"
@@ -155,7 +178,13 @@ export const EconCharts: React.FC<{
               <XAxis dataKey="i" tick={tick} tickLine={false} axisLine={{ stroke: grid }} />
               <YAxis tick={tick} tickLine={false} axisLine={false} />
               <Tooltip formatter={(v) => `${Number(v).toFixed(2)}%`} />
-              <Area type="monotone" dataKey="drawdown" stroke={LOSS} fill={LOSS} fillOpacity={0.1} />
+              <Area
+                type="monotone"
+                dataKey="drawdown"
+                stroke={LOSS}
+                fill={LOSS}
+                fillOpacity={0.1}
+              />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

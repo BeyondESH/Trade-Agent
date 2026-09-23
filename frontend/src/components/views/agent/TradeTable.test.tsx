@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+
 import { fireEvent, render, screen } from "@testing-library/react";
-import { TradeTable } from "./TradeTable";
+import { describe, expect, it } from "vitest";
 import type { BacktestTrade } from "../../../api/types";
+import { TradeTable } from "./TradeTable";
 
 const trade = (net: number, gross: number, side: "long" | "short" = "long"): BacktestTrade => ({
   side,
@@ -22,7 +23,9 @@ describe("TradeTable", () => {
   });
 
   it("renders trade rows with side and returns", () => {
-    render(<TradeTable trades={[trade(0.05, 0.051), trade(-0.02, -0.019, "short")]} theme="dark" />);
+    render(
+      <TradeTable trades={[trade(0.05, 0.051), trade(-0.02, -0.019, "short")]} theme="dark" />,
+    );
     expect(screen.getByText("开单列表 (2)")).toBeInTheDocument();
     expect(screen.getByText("多")).toBeInTheDocument();
     expect(screen.getByText("空")).toBeInTheDocument();

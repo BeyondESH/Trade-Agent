@@ -80,7 +80,10 @@ export function trendlineToSegment(
   return {
     name: "segment",
     points: [
-      { timestamp: fromTimeMs, value: line.slope * fromTimeMs + line.intercept },
+      {
+        timestamp: fromTimeMs,
+        value: line.slope * fromTimeMs + line.intercept,
+      },
       { timestamp: toTimeMs, value: line.slope * toTimeMs + line.intercept },
     ],
   };

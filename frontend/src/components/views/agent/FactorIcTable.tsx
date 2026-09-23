@@ -1,9 +1,16 @@
-import React, { useCallback, useState } from "react";
-import { ThemeMode } from "../../../types/trading";
-import type { DlFeaturesResponse, DataWindow, FactorDef, FactorIc, SeriesRef } from "../../../api/types";
+import type React from "react";
+import { useCallback, useState } from "react";
 import { api } from "../../../api/client";
-import { Panel, btnCls, fmtNum } from "./ui";
+import type {
+  DataWindow,
+  DlFeaturesResponse,
+  FactorDef,
+  FactorIc,
+  SeriesRef,
+} from "../../../api/types";
+import type { ThemeMode } from "../../../types/trading";
 import { FactorIcChart } from "./FactorIcChart";
+import { btnCls, fmtNum, Panel } from "./ui";
 
 type SortKey = "ic_abs" | "ic" | "coverage" | "id";
 type SortDir = "asc" | "desc";
@@ -28,7 +35,12 @@ export const FactorIcTable: React.FC<Props> = ({ series, factors, range, theme }
     setError(null);
     try {
       const enabled = factors.filter((f) => f.enabled !== false);
-      const res = await api.dlFeatures(series, enabled.length > 0 ? enabled : undefined, range?.start, range?.end);
+      const res = await api.dlFeatures(
+        series,
+        enabled.length > 0 ? enabled : undefined,
+        range?.start,
+        range?.end,
+      );
       setData(res);
     } catch (e) {
       setError(String(e));
@@ -84,12 +96,18 @@ export const FactorIcTable: React.FC<Props> = ({ series, factors, range, theme }
         </div>
       )}
       <FactorIcChart factors={data?.factors ?? []} theme={theme} />
-      {rows.length === 0 && !loading && <span className="text-xs text-gray-500">点击「分析因子 IC」查看各因子预测力。</span>}
+      {rows.length === 0 && !loading && (
+        <span className="text-xs text-gray-500">点击「分析因子 IC」查看各因子预测力。</span>
+      )}
       {rows.length > 0 && (
         <div className="overflow-x-auto">
-          <table className={`w-full text-xs ${theme === "dark" ? "text-[#d1d4dc]" : "text-[#131722]"}`}>
+          <table
+            className={`w-full text-xs ${theme === "dark" ? "text-[#d1d4dc]" : "text-[#131722]"}`}
+          >
             <thead>
-              <tr className={`border-b ${theme === "dark" ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}>
+              <tr
+                className={`border-b ${theme === "dark" ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
+              >
                 <SortHeader k="id" label="因子" />
                 <SortHeader k="ic" label="IC" />
                 <SortHeader k="ic_abs" label="|IC|" />
@@ -100,13 +118,22 @@ export const FactorIcTable: React.FC<Props> = ({ series, factors, range, theme }
             </thead>
             <tbody>
               {rows.map((f) => (
-                <tr key={f.id} className={`border-b ${theme === "dark" ? "border-[#2a2e39]/60" : "border-[#e0e3eb]/60"}`}>
+                <tr
+                  key={f.id}
+                  className={`border-b ${theme === "dark" ? "border-[#2a2e39]/60" : "border-[#e0e3eb]/60"}`}
+                >
                   <td className="px-2 py-1 font-mono">{f.id}</td>
                   <td className="px-2 py-1 font-mono">{f.ic != null ? f.ic.toFixed(4) : "—"}</td>
-                  <td className="px-2 py-1 font-mono">{f.ic_abs != null ? f.ic_abs.toFixed(4) : "—"}</td>
+                  <td className="px-2 py-1 font-mono">
+                    {f.ic_abs != null ? f.ic_abs.toFixed(4) : "—"}
+                  </td>
                   <td className="px-2 py-1 font-mono">{fmtNum(f.coverage * 100, 1)}%</td>
-                  <td className="px-2 py-1 font-mono">{f.mean != null ? f.mean.toFixed(4) : "—"}</td>
-                  <td className="px-2 py-1 font-mono">{f.last_value != null ? f.last_value.toFixed(4) : "—"}</td>
+                  <td className="px-2 py-1 font-mono">
+                    {f.mean != null ? f.mean.toFixed(4) : "—"}
+                  </td>
+                  <td className="px-2 py-1 font-mono">
+                    {f.last_value != null ? f.last_value.toFixed(4) : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

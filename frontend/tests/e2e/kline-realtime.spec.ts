@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 /**
  * Chart render + symbol/timeframe switching + realtime ordering diagnostics.
@@ -10,7 +10,14 @@ import { test, expect, type Page } from "@playwright/test";
 declare global {
   interface Window {
     __kline_chart__?: {
-      getDataList(): Array<{ timestamp: number; close: number; open: number; high: number; low: number; volume: number }>;
+      getDataList(): Array<{
+        timestamp: number;
+        close: number;
+        open: number;
+        high: number;
+        low: number;
+        volume: number;
+      }>;
     };
   }
 }
@@ -18,15 +25,24 @@ declare global {
 test.describe.configure({ mode: "serial" });
 
 async function waitForChartData(page: Page): Promise<void> {
-  await page.waitForFunction(() => {
-    const c = window.__kline_chart__;
-    if (!c) return false;
-    return Array.isArray(c.getDataList()) && c.getDataList().length > 0;
-  }, null, { timeout: 30_000 });
+  await page.waitForFunction(
+    () => {
+      const c = window.__kline_chart__;
+      if (!c) return false;
+      return Array.isArray(c.getDataList()) && c.getDataList().length > 0;
+    },
+    null,
+    { timeout: 30_000 },
+  );
 }
 
 async function chartDataList(page: Page): Promise<Array<{ timestamp: number }>> {
-  return page.evaluate(() => (window.__kline_chart__?.getDataList() ?? []) as Array<{ timestamp: number }>);
+  return page.evaluate(
+    () =>
+      (window.__kline_chart__?.getDataList() ?? []) as Array<{
+        timestamp: number;
+      }>,
+  );
 }
 
 test("chart renders real candles on first load", async ({ page }) => {
@@ -59,9 +75,9 @@ test("timeframe switch changes bar period", async ({ page }) => {
 });
 
 test("realtime candle frames stay ordered (no stale append)", async ({ page }) => {
-  await page.goto("/");
-  await waitForChartData(page);
-
+  // Attach the WS listener BEFORE navigation: Playwright only reports
+  // websockets created after the listener is registered, and the app opens its
+  // /ws connection during page load.
   const frames: Array<{ open_time: number }> = [];
   page.on("websocket", (ws) => {
     ws.on("framereceived", (e) => {
@@ -79,8 +95,14 @@ test("realtime candle frames stay ordered (no stale append)", async ({ page }) =
     });
   });
 
-  await page.waitForTimeout(6000);
-  expect(frames.length).toBeGreaterThan(0);
+  await page.goto("/");
+  await waitForChartData(page);
+
+  // Candle pushes are trade-driven: the live feed's cadence fluctuates with
+  // market activity (observed ~0.2–0.8 frames/s for BTCUSDT). Poll until a
+  // couple of frames have arrived instead of sampling a fixed 6s window,
+  // which made this check flaky on quiet markets.
+  await expect.poll(() => frames.length, { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
 
   for (let i = 1; i < frames.length; i++) {
     expect(frames[i].open_time).toBeGreaterThanOrEqual(frames[i - 1].open_time);

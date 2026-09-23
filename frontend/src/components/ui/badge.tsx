@@ -3,7 +3,9 @@ import { cn } from "../../lib/utils";
 
 const Badge = React.forwardRef<
   HTMLSpanElement,
-  React.HTMLAttributes<HTMLSpanElement> & { variant?: "default" | "outline" | "success" | "danger" }
+  React.HTMLAttributes<HTMLSpanElement> & {
+    variant?: "default" | "outline" | "success" | "danger";
+  }
 >(({ className, variant = "default", ...props }, ref) => (
   <span
     ref={ref}

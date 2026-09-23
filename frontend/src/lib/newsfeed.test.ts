@@ -1,16 +1,16 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { api } from "../api/client";
 import {
-  htmlToText,
-  parseBlockbeatsTime,
-  toNewsItem,
-  NEWSFLASH_TYPES,
   fetchNewsflash,
   fetchNewsflashPage,
-  formatRelativeTime,
   formatDateGroup,
+  formatRelativeTime,
   groupNewsByDate,
+  htmlToText,
+  NEWSFLASH_TYPES,
+  parseBlockbeatsTime,
+  toNewsItem,
 } from "./newsfeed";
-import { api } from "../api/client";
 
 vi.mock("../api/client", () => ({
   api: { blockbeatsNews: vi.fn() },
@@ -171,7 +171,11 @@ describe("fetchNewsflashPage", () => {
       content: "",
       create_time: "2026-01-29 14:32:37",
     }));
-    vi.mocked(api.blockbeatsNews).mockResolvedValue({ status: 0, page: 3, data: rows });
+    vi.mocked(api.blockbeatsNews).mockResolvedValue({
+      status: 0,
+      page: 3,
+      data: rows,
+    });
     const page = await fetchNewsflashPage("24h", 3, 20);
     expect(api.blockbeatsNews).toHaveBeenCalledWith("24h", 3, 20, "cn");
     expect(page.page).toBe(3);
@@ -194,7 +198,11 @@ describe("fetchNewsflashPage", () => {
   });
 
   it("reports no-more on an empty page", async () => {
-    vi.mocked(api.blockbeatsNews).mockResolvedValue({ status: 0, page: 6, data: [] });
+    vi.mocked(api.blockbeatsNews).mockResolvedValue({
+      status: 0,
+      page: 6,
+      data: [],
+    });
     const page = await fetchNewsflashPage("first", 6, 20);
     expect(page.items).toEqual([]);
     expect(page.hasMore).toBe(false);

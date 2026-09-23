@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import { MarketsView } from "./MarketsView";
-import type { MarketOverview, TopIndicatorRow } from "../../hooks/useMarketOverview";
 
-const state = vi.hoisted(() => ({ overview: undefined as unknown as MarketOverview }));
+import { render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MarketOverview, TopIndicatorRow } from "../../hooks/useMarketOverview";
+import { MarketsView } from "./MarketsView";
+
+const state = vi.hoisted(() => ({
+  overview: undefined as unknown as MarketOverview,
+}));
 
 vi.mock("../../hooks/useMarketOverview", () => ({
   useMarketOverview: () => state.overview,
@@ -43,9 +46,24 @@ describe("MarketsView IndicatorCard", () => {
 
   it("renders every indicator row with a signal badge and the data time", () => {
     state.overview = mkOverview([
-      { name: "市场脉动指数", info: "综合", status: "Buy", createTime: "2026-08-19 08:03:09" },
-      { name: "整体市场流动性指数", info: "加权", status: "Hold", createTime: "2026-08-19 08:03:09" },
-      { name: "逃顶信号", info: "测试", status: "Sell", createTime: "2026-08-19 08:03:09" },
+      {
+        name: "市场脉动指数",
+        info: "综合",
+        status: "Buy",
+        createTime: "2026-08-19 08:03:09",
+      },
+      {
+        name: "整体市场流动性指数",
+        info: "加权",
+        status: "Hold",
+        createTime: "2026-08-19 08:03:09",
+      },
+      {
+        name: "逃顶信号",
+        info: "测试",
+        status: "Sell",
+        createTime: "2026-08-19 08:03:09",
+      },
       { name: "无信号指标", info: "", status: "", createTime: "" },
     ]);
     render(<MarketsView theme="dark" />);

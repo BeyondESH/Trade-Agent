@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { ThemeMode, SymbolInfo } from "../../types/trading";
-import { QuantLabPanel } from "./agent/QuantLabPanel";
+import type React from "react";
+import { useState } from "react";
+import type { SymbolInfo, ThemeMode } from "../../types/trading";
 import { AgentAnalysisTab } from "./agent/AgentAnalysisTab";
+import { QuantLabPanel } from "./agent/QuantLabPanel";
 
 interface Props {
   symbols: SymbolInfo[];

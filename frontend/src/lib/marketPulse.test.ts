@@ -1,16 +1,16 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { api } from "../api/client";
 import {
-  flattenValue,
-  extractTrend,
   extractSeries,
-  parseNetflow,
-  summarizeIndicatorStatus,
+  extractTrend,
   fetchMarketPulseEntry,
   fetchNetflow,
+  flattenValue,
   MARKET_PULSE_ENDPOINTS,
   NETFLOW_NETWORKS,
+  parseNetflow,
+  summarizeIndicatorStatus,
 } from "./marketPulse";
-import { api } from "../api/client";
 
 vi.mock("../api/client", () => ({
   api: { blockbeatsData: vi.fn() },
@@ -30,7 +30,9 @@ describe("marketPulse helpers", () => {
   });
 
   it("extracts a numeric series for the DXY sparkline", () => {
-    const series = extractSeries({ list: [{ value: 1 }, { value: 3 }, { value: 2 }] });
+    const series = extractSeries({
+      list: [{ value: 1 }, { value: 3 }, { value: 2 }],
+    });
     expect(series).toEqual([1, 3, 2]);
   });
 
@@ -84,7 +86,10 @@ describe("data fetching", () => {
   });
 
   it("calls the right endpoint for Market Pulse", async () => {
-    vi.mocked(api.blockbeatsData).mockResolvedValue({ status: 0, data: { value: 103.5 } });
+    vi.mocked(api.blockbeatsData).mockResolvedValue({
+      status: 0,
+      data: { value: 103.5 },
+    });
     const entry = await fetchMarketPulseEntry("dxy", "US Dollar Index (DXY)");
     expect(api.blockbeatsData).toHaveBeenCalledWith("dxy");
     expect(entry.label).toBe("US Dollar Index (DXY)");
@@ -114,7 +119,9 @@ describe("data fetching", () => {
       data: { solana: [{ symbol: "WIF", netflow: 1234 }] },
     });
     const rows = await fetchNetflow("solana");
-    expect(api.blockbeatsData).toHaveBeenCalledWith("top10_netflow", { network: "solana" });
+    expect(api.blockbeatsData).toHaveBeenCalledWith("top10_netflow", {
+      network: "solana",
+    });
     expect(rows).toEqual([{ symbol: "WIF", netflow: 1234 }]);
   });
 

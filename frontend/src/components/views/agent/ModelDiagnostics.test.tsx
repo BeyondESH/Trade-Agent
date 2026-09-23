@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { ModelDiagnostics } from "./ModelDiagnostics";
 
 class ResizeObserverMock {

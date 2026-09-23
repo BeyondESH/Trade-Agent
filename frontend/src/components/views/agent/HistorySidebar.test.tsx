@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { HistorySidebar } from "./HistorySidebar";
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BacktestHistoryMeta } from "../../../api/types";
+import { HistorySidebar } from "./HistorySidebar";
 
 const apiMock = vi.hoisted(() => ({
   backtestHistory: vi.fn(),
@@ -29,7 +30,9 @@ describe("HistorySidebar", () => {
   });
 
   it("loads and lists runs on mount", async () => {
-    apiMock.backtestHistory.mockResolvedValue({ runs: [mkRun("a"), mkRun("b", "ETHUSDT")] });
+    apiMock.backtestHistory.mockResolvedValue({
+      runs: [mkRun("a"), mkRun("b", "ETHUSDT")],
+    });
     render(<HistorySidebar activeId={null} onSelect={vi.fn()} onDeleted={vi.fn()} theme="dark" />);
     await waitFor(() => expect(screen.getByText("BTCUSDT")).toBeInTheDocument());
     expect(screen.getByText("ETHUSDT")).toBeInTheDocument();
@@ -44,11 +47,15 @@ describe("HistorySidebar", () => {
   });
 
   it("selects a run and deletes it without losing the rest", async () => {
-    apiMock.backtestHistory.mockResolvedValue({ runs: [mkRun("a"), mkRun("b")] });
+    apiMock.backtestHistory.mockResolvedValue({
+      runs: [mkRun("a"), mkRun("b")],
+    });
     apiMock.backtestHistoryDelete.mockResolvedValue({ deleted: true });
     const onSelect = vi.fn();
     const onDeleted = vi.fn();
-    render(<HistorySidebar activeId={null} onSelect={onSelect} onDeleted={onDeleted} theme="dark" />);
+    render(
+      <HistorySidebar activeId={null} onSelect={onSelect} onDeleted={onDeleted} theme="dark" />,
+    );
 
     await waitFor(() => expect(screen.getAllByText("删除")).toHaveLength(2));
     fireEvent.click(screen.getAllByText("删除")[0]);

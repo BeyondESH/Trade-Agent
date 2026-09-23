@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { ThemeMode } from "../../../types/trading";
+import type React from "react";
+import { useState } from "react";
 import { api } from "../../../api/client";
-import { Panel, btnCls, fmtNum } from "./ui";
+import type { ThemeMode } from "../../../types/trading";
+import { btnCls, fmtNum, Panel } from "./ui";
 
 interface Props {
   symbol: string;
@@ -40,7 +41,11 @@ export const CyclePanel: React.FC<Props> = ({ symbol, timeframe, theme }) => {
       }
     >
       {error && <span className="text-xs text-[#f23645]">✕ {error}</span>}
-      {!result && !error && <span className="text-xs text-gray-500">执行一次完整的决策 → 风控校验 → 纸面成交循环。</span>}
+      {!result && !error && (
+        <span className="text-xs text-gray-500">
+          执行一次完整的决策 → 风控校验 → 纸面成交循环。
+        </span>
+      )}
       {result && (
         <div className="flex flex-col gap-2 text-xs font-mono">
           <div className="flex flex-wrap gap-4">
@@ -50,7 +55,8 @@ export const CyclePanel: React.FC<Props> = ({ symbol, timeframe, theme }) => {
             {decision && (
               <>
                 <span>
-                  动作: <b>{String(decision.action ?? "")}</b> {decision.side ? String(decision.side) : ""}
+                  动作: <b>{String(decision.action ?? "")}</b>{" "}
+                  {decision.side ? String(decision.side) : ""}
                 </span>
                 {decision.reference_price != null && (
                   <span>参考价: {fmtNum(Number(decision.reference_price))}</span>
@@ -68,7 +74,9 @@ export const CyclePanel: React.FC<Props> = ({ symbol, timeframe, theme }) => {
               </span>
             )}
           </div>
-          <pre className={`whitespace-pre-wrap rounded-lg p-2 text-[11px] ${theme === "dark" ? "bg-[#131722]" : "bg-[#f0f3fa]"}`}>
+          <pre
+            className={`whitespace-pre-wrap rounded-lg p-2 text-[11px] ${theme === "dark" ? "bg-[#131722]" : "bg-[#f0f3fa]"}`}
+          >
             {JSON.stringify(result, null, 2)}
           </pre>
         </div>

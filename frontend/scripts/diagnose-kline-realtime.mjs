@@ -10,11 +10,11 @@
 // Usage:
 //   node scripts/diagnose-kline-realtime.mjs \
 //     [--timeframes 1m,5m,1h] [--window 30] [--port 5173] [--out ./e2e-results]
-import { chromium } from "playwright";
+
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
+import { chromium } from "playwright";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -80,9 +80,7 @@ async function runTimeframe(page, frames, snapshots, timeframe) {
   // on the selected span (class "item period selected").
   const selected = await page
     .evaluate(() => {
-      const el = document.querySelector(
-        ".klinecharts-pro-period-bar span.item.period.selected",
-      );
+      const el = document.querySelector(".klinecharts-pro-period-bar span.item.period.selected");
       return el ? el.textContent.trim() : null;
     })
     .catch(() => null);
@@ -95,7 +93,9 @@ async function runTimeframe(page, frames, snapshots, timeframe) {
       .then(() => true)
       .catch(() => false);
     if (!clicked) {
-      console.warn(`[warn] could not switch period to ${timeframe} — continuing with displayed period.`);
+      console.warn(
+        `[warn] could not switch period to ${timeframe} — continuing with displayed period.`,
+      );
     }
     await page.waitForTimeout(1500);
   }
@@ -135,7 +135,9 @@ async function main() {
   const snapshots = []; // {t, timeframe, tailTimestamp, length, timestamps}
 
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 800 },
+  });
 
   page.on("websocket", (ws) => {
     ws.on("framereceived", (f) => {
@@ -160,7 +162,9 @@ async function main() {
   });
 
   await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 30_000 });
-  await page.waitForFunction(() => !!window.__kline_chart__, null, { timeout: 30_000 });
+  await page.waitForFunction(() => !!window.__kline_chart__, null, {
+    timeout: 30_000,
+  });
 
   for (const tf of TIMEFRAMES) {
     await runTimeframe(page, frames, snapshots, tf);
@@ -244,15 +248,22 @@ async function main() {
       console.log(`  [${tf}] verdict: NO_REALTIME_DATA — no realtime frames observed`);
       ok = false;
     } else if (bySeries.get(`${DEFAULT_SYMBOL}/${tf}`)?.stale) {
-      console.log(`  [${tf}] verdict: STALE_OUT_OF_ORDER — at least one frame lagged the chart tail`);
+      console.log(
+        `  [${tf}] verdict: STALE_OUT_OF_ORDER — at least one frame lagged the chart tail`,
+      );
       ok = false;
     }
   }
   if (!ascending) {
-    console.log(`  [all] verdict: SERIES_NOT_ASCENDING — duplicate or out-of-order timestamps (dups=${duplicates})`);
+    console.log(
+      `  [all] verdict: SERIES_NOT_ASCENDING — duplicate or out-of-order timestamps (dups=${duplicates})`,
+    );
     ok = false;
   }
-  if (ok) console.log("  [all] verdict: OK_ORDERED — realtime frames in order, series strictly ascending");
+  if (ok)
+    console.log(
+      "  [all] verdict: OK_ORDERED — realtime frames in order, series strictly ascending",
+    );
   console.log(`evidence : ${logPath}`);
   console.log(`screenshot: ${screenshotPath}\n`);
 

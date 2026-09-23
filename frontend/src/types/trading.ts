@@ -1,22 +1,44 @@
-export type Timeframe = '1s' | '1m' | '3m' | '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '6h' | '12h' | '1d' | '3d' | '1w' | '1mo';
+export type Timeframe =
+  | "1s"
+  | "1m"
+  | "3m"
+  | "5m"
+  | "15m"
+  | "30m"
+  | "1h"
+  | "2h"
+  | "4h"
+  | "6h"
+  | "12h"
+  | "1d"
+  | "3d"
+  | "1w"
+  | "1mo";
 
-export type ChartType = 'candles' | 'heikin_ashi' | 'line' | 'area' | 'hollow_candles' | 'bars' | 'baseline';
+export type ChartType =
+  | "candles"
+  | "heikin_ashi"
+  | "line"
+  | "area"
+  | "hollow_candles"
+  | "bars"
+  | "baseline";
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = "dark" | "light";
 
 export type DesktopViewMode =
-  | 'chart'
-  | 'screener'
-  | 'heatmaps'
-  | 'markets'
-  | 'community'
-  | 'news'
-  | 'agent';
+  | "chart"
+  | "screener"
+  | "heatmaps"
+  | "markets"
+  | "community"
+  | "news"
+  | "agent";
 
 export interface DesktopTab {
   id: string;
   title: string;
-  type: DesktopViewMode | 'dashboard';
+  type: DesktopViewMode | "dashboard";
   symbol?: string;
   symbolId?: string;
   timeframe?: Timeframe;
@@ -40,7 +62,7 @@ export interface SymbolInfo {
   ticker: string;
   name: string;
   exchange: string;
-  category: 'crypto' | 'stocks' | 'forex' | 'indices' | 'futures' | 'commodities';
+  category: "crypto" | "stocks" | "forex" | "indices" | "futures" | "commodities";
   price: number;
   change24h: number;
   change24hPercent: number;
@@ -56,38 +78,38 @@ export interface SymbolInfo {
   peRatio?: string;
   week52High?: number;
   week52Low?: number;
-  technicalRating?: 'Strong Buy' | 'Buy' | 'Neutral' | 'Sell' | 'Strong Sell';
+  technicalRating?: "Strong Buy" | "Buy" | "Neutral" | "Sell" | "Strong Sell";
   /** @internal raw exchange product category (e.g. "USDT-FUTURES", "SPOT"); used only for symbol-list dedup */
   _productCategory?: string;
 }
 
 export type DrawingToolType =
-  | 'cursor'
-  | 'crosshair'
-  | 'dot'
-  | 'eraser'
-  | 'trendline'
-  | 'ray'
-  | 'info_line'
-  | 'horizontal_line'
-  | 'horizontal_ray'
-  | 'vertical_line'
-  | 'parallel_channel'
-  | 'fib_retracement'
-  | 'fib_extension'
-  | 'pitchfork'
-  | 'rectangle'
-  | 'circle'
-  | 'brush'
-  | 'highlighter'
-  | 'text'
-  | 'callout'
-  | 'price_label'
-  | 'long_position'
-  | 'short_position'
-  | 'price_range'
-  | 'date_range'
-  | 'measure';
+  | "cursor"
+  | "crosshair"
+  | "dot"
+  | "eraser"
+  | "trendline"
+  | "ray"
+  | "info_line"
+  | "horizontal_line"
+  | "horizontal_ray"
+  | "vertical_line"
+  | "parallel_channel"
+  | "fib_retracement"
+  | "fib_extension"
+  | "pitchfork"
+  | "rectangle"
+  | "circle"
+  | "brush"
+  | "highlighter"
+  | "text"
+  | "callout"
+  | "price_label"
+  | "long_position"
+  | "short_position"
+  | "price_range"
+  | "date_range"
+  | "measure";
 
 export interface Point {
   time: number;
@@ -100,7 +122,7 @@ export interface Drawing {
   points: Point[];
   color: string;
   lineWidth: number;
-  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  lineStyle?: "solid" | "dashed" | "dotted";
   fillColor?: string;
   fillOpacity?: number;
   text?: string;
@@ -122,7 +144,7 @@ export interface IndicatorConfig {
   id: string;
   name: string;
   shortName: string;
-  type: 'overlay' | 'pane';
+  type: "overlay" | "pane";
   visible: boolean;
   color: string;
   color2?: string;
@@ -134,12 +156,12 @@ export interface IndicatorConfig {
 export interface Order {
   id: string;
   symbol: string;
-  side: 'BUY' | 'SELL';
-  type: 'MARKET' | 'LIMIT' | 'STOP_LIMIT';
+  side: "BUY" | "SELL";
+  type: "MARKET" | "LIMIT" | "STOP_LIMIT";
   price: number;
   amount: number;
   filled: number;
-  status: 'FILLED' | 'WORKING' | 'CANCELLED';
+  status: "FILLED" | "WORKING" | "CANCELLED";
   tp?: number;
   sl?: number;
   leverage: number;
@@ -149,7 +171,7 @@ export interface Order {
 export interface Position {
   id: string;
   symbol: string;
-  side: 'LONG' | 'SHORT';
+  side: "LONG" | "SHORT";
   entryPrice: number;
   currentPrice: number;
   amount: number;
@@ -185,7 +207,7 @@ export interface BacktestResult {
   sharpeRatio: number;
   trades: Array<{
     id: string;
-    type: 'LONG' | 'SHORT';
+    type: "LONG" | "SHORT";
     entryTime: string;
     exitTime: string;
     entryPrice: number;
@@ -201,13 +223,14 @@ export interface BacktestResult {
 export interface AlertItem {
   id: string;
   symbol: string;
-  condition: 'Crossing' | 'Crossing Up' | 'Crossing Down' | 'Greater Than' | 'Less Than';
+  condition: "Crossing" | "Crossing Up" | "Crossing Down" | "Greater Than" | "Less Than";
   targetPrice: number;
   createdAt: string;
+  enabled: boolean;
   triggered: boolean;
   triggerTime?: string;
   note: string;
-  frequency: 'Only Once' | 'Every Time';
+  frequency: "Only Once" | "Every Time";
 }
 
 export interface NewsItem {
@@ -215,23 +238,23 @@ export interface NewsItem {
   title: string;
   source: string;
   time: string;
-  category: 'Crypto' | 'Macro' | 'Stocks' | 'Forex';
-  sentiment: 'bullish' | 'bearish' | 'neutral';
+  category: "Crypto" | "Macro" | "Stocks" | "Forex";
+  sentiment: "bullish" | "bearish" | "neutral";
   summary: string;
   relatedSymbols: string[];
 }
 
-export type GlobalNewsSource = 'em' | 'sina' | 'ths' | 'cls';
+export type GlobalNewsSource = "em" | "sina" | "ths" | "cls";
 
 export type GlobalNewsCategory =
-  | 'crypto'
-  | 'macro'
-  | 'policy'
-  | 'a-share'
-  | 'global-market'
-  | 'industry'
-  | 'company'
-  | 'other';
+  | "crypto"
+  | "macro"
+  | "policy"
+  | "a-share"
+  | "global-market"
+  | "industry"
+  | "company"
+  | "other";
 
 export interface GlobalNewsItem {
   id: string;
@@ -250,7 +273,7 @@ export interface EconomicEvent {
   country: string;
   currency: string;
   event: string;
-  impact: 'high' | 'medium' | 'low';
+  impact: "high" | "medium" | "low";
   actual?: string;
   forecast?: string;
   previous?: string;
@@ -279,7 +302,7 @@ export interface CommunityIdea {
   authorRank: string;
   avatar: string;
   symbol: string;
-  sentiment: 'LONG' | 'SHORT' | 'NEUTRAL';
+  sentiment: "LONG" | "SHORT" | "NEUTRAL";
   timeframe: string;
   likes: number;
   comments: number;
@@ -294,7 +317,7 @@ export interface BrokerAccount {
   id: string;
   name: string;
   logo: string;
-  status: 'connected' | 'disconnected';
+  status: "connected" | "disconnected";
   type: string;
   description: string;
   supportedAssets: string[];

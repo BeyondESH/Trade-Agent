@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ThemeMode, SymbolInfo } from "../../../types/trading";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../../../api/client";
 import type {
   BacktestJobResult,
   BacktestParams,
@@ -8,24 +9,24 @@ import type {
   SweepResult,
   WalkForwardResult,
 } from "../../../api/types";
-import { api } from "../../../api/client";
-import { resolveFactors, enabledFactors } from "./factorCatalog";
-import { DataAvailability } from "./DataAvailability";
-import { BacktestControls, DEFAULT_PARAMS, TimeRange } from "./BacktestControls";
-import { ModelPanel } from "./ModelPanel";
-import { MetricCards } from "./MetricCards";
-import { SeriesChart } from "./SeriesChart";
-import { EconCharts } from "./EconCharts";
-import { FactorManager } from "./FactorManager";
-import { FactorIcTable } from "./FactorIcTable";
-import { TradeTable } from "./TradeTable";
-import { HistorySidebar } from "./HistorySidebar";
-import { SweepView } from "./SweepView";
-import { WalkForwardView } from "./WalkForwardView";
-import { SignalKLineChart } from "./SignalKLineChart";
-import { ModelDiagnostics } from "./ModelDiagnostics";
-import { Panel } from "./ui";
+import type { SymbolInfo, ThemeMode } from "../../../types/trading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
+import { BacktestControls, DEFAULT_PARAMS, type TimeRange } from "./BacktestControls";
+import { DataAvailability } from "./DataAvailability";
+import { EconCharts } from "./EconCharts";
+import { FactorIcTable } from "./FactorIcTable";
+import { FactorManager } from "./FactorManager";
+import { enabledFactors, resolveFactors } from "./factorCatalog";
+import { HistorySidebar } from "./HistorySidebar";
+import { MetricCards } from "./MetricCards";
+import { ModelDiagnostics } from "./ModelDiagnostics";
+import { ModelPanel } from "./ModelPanel";
+import { SeriesChart } from "./SeriesChart";
+import { SignalKLineChart } from "./SignalKLineChart";
+import { SweepView } from "./SweepView";
+import { TradeTable } from "./TradeTable";
+import { Panel } from "./ui";
+import { WalkForwardView } from "./WalkForwardView";
 
 interface Props {
   symbols: SymbolInfo[];
@@ -184,12 +185,15 @@ export const QuantLabPanel: React.FC<Props> = ({ symbols, theme }) => {
     }
   }, []);
 
-  const historyDeleted = useCallback((id: string) => {
-    if (historyId === id) {
-      setHistoryId(null);
-      setResult(null);
-    }
-  }, [historyId]);
+  const historyDeleted = useCallback(
+    (id: string) => {
+      if (historyId === id) {
+        setHistoryId(null);
+        setResult(null);
+      }
+    },
+    [historyId],
+  );
 
   const sr = result?.series;
 
@@ -245,7 +249,12 @@ export const QuantLabPanel: React.FC<Props> = ({ symbols, theme }) => {
             <Panel title="权益 / 回撤曲线 (测试集)" theme={theme}>
               <SeriesChart
                 lanes={[
-                  { name: "equity", color: "#2962ff", values: sr.equity, fill: true },
+                  {
+                    name: "equity",
+                    color: "#2962ff",
+                    values: sr.equity,
+                    fill: true,
+                  },
                   { name: "drawdown", color: "#f23645", values: sr.drawdown },
                 ]}
                 height={200}
@@ -254,9 +263,7 @@ export const QuantLabPanel: React.FC<Props> = ({ symbols, theme }) => {
                 <div className="flex flex-wrap gap-4 text-[11px] text-gray-400 font-mono">
                   <span>训练集: {result.data_meta.n_train} 根</span>
                   <span>测试集: {result.data_meta.n_test} 根</span>
-                  {result.stats && (
-                    <span>Sharpe: {result.stats.sharpe_ratio?.toFixed(2)}</span>
-                  )}
+                  {result.stats && <span>Sharpe: {result.stats.sharpe_ratio?.toFixed(2)}</span>}
                 </div>
               )}
             </Panel>
@@ -275,12 +282,7 @@ export const QuantLabPanel: React.FC<Props> = ({ symbols, theme }) => {
         </TabsContent>
 
         <TabsContent value="sweep">
-          <SweepView
-            running={sweepRunning}
-            result={sweep}
-            onRun={runSweep}
-            theme={theme}
-          />
+          <SweepView running={sweepRunning} result={sweep} onRun={runSweep} theme={theme} />
         </TabsContent>
 
         <TabsContent value="walk">

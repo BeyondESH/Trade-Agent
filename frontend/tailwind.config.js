@@ -32,9 +32,9 @@ export default {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       fontSize: {
-        "11": ["11px", "1.3"],
-        "12": ["12px", "1.3"],
-        "13": ["13px", "1.3"],
+        11: ["11px", "1.3"],
+        12: ["12px", "1.3"],
+        13: ["13px", "1.3"],
       },
       borderRadius: {
         btn: "4px",

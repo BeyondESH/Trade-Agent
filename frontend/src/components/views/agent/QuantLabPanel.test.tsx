@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
+
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QuantLabPanel } from "./QuantLabPanel";
 
 const apiMock = vi.hoisted(() => ({
@@ -58,7 +59,12 @@ const fakeResult = {
     signal: [1, 0, 0],
     proba: [0.7, 0.6, 0.5],
   },
-  data_meta: { n_train: 100, n_test: 60, start: 1700000000000, end: 1700007200000 },
+  data_meta: {
+    n_train: 100,
+    n_test: 60,
+    start: 1700000000000,
+    end: 1700007200000,
+  },
 };
 
 const symbols = [
@@ -129,7 +135,9 @@ describe("QuantLabPanel", () => {
     fireEvent.mouseDown(tab);
     fireEvent.mouseUp(tab);
     fireEvent.click(tab);
-    expect(await screen.findByText("开单列表 (1)", undefined, { timeout: 5000 })).toBeInTheDocument();
+    expect(
+      await screen.findByText("开单列表 (1)", undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   it("shows an error banner when the job fails", async () => {

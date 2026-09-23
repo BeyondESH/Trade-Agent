@@ -1,19 +1,22 @@
 // @vitest-environment jsdom
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ALERT_LINE_COLOR,
-  REFERENCE_LINE_COLOR_DARK,
-  REFERENCE_LINE_COLOR_LIGHT,
   createAlert,
   evalAlert,
+  evaluateAlerts,
   loadAlerts,
   loadAlertsForSymbol,
   mirrorAlertCreate,
   mirrorAlertDelete,
   mirrorAlertUpdate,
   priceLineColor,
+  REFERENCE_LINE_COLOR_DARK,
+  REFERENCE_LINE_COLOR_LIGHT,
   removeAlert,
+  resetAlert,
   saveAlerts,
+  setAlertEnabled,
   subscribeAlerts,
   syncAlertsFromServer,
   updateAlert,
@@ -43,7 +46,14 @@ beforeEach(() => {
 
 describe("alertsStore", () => {
   it("persists alerts and reloads them", () => {
-    saveAlerts([createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 70000, enabled: true })]);
+    saveAlerts([
+      createAlert({
+        symbol: "BTCUSDT",
+        condition: "above",
+        threshold: 70000,
+        enabled: true,
+      }),
+    ]);
     const loaded = loadAlerts();
     expect(loaded).toHaveLength(1);
     expect(loaded[0].symbol).toBe("BTCUSDT");
@@ -57,8 +67,18 @@ describe("alertsStore", () => {
   });
 
   it("triggers above/below conditions exactly once", () => {
-    const above = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 70000, enabled: true });
-    const below = createAlert({ symbol: "BTCUSDT", condition: "below", threshold: 60000, enabled: true });
+    const above = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 70000,
+      enabled: true,
+    });
+    const below = createAlert({
+      symbol: "BTCUSDT",
+      condition: "below",
+      threshold: 60000,
+      enabled: true,
+    });
     expect(evalAlert(above, 69999)).toBe(false);
     expect(evalAlert(above, 70000)).toBe(true);
     expect(evalAlert({ ...above, triggered: true }, 71000)).toBe(false);
@@ -67,14 +87,26 @@ describe("alertsStore", () => {
   });
 
   it("does not evaluate disabled alerts", () => {
-    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: false });
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 1,
+      enabled: false,
+    });
     expect(evalAlert(a, 99999)).toBe(false);
   });
 
   it("notifies subscribers when alerts are saved", () => {
     const spy = vi.fn();
     const off = subscribeAlerts(spy);
-    saveAlerts([createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: true })]);
+    saveAlerts([
+      createAlert({
+        symbol: "BTCUSDT",
+        condition: "above",
+        threshold: 1,
+        enabled: true,
+      }),
+    ]);
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy.mock.calls[0][0]).toHaveLength(1);
     off();
@@ -105,8 +137,18 @@ describe("priceLineColor", () => {
 describe("price-line entity helpers", () => {
   it("filters entities by symbol", () => {
     saveAlerts([
-      createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: true }),
-      createAlert({ symbol: "ETHUSDT", condition: "below", threshold: 2, enabled: false }),
+      createAlert({
+        symbol: "BTCUSDT",
+        condition: "above",
+        threshold: 1,
+        enabled: true,
+      }),
+      createAlert({
+        symbol: "ETHUSDT",
+        condition: "below",
+        threshold: 2,
+        enabled: false,
+      }),
     ]);
     const btc = loadAlertsForSymbol("BTCUSDT");
     expect(btc).toHaveLength(1);
@@ -114,13 +156,24 @@ describe("price-line entity helpers", () => {
   });
 
   it("persists and reloads a custom color", () => {
-    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: false, color: "#abcdef" });
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 1,
+      enabled: false,
+      color: "#abcdef",
+    });
     saveAlerts([a]);
     expect(loadAlerts()[0].color).toBe("#abcdef");
   });
 
   it("upsertAlert inserts new and replaces existing by id", () => {
-    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: false });
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 1,
+      enabled: false,
+    });
     upsertAlert(a);
     expect(loadAlerts()).toHaveLength(1);
     upsertAlert({ ...a, threshold: 99, color: "#123456" });
@@ -132,7 +185,12 @@ describe("price-line entity helpers", () => {
   it("updateAlert patches threshold/color and notifies subscribers", () => {
     const spy = vi.fn();
     const off = subscribeAlerts(spy);
-    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 100, enabled: true });
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 100,
+      enabled: true,
+    });
     saveAlerts([a]);
     spy.mockClear();
     updateAlert(a.id, { threshold: 105, color: "#ff0000" });
@@ -147,7 +205,12 @@ describe("price-line entity helpers", () => {
   it("removeAlert deletes the entity and notifies subscribers", () => {
     const spy = vi.fn();
     const off = subscribeAlerts(spy);
-    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 100, enabled: false });
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 100,
+      enabled: false,
+    });
     saveAlerts([a]);
     spy.mockClear();
     removeAlert(a.id);
@@ -159,7 +222,16 @@ describe("price-line entity helpers", () => {
   it("round-trips color through the server sync parser", async () => {
     m.alerts.mockResolvedValue({
       alerts: [
-        { id: "s1", symbol: "ETHUSDT", condition: "below", threshold: 2500, enabled: false, triggered: false, createdAt: 1, color: "#abc123" },
+        {
+          id: "s1",
+          symbol: "ETHUSDT",
+          condition: "below",
+          threshold: 2500,
+          enabled: false,
+          triggered: false,
+          createdAt: 1,
+          color: "#abc123",
+        },
       ],
     });
     const merged = await syncAlertsFromServer();
@@ -172,11 +244,26 @@ describe("alertsStore server sync", () => {
   it("syncAlertsFromServer merges server list and persists it", async () => {
     m.alerts.mockResolvedValue({
       alerts: [
-        { id: "s1", symbol: "ETHUSDT", condition: "below", threshold: 2500, enabled: true, triggered: false, createdAt: 1 },
+        {
+          id: "s1",
+          symbol: "ETHUSDT",
+          condition: "below",
+          threshold: 2500,
+          enabled: true,
+          triggered: false,
+          createdAt: 1,
+        },
       ],
     });
     // a local-only alert that the server does not know about
-    saveAlerts([createAlert({ symbol: "SOLUSDT", condition: "above", threshold: 9, enabled: true })]);
+    saveAlerts([
+      createAlert({
+        symbol: "SOLUSDT",
+        condition: "above",
+        threshold: 9,
+        enabled: true,
+      }),
+    ]);
     const merged = await syncAlertsFromServer();
     expect(merged).not.toBeNull();
     expect(merged!.map((a) => a.symbol).sort()).toEqual(["ETHUSDT", "SOLUSDT"]);
@@ -193,7 +280,12 @@ describe("alertsStore server sync", () => {
     m.saveAlert.mockRejectedValue(new Error("offline"));
     m.updateAlert.mockRejectedValue(new Error("offline"));
     m.deleteAlert.mockRejectedValue(new Error("offline"));
-    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: true });
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 1,
+      enabled: true,
+    });
     expect(() => mirrorAlertCreate(a)).not.toThrow();
     expect(() => mirrorAlertUpdate(a.id, { triggered: true })).not.toThrow();
     expect(() => mirrorAlertDelete(a.id)).not.toThrow();
@@ -203,12 +295,130 @@ describe("alertsStore server sync", () => {
     m.saveAlert.mockResolvedValue({ ok: true });
     m.updateAlert.mockResolvedValue({ ok: true });
     m.deleteAlert.mockResolvedValue({ ok: true });
-    const a = createAlert({ symbol: "BTCUSDT", condition: "above", threshold: 1, enabled: true });
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 1,
+      enabled: true,
+    });
     mirrorAlertCreate(a);
     expect(m.saveAlert).toHaveBeenCalledWith(a);
     mirrorAlertUpdate(a.id, { enabled: false });
     expect(m.updateAlert).toHaveBeenCalledWith(a.id, { enabled: false });
     mirrorAlertDelete(a.id);
     expect(m.deleteAlert).toHaveBeenCalledWith(a.id);
+  });
+});
+
+describe("evaluateAlerts", () => {
+  it("hits above and below conditions that are met", () => {
+    const above = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 70000,
+      enabled: true,
+    });
+    const below = createAlert({
+      symbol: "ETHUSDT",
+      condition: "below",
+      threshold: 2500,
+      enabled: true,
+    });
+    const hits = evaluateAlerts([above, below], {
+      BTCUSDT: 70000,
+      ETHUSDT: 2400,
+    });
+    expect(hits.map((h) => h.id).sort()).toEqual([above.id, below.id].sort());
+    for (const hit of hits) {
+      expect(Number.isNaN(new Date(hit.triggerTime).getTime())).toBe(false);
+    }
+  });
+
+  it("ignores missing, non-finite prices and unmet conditions", () => {
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 70000,
+      enabled: true,
+    });
+    expect(evaluateAlerts([a], {})).toHaveLength(0);
+    expect(evaluateAlerts([a], { BTCUSDT: Number.NaN })).toHaveLength(0);
+    expect(evaluateAlerts([a], { BTCUSDT: 69999 })).toHaveLength(0);
+  });
+
+  it("short-circuits disabled and already-triggered alerts", () => {
+    const disabled = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 1,
+      enabled: false,
+    });
+    const triggered = {
+      ...createAlert({
+        symbol: "BTCUSDT",
+        condition: "above",
+        threshold: 1,
+        enabled: true,
+      }),
+      triggered: true,
+    };
+    expect(evaluateAlerts([disabled, triggered], { BTCUSDT: 999999 })).toHaveLength(0);
+  });
+
+  it("does not re-trigger once the hit is persisted", () => {
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 100,
+      enabled: true,
+    });
+    saveAlerts([a]);
+    const first = evaluateAlerts(loadAlerts(), { BTCUSDT: 150 });
+    expect(first).toHaveLength(1);
+    updateAlert(a.id, { triggered: true, triggerTime: first[0].triggerTime });
+    expect(evaluateAlerts(loadAlerts(), { BTCUSDT: 150 })).toHaveLength(0);
+  });
+});
+
+describe("resetAlert / setAlertEnabled", () => {
+  beforeEach(() => {
+    m.updateAlert.mockResolvedValue({ ok: true });
+  });
+
+  it("resetAlert clears the trigger flag/time, persists, notifies and mirrors", () => {
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 100,
+      enabled: true,
+    });
+    saveAlerts([{ ...a, triggered: true, triggerTime: "2026-01-01T00:00:00.000Z" }]);
+    const spy = vi.fn();
+    const off = subscribeAlerts(spy);
+    spy.mockClear();
+    resetAlert(a.id);
+    const [stored] = loadAlerts();
+    expect(stored.triggered).toBe(false);
+    expect(stored.triggerTime).toBeUndefined();
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(m.updateAlert).toHaveBeenCalledWith(a.id, {
+      triggered: false,
+      triggerTime: undefined,
+    });
+    off();
+  });
+
+  it("setAlertEnabled persists the flag, mirrors it and stops evaluation when disabled", () => {
+    const a = createAlert({
+      symbol: "BTCUSDT",
+      condition: "above",
+      threshold: 100,
+      enabled: true,
+    });
+    saveAlerts([a]);
+    setAlertEnabled(a.id, false);
+    expect(loadAlerts()[0].enabled).toBe(false);
+    expect(m.updateAlert).toHaveBeenCalledWith(a.id, { enabled: false });
+    expect(evaluateAlerts(loadAlerts(), { BTCUSDT: 999 })).toHaveLength(0);
   });
 });

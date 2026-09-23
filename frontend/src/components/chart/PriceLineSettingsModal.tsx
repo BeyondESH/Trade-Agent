@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   ALERT_LINE_COLOR,
+  type Alert,
   REFERENCE_LINE_COLOR_DARK,
   REFERENCE_LINE_COLOR_LIGHT,
-  type Alert,
 } from "../../lib/alertsStore";
 import type { ThemeMode } from "../../types/trading";
 
@@ -119,9 +119,7 @@ export const PriceLineSettingsModal: React.FC<Props> = ({
                   onClick={() => setColor(color === c.value ? "" : c.value)}
                   title={c.label}
                   className={`w-8 h-8 rounded border cursor-pointer transition-transform ${
-                    color === c.value
-                      ? "border-white ring-2 ring-[#2962ff]"
-                      : "border-[#2a2e39]"
+                    color === c.value ? "border-white ring-2 ring-[#2962ff]" : "border-[#2a2e39]"
                   }`}
                   style={{ backgroundColor: c.value }}
                 />

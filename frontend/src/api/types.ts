@@ -391,26 +391,6 @@ export interface ChartPoint {
   value?: number;
 }
 
-export interface GridCellPersist {
-  category: string;
-  symbol: string;
-  timeframe: string;
-  indicators?: { paneId: string; name: string }[];
-}
-
-export interface GridLayoutPersist {
-  layoutCount: number;
-  activeCell: number;
-  syncFlags: {
-    symbol: boolean;
-    period: boolean;
-    crosshair: boolean;
-    range: boolean;
-    draw: boolean;
-  };
-  cells: GridCellPersist[];
-}
-
 export interface ChartConfig {
   indicators: { name: string; pane: "candle" | "sub" }[];
   drawings: {
@@ -421,6 +401,4 @@ export interface ChartConfig {
     groupId?: string;
   }[];
   layers: { sr: boolean; structure: boolean; smc: boolean };
-  /** Multi-chart workspace layout (tv-multichart-sync). */
-  grid?: GridLayoutPersist;
 }

@@ -1,16 +1,17 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { GlobalNewsItem, ThemeMode } from '../../types/trading';
+import { AlertCircle, ChevronUp, ExternalLink, Globe } from "lucide-react";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  NEWS_WINDOW_SIZE,
-  REVEAL_CHUNK,
   allSourcesUnavailable,
   fetchNewsCategories,
   formatNewsTime,
+  NEWS_WINDOW_SIZE,
+  REVEAL_CHUNK,
   useGlobalNewsStream,
-} from '../../lib/globalNews';
-import { useMasonry } from '../../lib/useMasonry';
-import { t } from '../../lib/i18n';
-import { AlertCircle, ChevronUp, ExternalLink, Globe } from 'lucide-react';
+} from "../../lib/globalNews";
+import { t } from "../../lib/i18n";
+import { useMasonry } from "../../lib/useMasonry";
+import type { GlobalNewsItem, ThemeMode } from "../../types/trading";
 
 interface Props {
   theme: ThemeMode;
@@ -19,12 +20,12 @@ interface Props {
 /** Scroll position (px) considered "at the top" for auto-flushing pending items. */
 const AT_TOP_THRESHOLD = 24;
 /** Page-level scroll container (NewsCalendarView root) that owns the feed scroll. */
-const SCROLL_ROOT_SELECTOR = '#news-calendar-view';
+const SCROLL_ROOT_SELECTOR = "#news-calendar-view";
 
 /** Rough pre-mount card height: title + content lines * line height. */
 function estimateHeight(item: GlobalNewsItem): number {
   const titleLines = Math.max(1, Math.ceil(item.title.length / 26));
-  const content = item.content && item.content !== item.title ? item.content : '';
+  const content = item.content && item.content !== item.title ? item.content : "";
   const contentLines = content ? Math.max(1, Math.ceil(content.length / 30)) : 0;
   return 64 + titleLines * 20 + contentLines * 18;
 }
@@ -37,7 +38,7 @@ function findScrollRoot(el: Element | null): HTMLElement | null {
 /** First card currently visible in the scroll container (anchor for D3). */
 function topVisibleCard(container: HTMLElement): HTMLElement | null {
   const cTop = container.getBoundingClientRect().top;
-  const cards = Array.from(container.querySelectorAll<HTMLElement>('[data-item-id]'));
+  const cards = Array.from(container.querySelectorAll<HTMLElement>("[data-item-id]"));
   for (const card of cards) {
     const r = card.getBoundingClientRect();
     if (r.bottom >= cTop + 1) return card;
@@ -46,7 +47,7 @@ function topVisibleCard(container: HTMLElement): HTMLElement | null {
 }
 
 function scheduleFrame(cb: () => void): void {
-  if (typeof requestAnimationFrame === 'function') {
+  if (typeof requestAnimationFrame === "function") {
     requestAnimationFrame(() => cb());
   } else {
     setTimeout(cb, 0);
@@ -63,7 +64,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
   const [ioOk, setIoOk] = useState(true);
   const rootRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
 
   useEffect(() => {
     fetchNewsCategories()
@@ -76,9 +77,9 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
     const container = findScrollRoot(rootRef.current);
     if (!container) return;
     const onScroll = () => setAtTop(container.scrollTop <= AT_TOP_THRESHOLD);
-    container.addEventListener('scroll', onScroll, { passive: true });
+    container.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
-    return () => container.removeEventListener('scroll', onScroll);
+    return () => container.removeEventListener("scroll", onScroll);
   }, []);
 
   // Flush pending items, anchoring the viewport so a near-top auto-flush does
@@ -120,11 +121,13 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
       setRenderCount((c) => c + REVEAL_CHUNK);
       return;
     }
-    void loadMore(selected ?? undefined).then(() => {
-      setRenderCount((c) => c + REVEAL_CHUNK);
-    }).catch(() => {
-      /* load failure is silent; the sentinel retries on the next scroll */
-    });
+    void loadMore(selected ?? undefined)
+      .then(() => {
+        setRenderCount((c) => c + REVEAL_CHUNK);
+      })
+      .catch(() => {
+        /* load failure is silent; the sentinel retries on the next scroll */
+      });
   }, [renderCount, visible.length, selected, loadMore]);
 
   // Keep the IntersectionObserver callback on the latest revealMore.
@@ -133,7 +136,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
 
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || !('IntersectionObserver' in window)) {
+    if (!el || !("IntersectionObserver" in window)) {
       setIoOk(false);
       return;
     }
@@ -143,7 +146,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
         (entries) => {
           if (entries.some((en) => en.isIntersecting)) revealRef.current();
         },
-        { root: findScrollRoot(rootRef.current), rootMargin: '200px' },
+        { root: findScrollRoot(rootRef.current), rootMargin: "200px" },
       );
       observer.observe(el);
     } catch {
@@ -169,13 +172,13 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
           onClick={() => setSelected(null)}
           className={`px-3 py-1 rounded-lg border text-xs font-medium transition-colors ${
             selected === null
-              ? 'bg-[#2962ff] border-[#2962ff] text-white'
+              ? "bg-[#2962ff] border-[#2962ff] text-white"
               : isDark
-                ? 'bg-[#1e222d] border-[#2a2e39] text-gray-400 hover:text-white'
-                : 'bg-white border-[#e0e3eb] text-gray-600 hover:text-black'
+                ? "bg-[#1e222d] border-[#2a2e39] text-gray-400 hover:text-white"
+                : "bg-white border-[#e0e3eb] text-gray-600 hover:text-black"
           }`}
         >
-          {t('All')}
+          {t("All")}
         </button>
         {categories.map((c) => (
           <button
@@ -183,10 +186,10 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
             onClick={() => setSelected(selected === c ? null : c)}
             className={`px-3 py-1 rounded-lg border text-xs font-medium transition-colors ${
               selected === c
-                ? 'bg-[#2962ff] border-[#2962ff] text-white'
+                ? "bg-[#2962ff] border-[#2962ff] text-white"
                 : isDark
-                  ? 'bg-[#1e222d] border-[#2a2e39] text-gray-400 hover:text-white'
-                  : 'bg-white border-[#e0e3eb] text-gray-600 hover:text-black'
+                  ? "bg-[#1e222d] border-[#2a2e39] text-gray-400 hover:text-white"
+                  : "bg-white border-[#e0e3eb] text-gray-600 hover:text-black"
             }`}
           >
             {t(c)}
@@ -196,8 +199,8 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
 
       {/* Status line */}
       <div className="flex items-center gap-2 text-xs min-h-[18px]">
-        {state === 'connecting' && <span className="text-gray-400">{t('Connecting...')}</span>}
-        {state === 'open' && (
+        {state === "connecting" && <span className="text-gray-400">{t("Connecting...")}</span>}
+        {state === "open" && (
           <span className="text-[10px] px-2 py-0.5 rounded bg-[#089981]/20 text-[#089981] font-bold">
             LIVE
           </span>
@@ -205,7 +208,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
         {unavailable && (
           <span className="flex items-center gap-1 text-[#f23645] text-xs">
             <AlertCircle className="w-3.5 h-3.5" />
-            {t('News sources unavailable')}
+            {t("News sources unavailable")}
           </span>
         )}
       </div>
@@ -220,7 +223,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
           >
             <ChevronUp className="w-3.5 h-3.5" />
             <span>
-              {pendingCount} {t('New Items')}
+              {pendingCount} {t("New Items")}
             </span>
           </button>
         </div>
@@ -229,7 +232,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
       {/* Waterfall columns */}
       {windowed.length === 0 && !unavailable && (
         <div className="text-xs text-gray-400 text-center py-6">
-          {state === 'connecting' ? t('Connecting...') : '--'}
+          {state === "connecting" ? t("Connecting...") : "--"}
         </div>
       )}
       <div className="flex gap-3 items-start" data-testid="global-news-columns">
@@ -251,14 +254,14 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
               data-testid="load-earlier-button"
               className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors bg-[#2962ff] border-[#2962ff] text-white hover:bg-[#1e4fd8]"
             >
-              {t('Load Earlier')}
+              {t("Load Earlier")}
             </button>
           )}
         </div>
       )}
       {!hasOlder && windowed.length > 0 && (
         <div className="text-xs text-gray-400 text-center py-2" data-testid="all-loaded">
-          {t('All Loaded')}
+          {t("All Loaded")}
         </div>
       )}
     </div>
@@ -284,7 +287,7 @@ function NewsCard({
       if (h > 0) onMeasure(item.id, h);
     };
     report();
-    if (typeof ResizeObserver !== 'undefined') {
+    if (typeof ResizeObserver !== "undefined") {
       const ro = new ResizeObserver(report);
       ro.observe(el);
       return () => ro.disconnect();
@@ -296,7 +299,7 @@ function NewsCard({
       ref={ref}
       data-item-id={item.id}
       className={`p-4 rounded-xl border flex flex-col gap-2 transition-all hover:border-[#2962ff] ${
-        isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-white border-[#e0e3eb]'
+        isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
       }`}
     >
       <div className="flex items-center justify-between">
@@ -325,7 +328,7 @@ function NewsCard({
             className="text-gray-400 hover:text-white flex items-center gap-1 text-xs"
           >
             <Globe className="w-3 h-3" />
-            <span>{t('Original Article')}</span>
+            <span>{t("Original Article")}</span>
             <ExternalLink className="w-3 h-3" />
           </a>
         </div>

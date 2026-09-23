@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { signalsToMarks, signalMarkToOverlay, signalsToOverlays } from "./signalMarks";
+import { signalMarkToOverlay, signalsToMarks, signalsToOverlays } from "./signalMarks";
 
 describe("signalsToMarks", () => {
   const priceByTs = new Map<number, number>([
@@ -47,7 +47,11 @@ describe("signalMarkToOverlay", () => {
     const overlays = signalsToOverlays(
       [1, -1, 0],
       [1000, 2000, 3000],
-      new Map([[1000, 10], [2000, 20], [3000, 30]]),
+      new Map([
+        [1000, 10],
+        [2000, 20],
+        [3000, 30],
+      ]),
     );
     expect(overlays).toHaveLength(2);
   });

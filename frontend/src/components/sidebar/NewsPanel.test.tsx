@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { NewsPanel } from "./NewsPanel";
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { formatRelativeTime } from "../../lib/newsfeed";
+import { NewsPanel } from "./NewsPanel";
 
 const mockFetch = vi.fn();
 
@@ -48,9 +49,9 @@ describe("NewsPanel", () => {
     mockFetch.mockResolvedValue([]);
     render(<NewsPanel theme="dark" />);
     // Active "all" first chip should be at the front of the collapsed row.
-    const chips = screen.getAllByRole("button").filter((b) =>
-      ["All", "Important", "AI"].includes(b.textContent ?? "")
-    );
+    const chips = screen
+      .getAllByRole("button")
+      .filter((b) => ["All", "Important", "AI"].includes(b.textContent ?? ""));
     expect(chips[0].textContent).toBe("All");
   });
 

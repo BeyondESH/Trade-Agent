@@ -93,7 +93,14 @@ export interface MarketOverview {
 }
 
 /** Networks available for the top10_netflow selector. */
-export const NETFLOW_NETWORK_OPTIONS = ["solana", "ethereum", "base", "bsc", "arbitrum", "ton"] as const;
+export const NETFLOW_NETWORK_OPTIONS = [
+  "solana",
+  "ethereum",
+  "base",
+  "bsc",
+  "arbitrum",
+  "ton",
+] as const;
 
 /* -- candidate-field helpers -------------------------------------------------- */
 
@@ -147,12 +154,45 @@ function normalizeTopCards(
     : [];
 
   return {
-    etfNet: etfRow ? asNumber(pick(etfRow, ["day_net_inflow_million", "dayNetInflowMillion", "net_inflow_million", "netInflowMillion"])) : null,
-    etfTotal: etfRow ? asNumber(pick(etfRow, ["total_net_inflow_million", "totalNetInflowMillion", "total_inflow_million", "totalInflowMillion"])) : null,
-    compliantNet: compliantRow ? asNumber(pick(compliantRow, ["day_net_inflow", "dayNetInflow", "net_inflow", "netInflow"])) : null,
-    compliantTotal: compliantRow ? asNumber(pick(compliantRow, ["total_net_inflow", "totalNetInflow", "total_net_flow", "totalNetFlow"])) : null,
-    ibit: ibitRow ? asNumber(pick(ibitRow, ["day_net_inflow", "dayNetInflow", "net_inflow", "netInflow"])) : null,
-    fbtc: fbtcRow ? asNumber(pick(fbtcRow, ["day_net_inflow", "dayNetInflow", "net_inflow", "netInflow"])) : null,
+    etfNet: etfRow
+      ? asNumber(
+          pick(etfRow, [
+            "day_net_inflow_million",
+            "dayNetInflowMillion",
+            "net_inflow_million",
+            "netInflowMillion",
+          ]),
+        )
+      : null,
+    etfTotal: etfRow
+      ? asNumber(
+          pick(etfRow, [
+            "total_net_inflow_million",
+            "totalNetInflowMillion",
+            "total_inflow_million",
+            "totalInflowMillion",
+          ]),
+        )
+      : null,
+    compliantNet: compliantRow
+      ? asNumber(pick(compliantRow, ["day_net_inflow", "dayNetInflow", "net_inflow", "netInflow"]))
+      : null,
+    compliantTotal: compliantRow
+      ? asNumber(
+          pick(compliantRow, [
+            "total_net_inflow",
+            "totalNetInflow",
+            "total_net_flow",
+            "totalNetFlow",
+          ]),
+        )
+      : null,
+    ibit: ibitRow
+      ? asNumber(pick(ibitRow, ["day_net_inflow", "dayNetInflow", "net_inflow", "netInflow"]))
+      : null,
+    fbtc: fbtcRow
+      ? asNumber(pick(fbtcRow, ["day_net_inflow", "dayNetInflow", "net_inflow", "netInflow"]))
+      : null,
     longPrice: longRow ? asNumber(pick(longRow, ["price"])) : null,
     longCount: longRow ? asNumber(pick(longRow, ["long"])) : null,
     indicators,
@@ -273,10 +313,7 @@ export function useMarketOverview(): MarketOverview {
       const dxy = dxyRes.status === "fulfilled" ? normalizeKline(dxyRes.value.data) : undefined;
       if (!cancelled) {
         setMacro({
-          data:
-            us10y || dxy
-              ? { ...(us10y ? { us10y } : {}), ...(dxy ? { dxy } : {}) }
-              : undefined,
+          data: us10y || dxy ? { ...(us10y ? { us10y } : {}), ...(dxy ? { dxy } : {}) } : undefined,
         });
       }
     }
@@ -292,27 +329,27 @@ export function useMarketOverview(): MarketOverview {
         api.blockbeatsData("daily_tx"),
         api.blockbeatsData("contract"),
       ]);
-      const v = <T,>(r: PromiseSettledResult<{ status: number; data: unknown }>): T | undefined =>
+      const v = <T>(r: PromiseSettledResult<{ status: number; data: unknown }>): T | undefined =>
         r.status === "fulfilled" ? (r.value.data as T) : undefined;
       if (cancelled) return;
       setTopCards({
-        data:
-          normalizeTopCards(
-            v<Array<Record<string, unknown>>>(etf),
-            v<Record<string, unknown>>(ibit),
-            v<Array<Record<string, unknown>>>(compliant),
-            v<Array<Record<string, unknown>>>(long),
-            v<Array<Record<string, unknown>>>(ind),
-          ),
+        data: normalizeTopCards(
+          v<Array<Record<string, unknown>>>(etf),
+          v<Record<string, unknown>>(ibit),
+          v<Array<Record<string, unknown>>>(compliant),
+          v<Array<Record<string, unknown>>>(long),
+          v<Array<Record<string, unknown>>>(ind),
+        ),
       });
       setAssets({
-        data:
-          normalizeAssets(
-            v<Record<string, unknown>>(mc),
-            v<Array<Record<string, unknown>>>(tx),
-          ),
+        data: normalizeAssets(
+          v<Record<string, unknown>>(mc),
+          v<Array<Record<string, unknown>>>(tx),
+        ),
       });
-      setContract({ data: normalizeContract(v<Array<Record<string, unknown>>>(ctr)) });
+      setContract({
+        data: normalizeContract(v<Array<Record<string, unknown>>>(ctr)),
+      });
     }
 
     async function fetchNetflow(network: string) {
@@ -337,5 +374,14 @@ export function useMarketOverview(): MarketOverview {
     setNetflowNetwork(n);
   }, []);
 
-  return { topCards, macro, assets, contract, netflow, loading, network: netflowNetwork, setNetwork };
+  return {
+    topCards,
+    macro,
+    assets,
+    contract,
+    netflow,
+    loading,
+    network: netflowNetwork,
+    setNetwork,
+  };
 }

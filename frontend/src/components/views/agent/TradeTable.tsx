@@ -1,15 +1,9 @@
-import React, { useMemo, useState } from "react";
-import { ThemeMode } from "../../../types/trading";
+import type React from "react";
+import { useMemo, useState } from "react";
 import type { BacktestTrade } from "../../../api/types";
-import { Panel, fmtNum, fmtPct, fmtTime } from "./ui";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../ui/table";
+import type { ThemeMode } from "../../../types/trading";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
+import { fmtNum, fmtPct, fmtTime, Panel } from "./ui";
 
 type SortKey =
   | "net_return"
@@ -24,10 +18,10 @@ type SortKey =
 type SortDir = "asc" | "desc";
 
 /** Open/close trade list rendered from a backtest's per-trade records. */
-export const TradeTable: React.FC<{ trades: BacktestTrade[]; theme: ThemeMode }> = ({
-  trades,
-  theme,
-}) => {
+export const TradeTable: React.FC<{
+  trades: BacktestTrade[];
+  theme: ThemeMode;
+}> = ({ trades, theme }) => {
   const [sortKey, setSortKey] = useState<SortKey>("index");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -82,7 +76,11 @@ export const TradeTable: React.FC<{ trades: BacktestTrade[]; theme: ThemeMode }>
     return sorted;
   }, [trades, sortKey, sortDir]);
 
-  const Head: React.FC<{ k: SortKey; label: string; align?: string }> = ({ k, label, align = "left" }) => (
+  const Head: React.FC<{ k: SortKey; label: string; align?: string }> = ({
+    k,
+    label,
+    align = "left",
+  }) => (
     <TableHead
       className={`cursor-pointer select-none whitespace-nowrap ${align}`}
       onClick={() => toggleSort(k)}
@@ -113,9 +111,14 @@ export const TradeTable: React.FC<{ trades: BacktestTrade[]; theme: ThemeMode }>
             const win = t.net_return >= 0;
             const pnlColor = win ? "text-[#089981]" : "text-[#f23645]";
             return (
-              <TableRow key={i} className={theme === "dark" ? "hover:bg-[#1e222d]" : "hover:bg-gray-50"}>
+              <TableRow
+                key={i}
+                className={theme === "dark" ? "hover:bg-[#1e222d]" : "hover:bg-gray-50"}
+              >
                 <TableCell className="text-gray-400 font-mono">{i + 1}</TableCell>
-                <TableCell className={`font-bold font-mono ${t.side === "long" ? "text-[#089981]" : "text-[#f23645]"}`}>
+                <TableCell
+                  className={`font-bold font-mono ${t.side === "long" ? "text-[#089981]" : "text-[#f23645]"}`}
+                >
                   {t.side === "long" ? "多" : "空"}
                 </TableCell>
                 <TableCell className="font-mono">{fmtTime(t.entry_time)}</TableCell>
@@ -124,7 +127,9 @@ export const TradeTable: React.FC<{ trades: BacktestTrade[]; theme: ThemeMode }>
                 <TableCell className="font-mono">{fmtNum(t.exit_price, 6)}</TableCell>
                 <TableCell className="font-mono">{t.bars}</TableCell>
                 <TableCell className={`font-mono ${pnlColor}`}>{fmtPct(t.gross_return)}</TableCell>
-                <TableCell className={`font-mono font-bold ${pnlColor}`}>{fmtPct(t.net_return)}</TableCell>
+                <TableCell className={`font-mono font-bold ${pnlColor}`}>
+                  {fmtPct(t.net_return)}
+                </TableCell>
               </TableRow>
             );
           })}

@@ -1,5 +1,5 @@
-import type { NewsItem } from "../types/trading";
 import { api } from "../api/client";
+import type { NewsItem } from "../types/trading";
 
 export const NEWSFLASH_TYPES = [
   { key: "all", label: "All" },
@@ -98,7 +98,9 @@ export async function fetchNewsflashPage(
       hasMore: rows.length >= size,
     };
   } catch (err) {
-    throw new Error(isConfigError(err) ? "未配置 BB_API_KEY,请在 backend/.env 中设置" : "新闻接口暂不可用");
+    throw new Error(
+      isConfigError(err) ? "未配置 BB_API_KEY,请在 backend/.env 中设置" : "新闻接口暂不可用",
+    );
   }
 }
 

@@ -91,9 +91,9 @@
    never falls onto Noto's Latin subset; CJK falls back to Noto because GFlex
    claims no CJK unicode-range (except a lone U+4E00 in its nushu subset). */
 @theme {
-  --font-sans: "Google Sans Flex Variable", "Noto Sans SC Variable",
-    "PingFang SC", "Microsoft YaHei", "Helvetica Neue", "Segoe UI", "Inter",
-    Arial, sans-serif;
+  --font-sans:
+    "Google Sans Flex Variable", "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", "Segoe UI", "Inter", Arial, sans-serif;
 }
 
 html,

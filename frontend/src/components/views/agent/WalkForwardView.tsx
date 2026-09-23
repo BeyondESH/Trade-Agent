@@ -1,15 +1,9 @@
-import React, { useMemo, useState } from "react";
-import { ThemeMode } from "../../../types/trading";
-import type { WalkForwardResult, WalkForwardFold } from "../../../api/types";
-import { Panel, btnCls, fmtPct, inputCls } from "./ui";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../ui/table";
+import type React from "react";
+import { useMemo, useState } from "react";
+import type { WalkForwardFold, WalkForwardResult } from "../../../api/types";
+import type { ThemeMode } from "../../../types/trading";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
+import { btnCls, fmtPct, inputCls, Panel } from "./ui";
 
 interface Props {
   running: boolean;
@@ -22,10 +16,10 @@ interface Props {
 const WINDOW_STROKES = ["#2962ff", "#089981", "#ff9800", "#e040fb", "#00bcd4"];
 
 /** Horizontal bars showing each fold's train/test segments on a shared axis. */
-export const FoldRanges: React.FC<{ folds: WalkForwardFold[]; theme: ThemeMode }> = ({
-  folds,
-  theme,
-}) => {
+export const FoldRanges: React.FC<{
+  folds: WalkForwardFold[];
+  theme: ThemeMode;
+}> = ({ folds, theme }) => {
   const { min, max } = useMemo(() => {
     const all = folds.flatMap((f) => [f.train_start, f.train_end, f.test_start, f.test_end]);
     return { min: Math.min(...all), max: Math.max(...all) };
@@ -41,7 +35,10 @@ export const FoldRanges: React.FC<{ folds: WalkForwardFold[]; theme: ThemeMode }
       {folds.map((f) => (
         <div key={f.fold} className="flex items-center gap-2">
           <span className="w-8 shrink-0 text-[10px] text-gray-400 font-mono">#{f.fold + 1}</span>
-          <div className="relative h-6 flex-1 rounded bg-muted/40 overflow-hidden" style={{ backgroundColor: barColor }}>
+          <div
+            className="relative h-6 flex-1 rounded bg-muted/40 overflow-hidden"
+            style={{ backgroundColor: barColor }}
+          >
             <div
               className="absolute top-1 bottom-1 rounded-sm"
               style={{
@@ -65,8 +62,20 @@ export const FoldRanges: React.FC<{ folds: WalkForwardFold[]; theme: ThemeMode }
         </div>
       ))}
       <div className="flex items-center gap-3 pl-10 text-[10px] text-gray-400">
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm opacity-40" style={{ backgroundColor: "#2962ff" }} /> 训练段</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: "#2962ff" }} /> 测试段</span>
+        <span className="flex items-center gap-1">
+          <span
+            className="inline-block w-3 h-2 rounded-sm opacity-40"
+            style={{ backgroundColor: "#2962ff" }}
+          />{" "}
+          训练段
+        </span>
+        <span className="flex items-center gap-1">
+          <span
+            className="inline-block w-3 h-2 rounded-sm"
+            style={{ backgroundColor: "#2962ff" }}
+          />{" "}
+          测试段
+        </span>
       </div>
     </div>
   );
@@ -108,15 +117,15 @@ export const WalkForwardView: React.FC<Props> = ({ running, result, onRun, theme
         }
       >
         {error && <span className="text-xs text-[#f23645]">✕ {error}</span>}
-        {!nValid && (
-          <span className="text-xs text-[#f23645]">✕ 折数必须为数字(留空表示自动)</span>
-        )}
+        {!nValid && <span className="text-xs text-[#f23645]">✕ 折数必须为数字(留空表示自动)</span>}
         {!result && !running && (
           <div className="text-sm text-gray-400 py-4 text-center">
             点击「运行 Walk-forward」以多折时间序列验证模型稳定性
           </div>
         )}
-        {running && <div className="text-sm text-gray-400 py-4 text-center">多折训练中,请稍候...</div>}
+        {running && (
+          <div className="text-sm text-gray-400 py-4 text-center">多折训练中,请稍候...</div>
+        )}
         {result && !running && (
           <div className="flex flex-col gap-3">
             <FoldRanges folds={folds} theme={theme} />
@@ -141,9 +150,15 @@ export const WalkForwardView: React.FC<Props> = ({ running, result, onRun, theme
                       {new Date(f.test_start).toISOString().slice(0, 10)} →{" "}
                       {new Date(f.test_end).toISOString().slice(0, 10)}
                     </TableCell>
-                    <TableCell className="font-mono">{f.roc_auc != null ? f.roc_auc.toFixed(3) : "—"}</TableCell>
-                    <TableCell className="font-mono">{f.log_loss != null ? f.log_loss.toFixed(3) : "—"}</TableCell>
-                    <TableCell className={`font-mono font-bold ${f.total_return >= 0 ? "text-[#089981]" : "text-[#f23645]"}`}>
+                    <TableCell className="font-mono">
+                      {f.roc_auc != null ? f.roc_auc.toFixed(3) : "—"}
+                    </TableCell>
+                    <TableCell className="font-mono">
+                      {f.log_loss != null ? f.log_loss.toFixed(3) : "—"}
+                    </TableCell>
+                    <TableCell
+                      className={`font-mono font-bold ${f.total_return >= 0 ? "text-[#089981]" : "text-[#f23645]"}`}
+                    >
                       {fmtPct(f.total_return)}
                     </TableCell>
                     <TableCell className="font-mono">{fmtPct(f.max_drawdown)}</TableCell>

@@ -1,11 +1,13 @@
-import { defineConfig, devices } from "@playwright/test";
-import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineConfig, devices } from "@playwright/test";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const BACKEND_PORT = 8000;
-const FRONTEND_PORT = 5173;
+// Ports are env-overridable so the suite can run on machines where the
+// defaults are occupied by other services (e.g. corporate tools binding :8000).
+const BACKEND_PORT = Number(process.env.E2E_BACKEND_PORT ?? 8000);
+const FRONTEND_PORT = Number(process.env.E2E_FRONTEND_PORT ?? 5173);
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
 const BACKEND_DIR = resolve(__dirname, "../backend");
 const PYTHON = resolve(BACKEND_DIR, ".venv/Scripts/python.exe");

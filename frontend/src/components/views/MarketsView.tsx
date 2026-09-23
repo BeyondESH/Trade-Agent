@@ -1,22 +1,22 @@
-import React from "react";
-import { ThemeMode } from "../../types/trading";
-import { t } from "../../lib/i18n";
 import {
-  Globe,
-  ArrowUpRight,
   ArrowDownRight,
+  ArrowUpRight,
   BarChart3,
-  Gauge,
-  PieChart,
-  Network,
   Coins,
+  Gauge,
+  Globe,
   LineChart,
+  Network,
+  PieChart,
 } from "lucide-react";
+import type React from "react";
 import {
-  useMarketOverview,
+  type MarketOverview,
   NETFLOW_NETWORK_OPTIONS,
-  MarketOverview,
+  useMarketOverview,
 } from "../../hooks/useMarketOverview";
+import { t } from "../../lib/i18n";
+import type { ThemeMode } from "../../types/trading";
 
 interface Props {
   theme: ThemeMode;
@@ -38,8 +38,14 @@ const fmtCompact = (v: number | null): string => {
   return v.toFixed(2);
 };
 
-const ChangePill: React.FC<{ label: string; up: boolean; active?: boolean }> = ({ label, up, active }) => (
-  <div className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${up ? "bg-[#089981]/20 text-[#089981]" : "bg-[#f23645]/20 text-[#f23645]"}`}>
+const ChangePill: React.FC<{
+  label: string;
+  up: boolean;
+  active?: boolean;
+}> = ({ label, up, active }) => (
+  <div
+    className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${up ? "bg-[#089981]/20 text-[#089981]" : "bg-[#f23645]/20 text-[#f23645]"}`}
+  >
     <div className="flex items-center gap-0.5">
       {up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
       <span>{label}</span>
@@ -68,17 +74,19 @@ const Sparkline: React.FC<{ series: number[]; up: boolean }> = ({ series, up }) 
 
 /* -- section card wrapper --------------------------------------------------- */
 
-const Card: React.FC<{ title: string; icon: React.ReactNode; color: string; className?: string; isDark: boolean; children: React.ReactNode; right?: React.ReactNode }> = ({
-  title,
-  icon,
-  color,
-  className = "",
-  isDark,
-  children,
-  right,
-}) => {
+const Card: React.FC<{
+  title: string;
+  icon: React.ReactNode;
+  color: string;
+  className?: string;
+  isDark: boolean;
+  children: React.ReactNode;
+  right?: React.ReactNode;
+}> = ({ title, icon, color, className = "", isDark, children, right }) => {
   return (
-    <div className={`p-4 rounded-xl border flex flex-col gap-3 ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"} ${className}`}>
+    <div
+      className={`p-4 rounded-xl border flex flex-col gap-3 ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"} ${className}`}
+    >
       <div className="flex items-center justify-between border-b pb-2 border-gray-500/20">
         <span className="font-bold text-sm flex items-center gap-1.5" style={{ color }}>
           {icon}
@@ -96,15 +104,34 @@ const Card: React.FC<{ title: string; icon: React.ReactNode; color: string; clas
 const TopCards: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, isDark }) => {
   const d = m.topCards.data;
   const cells = [
-    { label: t("BTC ETF Cumulative Inflow"), value: d?.etfTotal != null ? fmtCompact(d.etfTotal) : "N/A", sub: `${t("Today")}: ${d?.etfNet != null ? fmt(d.etfNet) : "N/A"}` },
-    { label: t("iBit / fBTC Net Flow"), value: d?.ibit != null ? fmt(d.ibit) : "N/A", sub: `fBTC: ${d?.fbtc != null ? fmt(d.fbtc) : "N/A"}` },
-    { label: t("Compliant CEX Cumulative Inflow"), value: d?.compliantTotal != null ? fmtCompact(d.compliantTotal) : "N/A", sub: `${t("Today")}: ${d?.compliantNet != null ? fmt(d.compliantNet) : "N/A"}` },
-    { label: t("Bitfinex Leveraged Long"), value: d?.longCount != null ? fmt(d.longCount, 0, "") : "N/A", sub: d?.longPrice != null ? `${t("BTC")}: ${fmt(d.longPrice)}` : "" },
+    {
+      label: t("BTC ETF Cumulative Inflow"),
+      value: d?.etfTotal != null ? fmtCompact(d.etfTotal) : "N/A",
+      sub: `${t("Today")}: ${d?.etfNet != null ? fmt(d.etfNet) : "N/A"}`,
+    },
+    {
+      label: t("iBit / fBTC Net Flow"),
+      value: d?.ibit != null ? fmt(d.ibit) : "N/A",
+      sub: `fBTC: ${d?.fbtc != null ? fmt(d.fbtc) : "N/A"}`,
+    },
+    {
+      label: t("Compliant CEX Cumulative Inflow"),
+      value: d?.compliantTotal != null ? fmtCompact(d.compliantTotal) : "N/A",
+      sub: `${t("Today")}: ${d?.compliantNet != null ? fmt(d.compliantNet) : "N/A"}`,
+    },
+    {
+      label: t("Bitfinex Leveraged Long"),
+      value: d?.longCount != null ? fmt(d.longCount, 0, "") : "N/A",
+      sub: d?.longPrice != null ? `${t("BTC")}: ${fmt(d.longPrice)}` : "",
+    },
   ];
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mb-5">
       {cells.map((c, i) => (
-        <div key={i} className={`p-3 rounded-lg border flex flex-col justify-between ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}>
+        <div
+          key={i}
+          className={`p-3 rounded-lg border flex flex-col justify-between ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}
+        >
           <div className="text-[11px] font-semibold text-gray-400">{c.label}</div>
           <div className="font-mono font-bold text-sm my-1">{c.value}</div>
           <div className="text-[10px] text-gray-500 font-mono">{c.sub}</div>
@@ -126,7 +153,9 @@ const SignalBadge: React.FC<{ status: string }> = ({ status }) => {
       ? "bg-[#f23645]/20 text-[#f23645]"
       : "bg-gray-500/20 text-gray-400";
   const label = isBuy || isSell || isHold ? status.toUpperCase() : "N/A";
-  return <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded ${cls}`}>{label}</span>;
+  return (
+    <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded ${cls}`}>{label}</span>
+  );
 };
 
 const IndicatorCard: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, isDark }) => {
@@ -135,7 +164,10 @@ const IndicatorCard: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, is
   const time = indicators.find((i) => i.createTime)?.createTime ?? null;
   const fmtTime = (t: string) => (t.length >= 16 ? t.slice(11, 16) : t);
   return (
-    <div data-testid="indicator-card" className={`mb-5 p-4 rounded-xl border ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}>
+    <div
+      data-testid="indicator-card"
+      className={`mb-5 p-4 rounded-xl border ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}
+    >
       <div className="flex items-center justify-between border-b pb-2 border-gray-500/20">
         <span className="flex items-center gap-2 font-bold text-sm">
           <Gauge className="w-4 h-4 text-[#2962ff]" />
@@ -171,12 +203,24 @@ const MacroSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, isD
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
       {rows.map((r) => (
-        <div key={r.label} className={`p-4 rounded-xl border flex items-center justify-between ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}>
+        <div
+          key={r.label}
+          className={`p-4 rounded-xl border flex items-center justify-between ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}
+        >
           <div>
             <div className="text-xs font-semibold text-gray-400">{r.label}</div>
-            <div className="font-mono font-bold text-lg mt-1">{r.k?.price != null ? r.k.price.toFixed(4) : "N/A"}</div>
+            <div className="font-mono font-bold text-lg mt-1">
+              {r.k?.price != null ? r.k.price.toFixed(4) : "N/A"}
+            </div>
             <div className="mt-2">
-              {r.k?.up != null ? <ChangePill label={`${r.k.up ? "+" : "-"}${r.k.price != null ? r.k.price.toFixed(4) : ""}`} up={r.k.up} /> : <span className="text-xs text-gray-500">N/A</span>}
+              {r.k?.up != null ? (
+                <ChangePill
+                  label={`${r.k.up ? "+" : "-"}${r.k.price != null ? r.k.price.toFixed(4) : ""}`}
+                  up={r.k.up}
+                />
+              ) : (
+                <span className="text-xs text-gray-500">N/A</span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -193,19 +237,34 @@ const AssetsSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, is
   const d = m.assets.data;
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-      <Card title={t("Stablecoin Market Cap")} icon={<Coins className="w-4 h-4" />} color="#00bcd4" isDark={isDark}>
+      <Card
+        title={t("Stablecoin Market Cap")}
+        icon={<Coins className="w-4 h-4" />}
+        color="#00bcd4"
+        isDark={isDark}
+      >
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-400">USDT</span>
-            <span className="font-mono font-bold text-sm">{d?.usdt != null ? fmtCompact(d.usdt) : "N/A"}</span>
+            <span className="font-mono font-bold text-sm">
+              {d?.usdt != null ? fmtCompact(d.usdt) : "N/A"}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-400">USDC</span>
-            <span className="font-mono font-bold text-sm">{d?.usdc != null ? fmtCompact(d.usdc) : "N/A"}</span>
+            <span className="font-mono font-bold text-sm">
+              {d?.usdc != null ? fmtCompact(d.usdc) : "N/A"}
+            </span>
           </div>
         </div>
       </Card>
-      <Card title={t("Daily On-Chain Transaction Volume")} icon={<PieChart className="w-4 h-4" />} color="#e040fb" isDark={isDark} className="max-h-[280px] overflow-y-auto">
+      <Card
+        title={t("Daily On-Chain Transaction Volume")}
+        icon={<PieChart className="w-4 h-4" />}
+        color="#e040fb"
+        isDark={isDark}
+        className="max-h-[280px] overflow-y-auto"
+      >
         {!d || d.chains.length === 0 ? (
           <span className="text-xs text-gray-500">N/A</span>
         ) : (
@@ -213,10 +272,14 @@ const AssetsSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, is
             {d.chains.map((c, i) => (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {c.image ? <img src={c.image} alt={c.name} className="w-5 h-5 rounded-full object-cover" /> : null}
+                  {c.image ? (
+                    <img src={c.image} alt={c.name} className="w-5 h-5 rounded-full object-cover" />
+                  ) : null}
                   <span className="text-xs font-semibold">{c.name}</span>
                 </div>
-                <span className="font-mono text-xs text-gray-400">{c.volume != null ? c.volume.toLocaleString() : "N/A"}</span>
+                <span className="font-mono text-xs text-gray-400">
+                  {c.volume != null ? c.volume.toLocaleString() : "N/A"}
+                </span>
               </div>
             ))}
           </div>
@@ -229,10 +292,14 @@ const AssetsSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, is
 const ContractSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, isDark }) => {
   const rows = m.contract.data?.rows ?? null;
   return (
-    <div className={`p-4 rounded-xl border mb-5 ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}>
+    <div
+      className={`p-4 rounded-xl border mb-5 ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}
+    >
       <div className="flex items-center gap-1.5 border-b pb-2 border-gray-500/20 mb-3">
         <BarChart3 className="w-4 h-4 text-[#ff9800]" />
-        <span className="font-bold text-sm flex items-center gap-1.5 text-[#ff9800]">{t("Major Futures Platforms")}</span>
+        <span className="font-bold text-sm flex items-center gap-1.5 text-[#ff9800]">
+          {t("Major Futures Platforms")}
+        </span>
       </div>
       {!rows ? (
         <span className="text-xs text-gray-500">N/A</span>
@@ -240,7 +307,9 @@ const ContractSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, 
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
             <thead>
-              <tr className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}>
+              <tr
+                className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
+              >
                 <th className="py-2 px-3">{t("Platform")}</th>
                 <th className="py-2 px-3">{t("Open Interest")}</th>
                 <th className="py-2 px-3">{t("Volume")}</th>
@@ -250,7 +319,9 @@ const ContractSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, 
               {rows.map((r) => (
                 <tr key={r.platform}>
                   <td className="py-2 px-3 font-bold font-sans text-white">{r.platform}</td>
-                  <td className="py-2 px-3">{r.openInterest != null ? fmtCompact(r.openInterest) : "N/A"}</td>
+                  <td className="py-2 px-3">
+                    {r.openInterest != null ? fmtCompact(r.openInterest) : "N/A"}
+                  </td>
                   <td className="py-2 px-3">{r.volume != null ? fmtCompact(r.volume) : "N/A"}</td>
                 </tr>
               ))}
@@ -265,7 +336,9 @@ const ContractSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, 
 const NetflowSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, isDark }) => {
   const coins = m.netflow.data?.coins ?? null;
   return (
-    <div className={`p-4 rounded-xl border mb-5 ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}>
+    <div
+      className={`p-4 rounded-xl border mb-5 ${isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"}`}
+    >
       <div className="flex items-center justify-between border-b pb-2 border-gray-500/20 mb-3">
         <span className="font-bold text-sm flex items-center gap-1.5 text-[#2962ff]">
           <Network className="w-4 h-4" />
@@ -289,7 +362,9 @@ const NetflowSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, i
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
             <thead>
-              <tr className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}>
+              <tr
+                className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
+              >
                 <th className="py-2 px-3">{t("Symbol")}</th>
                 <th className="py-2 px-3">{t("Price")}</th>
                 <th className="py-2 px-3">{t("Netflow")}</th>
@@ -301,15 +376,25 @@ const NetflowSection: React.FC<{ m: MarketOverview; isDark: boolean }> = ({ m, i
                 <tr key={i}>
                   <td className="py-2 px-3 font-bold font-sans text-white">
                     <div className="flex items-center gap-2">
-                      {c.logoUrl ? <img src={c.logoUrl} alt={c.symbol} className="w-5 h-5 rounded-full object-cover" /> : null}
+                      {c.logoUrl ? (
+                        <img
+                          src={c.logoUrl}
+                          alt={c.symbol}
+                          className="w-5 h-5 rounded-full object-cover"
+                        />
+                      ) : null}
                       {c.symbol}
                     </div>
                   </td>
                   <td className="py-2 px-3">{c.priceUsd != null ? fmt(c.priceUsd) : "N/A"}</td>
-                  <td className={`py-2 px-3 font-bold ${(c.netflow ?? 0) >= 0 ? "text-[#089981]" : "text-[#f23645]"}`}>
+                  <td
+                    className={`py-2 px-3 font-bold ${(c.netflow ?? 0) >= 0 ? "text-[#089981]" : "text-[#f23645]"}`}
+                  >
                     {c.netflow != null ? fmtCompact(c.netflow) : "N/A"}
                   </td>
-                  <td className="py-2 px-3">{c.liquidity != null ? fmtCompact(c.liquidity) : "N/A"}</td>
+                  <td className="py-2 px-3">
+                    {c.liquidity != null ? fmtCompact(c.liquidity) : "N/A"}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+
 import { fireEvent, render, screen } from "@testing-library/react";
-import { CreateAlertModal } from "./CreateAlertModal";
+import { describe, expect, it, vi } from "vitest";
 import type { SymbolInfo } from "../../types/trading";
+import { CreateAlertModal } from "./CreateAlertModal";
 
 function makeSymbol(): SymbolInfo {
   return {
@@ -72,7 +73,9 @@ describe("CreateAlertModal", () => {
 
   it("resets condition, frequency and note to defaults on reopen", () => {
     const first = renderModal();
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "Greater Than" } });
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "Greater Than" },
+    });
     fireEvent.click(screen.getByText("Every Time"));
     const note = screen.getByPlaceholderText("e.g. BTC breakout confirmation at key resistance");
     fireEvent.change(note, { target: { value: "my note" } });
@@ -81,7 +84,11 @@ describe("CreateAlertModal", () => {
     renderModal();
     expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("Crossing");
     expect(
-      (screen.getByPlaceholderText("e.g. BTC breakout confirmation at key resistance") as HTMLInputElement).value,
+      (
+        screen.getByPlaceholderText(
+          "e.g. BTC breakout confirmation at key resistance",
+        ) as HTMLInputElement
+      ).value,
     ).toBe("");
     expect(screen.getByText("Only Once").className).toContain("bg-[#2962ff]");
   });

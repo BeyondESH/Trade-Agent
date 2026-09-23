@@ -1,50 +1,50 @@
-import React, { useEffect, useRef, useState } from 'react';
 import {
-  DesktopTab,
-  DesktopViewMode,
-  ThemeMode,
-} from '../../types/trading';
-import {
-  Plus,
-  X,
-  Pin,
-  Search,
+  Bell,
+  Check,
+  ChevronDown,
   Cloud,
   CloudCheck,
-  Settings,
-  Bell,
-  Menu,
-  Maximize2,
-  Minimize2,
-  Minus,
-  Check,
+  ExternalLink,
+  Filter,
+  Flame,
   HelpCircle,
   Keyboard,
-  ExternalLink,
-  ChevronDown,
-  Monitor,
   Layout,
-  TrendingUp,
-  Flame,
-  Filter,
-  Users,
+  Maximize2,
+  Menu,
+  Minimize2,
+  Minus,
+  Monitor,
   Newspaper,
+  Pin,
+  Plus,
+  Search,
+  Settings,
   Share2,
-} from 'lucide-react';
-import { t } from '../../lib/i18n';
+  TrendingUp,
+  Users,
+  X,
+} from "lucide-react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { t } from "../../lib/i18n";
+import { formatRelativeTime } from "../../lib/newsfeed";
+import type { AlertItem, DesktopTab, DesktopViewMode, ThemeMode } from "../../types/trading";
 
 interface Props {
   tabs: DesktopTab[];
   activeTabId: string;
   onSelectTab: (id: string) => void;
   onCloseTab: (id: string) => void;
-  onNewTab: (type: DesktopViewMode | 'dashboard') => void;
+  onNewTab: (type: DesktopViewMode | "dashboard") => void;
   onPinTab: (id: string) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
   onOpenCommandPalette: () => void;
   onOpenDesktopSettings: () => void;
   onOpenShortcutsModal: () => void;
+  /** Real triggered alerts drive the notification dropdown (empty → empty state). */
+  triggeredAlerts?: AlertItem[];
 }
 
 export const DesktopTitleBar: React.FC<Props> = ({
@@ -59,10 +59,11 @@ export const DesktopTitleBar: React.FC<Props> = ({
   onOpenCommandPalette,
   onOpenDesktopSettings,
   onOpenShortcutsModal,
+  triggeredAlerts = [],
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
 
   const tabsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -72,24 +73,24 @@ export const DesktopTitleBar: React.FC<Props> = ({
     const container = tabsScrollRef.current;
     if (!container) return;
     const active = container.querySelector(`[data-tab-id="${activeTabId}"]`);
-    if (active) active.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+    if (active) active.scrollIntoView({ inline: "nearest", block: "nearest" });
   }, [activeTabId]);
 
-  const getTabIcon = (type: DesktopViewMode | 'dashboard') => {
+  const getTabIcon = (type: DesktopViewMode | "dashboard") => {
     switch (type) {
-      case 'chart':
+      case "chart":
         return <TrendingUp className="w-3.5 h-3.5 text-[#2962ff]" />;
-      case 'markets':
+      case "markets":
         return <Monitor className="w-3.5 h-3.5 text-[#00bcd4]" />;
-      case 'screener':
+      case "screener":
         return <Filter className="w-3.5 h-3.5 text-[#ff9800]" />;
-      case 'heatmaps':
+      case "heatmaps":
         return <Flame className="w-3.5 h-3.5 text-[#f23645]" />;
-      case 'community':
+      case "community":
         return <Users className="w-3.5 h-3.5 text-[#9c27b0]" />;
-      case 'news':
+      case "news":
         return <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />;
-      case 'dashboard':
+      case "dashboard":
         return <Layout className="w-3.5 h-3.5 text-[#2962ff]" />;
       default:
         return <Layout className="w-3.5 h-3.5 text-[#2962ff]" />;
@@ -100,7 +101,9 @@ export const DesktopTitleBar: React.FC<Props> = ({
     <div
       id="beyondether-desktop-titlebar"
       className={`h-9 w-full flex items-center justify-between border-b px-2 select-none z-50 text-xs font-sans ${
-        isDark ? 'bg-[#0f1118] border-[#2a2e39] text-[#d1d4dc]' : 'bg-[#e0e3eb] border-[#cbcfd9] text-[#131722]'
+        isDark
+          ? "bg-[#0f1118] border-[#2a2e39] text-[#d1d4dc]"
+          : "bg-[#e0e3eb] border-[#cbcfd9] text-[#131722]"
       }`}
     >
       {/* Left: Window Controls + BeyondEther Main Menu */}
@@ -110,20 +113,22 @@ export const DesktopTitleBar: React.FC<Props> = ({
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors font-bold ${
-              isDark ? 'hover:bg-[#1e222d] text-white' : 'hover:bg-white text-black'
+              isDark ? "hover:bg-[#1e222d] text-white" : "hover:bg-white text-black"
             }`}
           >
             <div className="w-4 h-4 bg-[#2962ff] text-white rounded flex items-center justify-center font-black text-[10px]">
               BE
             </div>
-            <span className="font-semibold text-xs tracking-tight">{t('BeyondEther')}</span>
+            <span className="font-semibold text-xs tracking-tight">{t("BeyondEther")}</span>
             <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
 
           {isMenuOpen && (
             <div
               className={`absolute top-full left-0 mt-1 w-56 rounded-lg shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
-                isDark ? 'bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]' : 'bg-white border-[#e0e3eb] text-[#131722]'
+                isDark
+                  ? "bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]"
+                  : "bg-white border-[#e0e3eb] text-[#131722]"
               }`}
             >
               <div className="px-3 py-1.5 border-b border-gray-500/20 text-[11px] font-semibold text-gray-400">
@@ -132,14 +137,14 @@ export const DesktopTitleBar: React.FC<Props> = ({
 
               <button
                 onClick={() => {
-                  onNewTab('chart');
+                  onNewTab("chart");
                   setIsMenuOpen(false);
                 }}
                 className={`w-full text-left px-3 py-1.5 flex items-center justify-between ${
-                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
                 }`}
               >
-                <span>{t('New Chart Tab')}</span>
+                <span>{t("New Chart Tab")}</span>
                 <span className="text-[10px] text-gray-400 font-mono">⌘T</span>
               </button>
 
@@ -149,10 +154,10 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   setIsMenuOpen(false);
                 }}
                 className={`w-full text-left px-3 py-1.5 flex items-center justify-between ${
-                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
                 }`}
               >
-                <span>{t('Command Palette')}</span>
+                <span>{t("Command Palette")}</span>
                 <span className="text-[10px] text-gray-400 font-mono">⌘K</span>
               </button>
 
@@ -164,11 +169,11 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   setIsMenuOpen(false);
                 }}
                 className={`w-full text-left px-3 py-1.5 flex items-center justify-between ${
-                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
                 }`}
               >
-                <span>{t(theme === 'dark' ? 'Color Theme: Dark' : 'Color Theme: Light')}</span>
-                <span className="text-[10px] text-[#2962ff] font-semibold">{t('Toggle')}</span>
+                <span>{t(theme === "dark" ? "Color Theme: Dark" : "Color Theme: Light")}</span>
+                <span className="text-[10px] text-[#2962ff] font-semibold">{t("Toggle")}</span>
               </button>
 
               <button
@@ -177,11 +182,11 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   setIsMenuOpen(false);
                 }}
                 className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
                 }`}
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>{t('Desktop App Settings')}</span>
+                <span>{t("Desktop App Settings")}</span>
               </button>
 
               <button
@@ -190,17 +195,17 @@ export const DesktopTitleBar: React.FC<Props> = ({
                   setIsMenuOpen(false);
                 }}
                 className={`w-full text-left px-3 py-1.5 flex items-center gap-2 ${
-                  isDark ? 'hover:bg-[#2a2e39]' : 'hover:bg-gray-100'
+                  isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
                 }`}
               >
                 <Keyboard className="w-3.5 h-3.5" />
-                <span>{t('Keyboard Shortcuts')}</span>
+                <span>{t("Keyboard Shortcuts")}</span>
               </button>
 
               <div className="my-1 border-t border-gray-500/20" />
 
               <div className="px-3 py-1 text-[10px] text-gray-400 flex items-center justify-between">
-                <span>{t('Cloud Sync: Active')}</span>
+                <span>{t("Cloud Sync: Active")}</span>
                 <span className="w-2 h-2 rounded-full bg-[#089981]"></span>
               </div>
             </div>
@@ -208,7 +213,10 @@ export const DesktopTitleBar: React.FC<Props> = ({
         </div>
 
         {/* Multi-Tab Bar Container */}
-        <div ref={tabsScrollRef} className="flex items-center h-full gap-1 overflow-x-auto no-scrollbar flex-1 min-w-0">
+        <div
+          ref={tabsScrollRef}
+          className="flex items-center h-full gap-1 overflow-x-auto no-scrollbar flex-1 min-w-0"
+        >
           {tabs.map((tab) => {
             const isActive = tab.id === activeTabId;
             return (
@@ -219,11 +227,11 @@ export const DesktopTitleBar: React.FC<Props> = ({
                 className={`group flex items-center gap-1.5 px-3 h-[28px] rounded-t-md cursor-pointer border-t border-x transition-all duration-100 select-none ${
                   isActive
                     ? isDark
-                      ? 'bg-[#131722] border-[#2a2e39] text-white font-medium shadow-xs'
-                      : 'bg-white border-[#cbcfd9] text-black font-semibold shadow-xs'
+                      ? "bg-[#131722] border-[#2a2e39] text-white font-medium shadow-xs"
+                      : "bg-white border-[#cbcfd9] text-black font-semibold shadow-xs"
                     : isDark
-                    ? 'border-transparent text-gray-400 hover:bg-[#1e222d] hover:text-gray-200'
-                    : 'border-transparent text-gray-600 hover:bg-[#d8dce6] hover:text-black'
+                      ? "border-transparent text-gray-400 hover:bg-[#1e222d] hover:text-gray-200"
+                      : "border-transparent text-gray-600 hover:bg-[#d8dce6] hover:text-black"
                 }`}
               >
                 {getTabIcon(tab.type)}
@@ -250,9 +258,9 @@ export const DesktopTitleBar: React.FC<Props> = ({
           {/* "+" New Tab Button -> Dashboard */}
           <button
             data-testid="tab-new"
-            onClick={() => onNewTab('dashboard')}
+            onClick={() => onNewTab("dashboard")}
             className={`p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors`}
-            title={t('Add New Workspace Tab')}
+            title={t("Add New Workspace Tab")}
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -266,12 +274,12 @@ export const DesktopTitleBar: React.FC<Props> = ({
           onClick={onOpenCommandPalette}
           className={`flex items-center gap-2 px-3 py-1 rounded-md border text-xs transition-colors ${
             isDark
-              ? 'bg-[#131722] border-[#2a2e39] text-gray-400 hover:text-white hover:border-[#2962ff]'
-              : 'bg-white border-[#cbcfd9] text-gray-600 hover:text-black hover:border-[#2962ff]'
+              ? "bg-[#131722] border-[#2a2e39] text-gray-400 hover:text-white hover:border-[#2962ff]"
+              : "bg-white border-[#cbcfd9] text-gray-600 hover:text-black hover:border-[#2962ff]"
           }`}
         >
           <Search className="w-3.5 h-3.5" />
-          <span>快速搜索...</span>
+          <span>{t("Quick search...")}</span>
           <kbd className="px-1.5 py-0.5 rounded bg-gray-500/20 text-[10px] font-mono">⌘K</kbd>
         </button>
 
@@ -281,7 +289,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
           title="All changes autosaved to BeyondEther Cloud"
         >
           <Cloud className="w-3.5 h-3.5 text-[#089981]" />
-          <span className="hidden md:inline">{t('Autosaved')}</span>
+          <span className="hidden md:inline">{t("Autosaved")}</span>
         </div>
 
         {/* Notification Bell */}
@@ -289,34 +297,57 @@ export const DesktopTitleBar: React.FC<Props> = ({
           <button
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
             className="p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors relative"
-            title="Notifications"
+            title={t("Notifications")}
           >
             <Bell className="w-3.5 h-3.5" />
-            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#2962ff]" />
+            {triggeredAlerts.length > 0 && (
+              <span
+                data-testid="notifications-badge"
+                className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#2962ff]"
+              />
+            )}
           </button>
 
           {isNotificationsOpen && (
             <div
+              data-testid="notifications-dropdown"
               className={`absolute top-full right-0 mt-1 w-72 rounded-lg shadow-2xl border p-3 z-50 text-xs animate-in fade-in zoom-in-95 duration-100 ${
-                isDark ? 'bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]' : 'bg-white border-[#e0e3eb] text-[#131722]'
+                isDark
+                  ? "bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]"
+                  : "bg-white border-[#e0e3eb] text-[#131722]"
               }`}
             >
-              <div className="font-bold text-xs mb-2 flex items-center justify-between">
-                <span>Notifications</span>
-                <span className="text-[10px] text-[#2962ff] cursor-pointer">Mark all read</span>
+              <div className="font-bold text-xs mb-2">
+                <span>{t("Notifications")}</span>
               </div>
-              <div className="flex flex-col gap-2">
-                <div className="p-2 rounded bg-[#2962ff]/10 border border-[#2962ff]/30 text-[11px]">
-                  <div className="font-bold text-[#2962ff]">{t('Price Alert Triggered')}</div>
-                  <div className="text-gray-300">BTCUSDT 上穿 $96,000</div>
-                  <div className="text-[9px] text-gray-500 mt-1">4 分钟前</div>
+              {triggeredAlerts.length === 0 ? (
+                <div
+                  data-testid="notifications-empty"
+                  className="py-4 text-center text-[11px] text-gray-500"
+                >
+                  {t("No notifications")}
                 </div>
-                <div className="p-2 rounded bg-gray-500/10 text-[11px]">
-                  <div className="font-bold">{t('New Pine Script Update')}</div>
-                  <div className="text-gray-400">SuperTrend Dynamic Breakout v4 已更新</div>
-                  <div className="text-[9px] text-gray-500 mt-1">1 小时前</div>
+              ) : (
+                <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                  {triggeredAlerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      data-testid={`notification-${alert.id}`}
+                      className="p-2 rounded bg-[#2962ff]/10 border border-[#2962ff]/30 text-[11px]"
+                    >
+                      <div className="font-bold text-[#2962ff]">{t("Price Alert Triggered")}</div>
+                      <div className="text-gray-300">
+                        {alert.symbol} {alert.condition} ${alert.targetPrice}
+                      </div>
+                      {alert.triggerTime && (
+                        <div className="text-[9px] text-gray-500 mt-1">
+                          {formatRelativeTime(alert.triggerTime)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -325,7 +356,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
         <button
           onClick={onOpenShortcutsModal}
           className="p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors"
-            title={t('Keyboard Shortcuts (?)')}
+          title={t("Keyboard Shortcuts (?)")}
         >
           <Keyboard className="w-3.5 h-3.5" />
         </button>
@@ -334,7 +365,7 @@ export const DesktopTitleBar: React.FC<Props> = ({
         <button
           onClick={onOpenDesktopSettings}
           className="p-1.5 rounded hover:bg-gray-500/20 text-gray-400 hover:text-white transition-colors"
-          title={t('Desktop App Settings')}
+          title={t("Desktop App Settings")}
         >
           <Settings className="w-3.5 h-3.5" />
         </button>

@@ -1,5 +1,5 @@
-import React from "react";
-import { ThemeMode } from "../../../types/trading";
+import type React from "react";
+import type { ThemeMode } from "../../../types/trading";
 
 export function cardCls(theme: ThemeMode): string {
   return `rounded-xl border ${
@@ -75,7 +75,8 @@ export const fmtTime = (ms: number): string => {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate(),
-  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes(),
-  ).padStart(2, "0")}`;
+  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(
+    2,
+    "0",
+  )}`;
 };

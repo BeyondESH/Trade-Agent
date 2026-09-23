@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useState } from "react";
-import type { GlobalNewsItem } from "../types/trading";
 import { api } from "../api/client";
+import type { GlobalNewsItem } from "../types/trading";
 import { formatRelativeTime } from "./newsfeed";
 
 const STREAM_URL = "/api/news/stream";

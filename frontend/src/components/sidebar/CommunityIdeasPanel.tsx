@@ -1,36 +1,63 @@
-import React, { useState } from 'react';
-import { MessageSquare, ThumbsUp, Send, User } from 'lucide-react';
-import { t } from '../../lib/i18n';
+import { MessageSquare, Send, ThumbsUp, User } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { t } from "../../lib/i18n";
 
 interface Props {
-  theme: 'dark' | 'light';
+  theme: "dark" | "light";
 }
 
 export const CommunityIdeasPanel: React.FC<Props> = ({ theme }) => {
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
   const [messages, setMessages] = useState([
-    { id: '1', user: 'CryptoWhale_Pro', time: '12m ago', text: 'BTC looking extremely strong holding $96k support. Watching for $100k breakout target next!', likes: 14 },
-    { id: '2', user: 'AlphaTrader_NY', time: '28m ago', text: 'NVDA earnings preview looking bullish on Blackwell cluster guidance.', likes: 8 },
-    { id: '3', user: 'ForexMaster_LDN', time: '1h ago', text: 'EURUSD forming a clear double bottom on 4h timeframe, RSI divergence confirmed.', likes: 5 },
+    {
+      id: "1",
+      user: "CryptoWhale_Pro",
+      time: "12m ago",
+      text: "BTC looking extremely strong holding $96k support. Watching for $100k breakout target next!",
+      likes: 14,
+    },
+    {
+      id: "2",
+      user: "AlphaTrader_NY",
+      time: "28m ago",
+      text: "NVDA earnings preview looking bullish on Blackwell cluster guidance.",
+      likes: 8,
+    },
+    {
+      id: "3",
+      user: "ForexMaster_LDN",
+      time: "1h ago",
+      text: "EURUSD forming a clear double bottom on 4h timeframe, RSI divergence confirmed.",
+      likes: 5,
+    },
   ]);
-  const [inputVal, setInputVal] = useState('');
+  const [inputVal, setInputVal] = useState("");
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputVal.trim()) return;
     setMessages([
       ...messages,
-      { id: Date.now().toString(), user: 'You (Trader)', time: 'Just now', text: inputVal.trim(), likes: 0 },
+      {
+        id: Date.now().toString(),
+        user: "You (Trader)",
+        time: "Just now",
+        text: inputVal.trim(),
+        likes: 0,
+      },
     ]);
-    setInputVal('');
+    setInputVal("");
   };
 
   return (
     <div id="community-ideas-panel" className="flex flex-col h-full w-full select-none text-xs">
-      <div className={`p-2.5 border-b flex items-center justify-between ${isDark ? 'border-[#2a2e39]' : 'border-[#e0e3eb]'}`}>
+      <div
+        className={`p-2.5 border-b flex items-center justify-between ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
+      >
         <div className="flex items-center gap-1.5 font-bold text-sm">
           <MessageSquare className="w-4 h-4 text-[#2962ff]" />
-          <span>{t('Public Stream & Chat')}</span>
+          <span>{t("Public Stream & Chat")}</span>
         </div>
       </div>
 
@@ -39,7 +66,7 @@ export const CommunityIdeasPanel: React.FC<Props> = ({ theme }) => {
           <div
             key={m.id}
             className={`p-2.5 rounded-lg border flex flex-col gap-1.5 ${
-              isDark ? 'bg-[#1e222d] border-[#2a2e39]' : 'bg-[#f8fafc] border-[#e0e3eb]'
+              isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-[#f8fafc] border-[#e0e3eb]"
             }`}
           >
             <div className="flex items-center justify-between text-[10px] text-gray-400">
@@ -58,14 +85,19 @@ export const CommunityIdeasPanel: React.FC<Props> = ({ theme }) => {
         ))}
       </div>
 
-      <form onSubmit={handleSend} className={`p-2 border-t flex gap-1.5 ${isDark ? 'border-[#2a2e39] bg-[#131722]' : 'border-[#e0e3eb] bg-white'}`}>
+      <form
+        onSubmit={handleSend}
+        className={`p-2 border-t flex gap-1.5 ${isDark ? "border-[#2a2e39] bg-[#131722]" : "border-[#e0e3eb] bg-white"}`}
+      >
         <input
           type="text"
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
           placeholder="Share trading thought..."
           className={`flex-1 px-2.5 py-1.5 rounded text-xs outline-none ${
-            isDark ? 'bg-[#1e222d] text-white border border-[#2a2e39] focus:border-[#2962ff]' : 'bg-gray-100 text-black border border-gray-200 focus:border-[#2962ff]'
+            isDark
+              ? "bg-[#1e222d] text-white border border-[#2a2e39] focus:border-[#2962ff]"
+              : "bg-gray-100 text-black border border-gray-200 focus:border-[#2962ff]"
           }`}
         />
         <button

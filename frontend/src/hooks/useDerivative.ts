@@ -25,25 +25,35 @@ export function useDerivative(symbol: string, category = "USDT-FUTURES"): Deriva
   const [funding, setFunding] = useState<FundingInfo | null>(null);
   const [markPrice, setMarkPrice] = useState<MarkPriceInfo | null>(null);
 
-  useExchangeSocket("funding-time", symbol, (frame) => {
-    const d = frame.data as { funding?: FundingInfo } | FundingInfo | undefined;
-    const info = Array.isArray(frame.data)
-      ? (frame.data as FundingInfo[])[0]
-      : d && typeof d === "object" && "funding" in d
-        ? (d as { funding: FundingInfo }).funding
-        : (d as FundingInfo | undefined);
-    if (info && info.instId === symbol) setFunding(info);
-  }, { category });
+  useExchangeSocket(
+    "funding-time",
+    symbol,
+    (frame) => {
+      const d = frame.data as { funding?: FundingInfo } | FundingInfo | undefined;
+      const info = Array.isArray(frame.data)
+        ? (frame.data as FundingInfo[])[0]
+        : d && typeof d === "object" && "funding" in d
+          ? (d as { funding: FundingInfo }).funding
+          : (d as FundingInfo | undefined);
+      if (info && info.instId === symbol) setFunding(info);
+    },
+    { category },
+  );
 
-  useExchangeSocket("mark-price", symbol, (frame) => {
-    const d = frame.data as { mark_price?: MarkPriceInfo } | MarkPriceInfo | undefined;
-    const info = Array.isArray(frame.data)
-      ? (frame.data as MarkPriceInfo[])[0]
-      : d && typeof d === "object" && "mark_price" in d
-        ? (d as { mark_price: MarkPriceInfo }).mark_price
-        : (d as MarkPriceInfo | undefined);
-    if (info && info.instId === symbol) setMarkPrice(info);
-  }, { category });
+  useExchangeSocket(
+    "mark-price",
+    symbol,
+    (frame) => {
+      const d = frame.data as { mark_price?: MarkPriceInfo } | MarkPriceInfo | undefined;
+      const info = Array.isArray(frame.data)
+        ? (frame.data as MarkPriceInfo[])[0]
+        : d && typeof d === "object" && "mark_price" in d
+          ? (d as { mark_price: MarkPriceInfo }).mark_price
+          : (d as MarkPriceInfo | undefined);
+      if (info && info.instId === symbol) setMarkPrice(info);
+    },
+    { category },
+  );
 
   return { funding, markPrice };
 }

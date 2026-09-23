@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { Chart } from "klinecharts";
 import type { SymbolInfo as ProSymbolInfo } from "@klinecharts/pro";
-import { ThemeMode } from "../../../types/trading";
-import type { BacktestJobResult, SeriesRef } from "../../../api/types";
+import type { Chart } from "klinecharts";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../../api/client";
-import { KLineChartProView } from "../../chart/KLineChartProView";
 import { BitgetDatafeed, periodFromTimeframe } from "../../../api/datafeed";
+import type { BacktestJobResult, SeriesRef } from "../../../api/types";
 import { signalsToOverlays } from "../../../lib/signalMarks";
+import type { ThemeMode } from "../../../types/trading";
+import { KLineChartProView } from "../../chart/KLineChartProView";
 import { Panel } from "./ui";
 
 interface Props {

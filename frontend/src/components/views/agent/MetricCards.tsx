@@ -1,8 +1,8 @@
-import React from "react";
-import { ThemeMode } from "../../../types/trading";
+import type React from "react";
 import type { BacktestJobResult } from "../../../api/types";
+import { buildMetricCards, type MetricCardDef } from "../../../lib/metricCards";
+import type { ThemeMode } from "../../../types/trading";
 import { cardCls } from "./ui";
-import { buildMetricCards, MetricCardDef } from "../../../lib/metricCards";
 
 const MetricCard: React.FC<{ def: MetricCardDef; theme: ThemeMode }> = ({ def, theme }) => {
   const color =
@@ -22,10 +22,10 @@ const MetricCard: React.FC<{ def: MetricCardDef; theme: ThemeMode }> = ({ def, t
 };
 
 /** KPI metric cards rendered from a completed backtest job result. */
-export const MetricCards: React.FC<{ result: BacktestJobResult; theme: ThemeMode }> = ({
-  result,
-  theme,
-}) => {
+export const MetricCards: React.FC<{
+  result: BacktestJobResult;
+  theme: ThemeMode;
+}> = ({ result, theme }) => {
   const cards = buildMetricCards(result);
   return (
     <div className="flex flex-col gap-2">

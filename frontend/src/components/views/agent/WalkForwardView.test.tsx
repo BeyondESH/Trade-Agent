@@ -1,13 +1,38 @@
 // @vitest-environment jsdom
+
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { FoldRanges, WalkForwardView } from "./WalkForwardView";
 import type { WalkForwardResult } from "../../../api/types";
+import { FoldRanges, WalkForwardView } from "./WalkForwardView";
 
 const wfResult: WalkForwardResult = {
   folds: [
-    { fold: 0, train_start: 100, train_end: 200, test_start: 200, test_end: 300, total_return: 0.05, max_drawdown: -0.02, win_rate: 0.6, trades: 5, roc_auc: 0.7, log_loss: 0.6 },
-    { fold: 1, train_start: 200, train_end: 300, test_start: 300, test_end: 400, total_return: -0.01, max_drawdown: -0.03, win_rate: 0.4, trades: 3, roc_auc: 0.65, log_loss: 0.68 },
+    {
+      fold: 0,
+      train_start: 100,
+      train_end: 200,
+      test_start: 200,
+      test_end: 300,
+      total_return: 0.05,
+      max_drawdown: -0.02,
+      win_rate: 0.6,
+      trades: 5,
+      roc_auc: 0.7,
+      log_loss: 0.6,
+    },
+    {
+      fold: 1,
+      train_start: 200,
+      train_end: 300,
+      test_start: 300,
+      test_end: 400,
+      total_return: -0.01,
+      max_drawdown: -0.03,
+      win_rate: 0.4,
+      trades: 3,
+      roc_auc: 0.65,
+      log_loss: 0.68,
+    },
   ],
   data_meta: { n_train: 300, n_test: 100, start: 100, end: 400 },
 };

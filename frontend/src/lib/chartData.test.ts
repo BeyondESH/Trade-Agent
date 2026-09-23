@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { BacktestTrade } from "../api/types";
 import {
   equityVsBenchmark,
   monthlyHeatmap,
@@ -8,7 +9,6 @@ import {
   returnsHistogram,
   tradePnl,
 } from "./chartData";
-import type { BacktestTrade } from "../api/types";
 
 const mkTrade = (netReturn: number): BacktestTrade => ({
   side: "long",
@@ -40,12 +40,9 @@ describe("monthlyReturns", () => {
     const nov = new Date(2023, 10, 30).getTime();
     const dec = new Date(2023, 11, 31).getTime();
     const jan = new Date(2024, 0, 31).getTime();
-    const out = monthlyReturns(
-      [1.0, 1.05, 1.1, 1.32],
-      [nov, nov + 3_600_000, dec, jan],
-    );
+    const out = monthlyReturns([1.0, 1.05, 1.1, 1.32], [nov, nov + 3_600_000, dec, jan]);
     expect(out.map((m) => m.month)).toEqual(["2023-11", "2023-12", "2024-01"]);
-    expect(out[0].value).toBeCloseTo(0.05, 6);      // 1.05/1.0 - 1
+    expect(out[0].value).toBeCloseTo(0.05, 6); // 1.05/1.0 - 1
     expect(out[1].value).toBeCloseTo(1.1 / 1.05 - 1, 6);
     expect(out[2].value).toBeCloseTo(1.32 / 1.1 - 1, 6);
   });

@@ -1,14 +1,17 @@
 ﻿// @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { GlobalNewsFeed } from "./GlobalNewsFeed";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GlobalNewsItem } from "../../types/trading";
+import { GlobalNewsFeed } from "./GlobalNewsFeed";
 
 const state = vi.hoisted(() => ({
   items: [] as GlobalNewsItem[],
   pending: [] as GlobalNewsItem[],
   state: "open" as "open" | "connecting" | "closed",
-  sources: {} as Record<string, { last_ts: number | null; last_error: string | null; failures: number }>,
+  sources: {} as Record<
+    string,
+    { last_ts: number | null; last_error: string | null; failures: number }
+  >,
   hasMore: false,
 }));
 
@@ -28,9 +31,15 @@ vi.mock("../../lib/globalNews", () => ({
     loadMore: vi.fn().mockResolvedValue(undefined),
   }),
   fetchNewsCategories: vi.fn().mockResolvedValue(["crypto", "macro", "policy"]),
-  allSourcesUnavailable: (sources: Record<string, { last_ts: number | null; last_error: string | null }>) => {
+  allSourcesUnavailable: (
+    sources: Record<string, { last_ts: number | null; last_error: string | null }>,
+  ) => {
     const entries = Object.values(sources);
-    return entries.length > 0 && entries.every((s) => !!s.last_error) && entries.every((s) => s.last_ts == null);
+    return (
+      entries.length > 0 &&
+      entries.every((s) => !!s.last_error) &&
+      entries.every((s) => s.last_ts == null)
+    );
   },
   formatNewsTime: (ts: number) => `T${ts}`,
   NEWS_WINDOW_SIZE: 100,
@@ -112,7 +121,10 @@ describe("GlobalNewsFeed", () => {
   });
 
   it("renders items into masonry columns with the full content", async () => {
-    state.items = [mk("1", "crypto"), mk("2", "macro", "这是一段很长的正文内容，应该被完整展示，不能截断。")];
+    state.items = [
+      mk("1", "crypto"),
+      mk("2", "macro", "这是一段很长的正文内容，应该被完整展示，不能截断。"),
+    ];
     renderFeed();
     expect(await screen.findByText("标题-1")).toBeTruthy();
     expect(screen.getByText("标题-2")).toBeTruthy();
@@ -167,14 +179,18 @@ describe("GlobalNewsFeed", () => {
     fireEvent.scroll(container);
 
     // stub the anchor card rect: topVisibleCard=40, anchorTop=40, post-insert=140
-    const card = container.querySelector('[data-item-id]')!;
+    const card = container.querySelector("[data-item-id]")!;
     const tops = [40, 40, 140];
     let calls = 0;
     (card as unknown as { getBoundingClientRect: () => DOMRect }).getBoundingClientRect = () =>
-      ({ top: tops[Math.min(calls++, 2)], bottom: 200 } as DOMRect);
+      ({ top: tops[Math.min(calls++, 2)], bottom: 200 }) as DOMRect;
 
     const origRaf = globalThis.requestAnimationFrame;
-    (globalThis as unknown as { requestAnimationFrame: (cb: () => void) => number }).requestAnimationFrame = (cb) => {
+    (
+      globalThis as unknown as {
+        requestAnimationFrame: (cb: () => void) => number;
+      }
+    ).requestAnimationFrame = (cb) => {
       cb();
       return 1;
     };
@@ -184,7 +200,11 @@ describe("GlobalNewsFeed", () => {
         rerender(scrollElement());
       });
     } finally {
-      (globalThis as unknown as { requestAnimationFrame: (cb: () => void) => number }).requestAnimationFrame = origRaf;
+      (
+        globalThis as unknown as {
+          requestAnimationFrame: (cb: () => void) => number;
+        }
+      ).requestAnimationFrame = origRaf;
     }
 
     expect(container.scrollTop).toBe(120); // 20 + (140 - 40) anchor compensation

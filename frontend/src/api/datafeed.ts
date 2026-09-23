@@ -1,11 +1,11 @@
 import type { Datafeed, DatafeedSubscribeCallback, Period, SymbolInfo } from "@klinecharts/pro";
 import type { KLineData } from "klinecharts";
+import { candleToKLine } from "../lib/transform";
+import { type BitgetWsStatus, bitgetWs, type CandleSubHandle } from "./bitgetWs";
 import { api } from "./client";
 import type { BackfillResponse, Instrument, SeriesRef } from "./types";
 import { categoryLabel } from "./types";
-import { bitgetWs, type BitgetWsStatus, type CandleSubHandle } from "./bitgetWs";
 import type { ConnStatus } from "./ws";
-import { candleToKLine } from "../lib/transform";
 
 const DEFAULT_CATEGORY = "USDT-FUTURES";
 
@@ -64,9 +64,21 @@ export function periodToTimeframe(period: Period): string {
 
 /** The set of native timeframe identifiers supported round-trip. */
 const NATIVE_TIMEFRAMES = new Set([
-  "1s", "1m", "3m", "5m", "15m", "30m",
-  "1h", "2h", "4h", "6h", "12h",
-  "1d", "3d", "1w", "1mo",
+  "1s",
+  "1m",
+  "3m",
+  "5m",
+  "15m",
+  "30m",
+  "1h",
+  "2h",
+  "4h",
+  "6h",
+  "12h",
+  "1d",
+  "3d",
+  "1w",
+  "1mo",
 ]);
 
 /**
@@ -87,13 +99,26 @@ export function periodFromTimeframe(timeframe: string): Period {
   const unit = m[2].toLowerCase();
   let timespan: Period["timespan"];
   switch (unit) {
-    case "s": timespan = "second"; break;
-    case "m": timespan = "minute"; break;
-    case "h": timespan = "hour"; break;
-    case "d": timespan = "day"; break;
-    case "w": timespan = "week"; break;
-    case "mo": timespan = "month"; break;
-    default: throw new Error(`periodFromTimeframe: unsupported unit "${unit}"`);
+    case "s":
+      timespan = "second";
+      break;
+    case "m":
+      timespan = "minute";
+      break;
+    case "h":
+      timespan = "hour";
+      break;
+    case "d":
+      timespan = "day";
+      break;
+    case "w":
+      timespan = "week";
+      break;
+    case "mo":
+      timespan = "month";
+      break;
+    default:
+      throw new Error(`periodFromTimeframe: unsupported unit "${unit}"`);
   }
   const text = `${multiplier}${unit}`;
   return { multiplier, timespan, text };
@@ -164,8 +189,7 @@ export class BitgetDatafeed implements Datafeed {
       if (inst.symbolStatus && inst.symbolStatus !== "online") return false;
       if (!q) return true;
       return (
-        inst.symbol.toLowerCase().includes(q) ||
-        (inst.baseCoin ?? "").toLowerCase().includes(q)
+        inst.symbol.toLowerCase().includes(q) || (inst.baseCoin ?? "").toLowerCase().includes(q)
       );
     });
     // prefer smaller/quoted symbols first for stable ordering
@@ -289,7 +313,11 @@ export class BitgetDatafeed implements Datafeed {
     return `${series.category}:${series.symbol}:${series.timeframe}`;
   }
 
-  private async fetchStored(series: SeriesRef, from: number, to: number): Promise<KLineData[] | null> {
+  private async fetchStored(
+    series: SeriesRef,
+    from: number,
+    to: number,
+  ): Promise<KLineData[] | null> {
     try {
       const stored = await api.candles(series, from, to, 500);
       if (stored.count > 0) return stored.candles.map(candleToKLine);
@@ -307,7 +335,11 @@ export class BitgetDatafeed implements Datafeed {
    * combined list is sorted ascending and deduplicated — keeping the
    * load/append seam free of duplicates and out-of-order timestamps.
    */
-  private async mergeLiveTail(series: SeriesRef, stored: KLineData[], to: number): Promise<KLineData[]> {
+  private async mergeLiveTail(
+    series: SeriesRef,
+    stored: KLineData[],
+    to: number,
+  ): Promise<KLineData[]> {
     const base = normalizeBackwardList(stored, to);
     if (base.length === 0) return base;
     try {

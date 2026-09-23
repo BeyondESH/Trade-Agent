@@ -1,19 +1,16 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import type { Chart } from "klinecharts";
 import {
-  KLineChartPro,
   type ChartPro,
   type Datafeed,
+  KLineChartPro,
   type Period,
   type SymbolInfo,
 } from "@klinecharts/pro";
+import type { Chart } from "klinecharts";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import "../../../vendor/klinecharts-pro/dist/klinecharts-pro.css";
 import "../../klinecharts-pro-theme.css";
 import { FONT_FAMILY_STACK } from "../../lib/fonts";
-import {
-  loadPinnedTimeframes,
-  savePinnedTimeframes,
-} from "../../lib/periodsStore";
+import { loadPinnedTimeframes, savePinnedTimeframes } from "../../lib/periodsStore";
 
 export interface KLineChartProHandle {
   setSymbol(symbol: SymbolInfo): void;
@@ -22,7 +19,21 @@ export interface KLineChartProHandle {
   setLocale(locale: string): void;
   getChart(): Chart | null;
   getRoot(): HTMLElement | null;
+  /** Open the pro native indicator picker (bridges the period-bar chrome button). */
+  openIndicatorPicker(): void;
+  /** Open the pro native settings modal (bridges the period-bar chrome button). */
+  openSettings(): void;
+  /** Re-anchor the viewport to the latest candle (default zoom). */
+  resetView(): void;
 }
+
+/**
+ * Native period-bar tool buttons, in render order (`PeriodBar`):
+ * indicator, timezone, setting, screenshot, fullscreen. The pro instance is
+ * built from Solid and exposes none of the modal openers on `ChartPro`, so the
+ * only viable entry point is to click its own chrome button.
+ */
+const NATIVE_TOOL_INDEX = { indicator: 0, settings: 2 } as const;
 
 /**
  * Bitget-native timeframe set, aligned with the backend-supported granularities
@@ -49,7 +60,11 @@ export const NATIVE_PERIODS: Period[] = [
 ];
 
 /** Group a period list by time unit for the expandable panel. */
-export const PERIOD_GROUPS: { unit: string; label: string; periods: Period[] }[] = [
+export const PERIOD_GROUPS: {
+  unit: string;
+  label: string;
+  periods: Period[];
+}[] = [
   { unit: "second", label: "秒", periods: [] },
   { unit: "minute", label: "分钟", periods: [] },
   { unit: "hour", label: "小时", periods: [] },
@@ -59,9 +74,10 @@ export const PERIOD_GROUPS: { unit: string; label: string; periods: Period[] }[]
 export function groupPeriods(periods: Period[]) {
   const grouped = PERIOD_GROUPS.map((g) => ({ ...g, periods: [] as Period[] }));
   for (const p of periods) {
-    const g = grouped.find((x) =>
-      x.unit === p.timespan ||
-      (x.unit === "week" && (p.timespan === "week" || p.timespan === "month")),
+    const g = grouped.find(
+      (x) =>
+        x.unit === p.timespan ||
+        (x.unit === "week" && (p.timespan === "week" || p.timespan === "month")),
     );
     if (g) g.periods.push(p);
   }
@@ -107,10 +123,7 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         }
         return () => {
           disposeTimerRef.current = setTimeout(() => {
-            propsRef.current.datafeed.unsubscribe(
-              propsRef.current.symbol,
-              propsRef.current.period,
-            );
+            propsRef.current.datafeed.unsubscribe(propsRef.current.symbol, propsRef.current.period);
             if (containerRef.current) containerRef.current.innerHTML = "";
             proRef.current = null;
             mountedRef.current = false;
@@ -137,7 +150,10 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         pinnedTimeframes: loadPinnedTimeframes(),
         onPinChange: (ids) => savePinnedTimeframes(ids),
         styles: {
-          grid: { horizontal: { color: "#2a2e39" }, vertical: { color: "#2a2e39" } },
+          grid: {
+            horizontal: { color: "#2a2e39" },
+            vertical: { color: "#2a2e39" },
+          },
           candle: {
             bar: {
               upColor: "#089981",
@@ -153,16 +169,37 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
                 upColor: "#089981",
                 downColor: "#f23645",
                 noChangeColor: "#787b86",
-                line: { show: true, style: "dashed" as import("klinecharts").LineType, dashedValue: [4, 4] },
-                text: { show: true, color: "#d1d4dc", size: 11, family: FONT_FAMILY_STACK },
+                line: {
+                  show: true,
+                  style: "dashed" as import("klinecharts").LineType,
+                  dashedValue: [4, 4],
+                },
+                text: {
+                  show: true,
+                  color: "#d1d4dc",
+                  size: 11,
+                  family: FONT_FAMILY_STACK,
+                },
               },
             },
           },
-          xAxis: { size: 28, tickText: { size: 11, family: FONT_FAMILY_STACK }, axisLine: { color: "#2a2e39" } },
-          yAxis: { size: "auto", tickText: { size: 11, family: FONT_FAMILY_STACK }, axisLine: { color: "#2a2e39" } },
+          xAxis: {
+            size: 28,
+            tickText: { size: 11, family: FONT_FAMILY_STACK },
+            axisLine: { color: "#2a2e39" },
+          },
+          yAxis: {
+            size: "auto",
+            tickText: { size: 11, family: FONT_FAMILY_STACK },
+            axisLine: { color: "#2a2e39" },
+          },
           crosshair: {
             horizontal: {
-              line: { color: "#9598a1", style: "dashed" as import("klinecharts").LineType, dashedValue: [4, 4] },
+              line: {
+                color: "#9598a1",
+                style: "dashed" as import("klinecharts").LineType,
+                dashedValue: [4, 4],
+              },
               text: {
                 show: true,
                 backgroundColor: "#131722",
@@ -173,7 +210,11 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
               },
             },
             vertical: {
-              line: { color: "#9598a1", style: "dashed" as import("klinecharts").LineType, dashedValue: [4, 4] },
+              line: {
+                color: "#9598a1",
+                style: "dashed" as import("klinecharts").LineType,
+                dashedValue: [4, 4],
+              },
               text: {
                 show: true,
                 backgroundColor: "#131722",
@@ -202,9 +243,7 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
       // force a relayout+redraw so axis/crosshair/price labels render with the
       // final Google Sans Flex / Noto Sans SC instead of the fallback glyphs.
       if (typeof document !== "undefined" && "fonts" in document) {
-        document.fonts.ready
-          .then(() => pro.getChart()?.resize())
-          .catch(() => undefined);
+        document.fonts.ready.then(() => pro.getChart()?.resize()).catch(() => undefined);
       }
       return () => {
         // Schedule the real disposal a tick later: React StrictMode (dev)
@@ -212,10 +251,7 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         // pending timer is cancelled by the new mount and the existing chart is
         // reused. A genuine unmount lets the timer fire and release everything.
         disposeTimerRef.current = setTimeout(() => {
-          propsRef.current.datafeed.unsubscribe(
-            propsRef.current.symbol,
-            propsRef.current.period,
-          );
+          propsRef.current.datafeed.unsubscribe(propsRef.current.symbol, propsRef.current.period);
           if (containerRef.current) containerRef.current.innerHTML = "";
           proRef.current = null;
           mountedRef.current = false;
@@ -225,6 +261,13 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const clickNativeTool = (index: number) => {
+      const root = containerRef.current;
+      if (!root) return;
+      const tools = root.querySelectorAll<HTMLElement>(".klinecharts-pro-period-bar .item.tools");
+      tools[index]?.click();
+    };
+
     useImperativeHandle(ref, () => ({
       setSymbol: (symbol) => proRef.current?.setSymbol(symbol),
       setPeriod: (period) => proRef.current?.setPeriod(period),
@@ -232,6 +275,9 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
       setLocale: (locale) => proRef.current?.setLocale(locale),
       getChart: () => (proRef.current?.getChart() ?? null) as Chart | null,
       getRoot: () => containerRef.current,
+      openIndicatorPicker: () => clickNativeTool(NATIVE_TOOL_INDEX.indicator),
+      openSettings: () => clickNativeTool(NATIVE_TOOL_INDEX.settings),
+      resetView: () => proRef.current?.getChart()?.scrollToRealTime(),
     }));
 
     // Follow global theme/locale changes without remounting.
@@ -248,12 +294,18 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
     // and the period bar switch themselves before onSymbolChange fires).
     useEffect(() => {
       const cur = proRef.current?.getSymbol();
-      if (cur && cur.ticker === props.symbol.ticker && (cur.market ?? null) === (props.symbol.market ?? null)) return;
+      if (
+        cur &&
+        cur.ticker === props.symbol.ticker &&
+        (cur.market ?? null) === (props.symbol.market ?? null)
+      )
+        return;
       proRef.current?.setSymbol(props.symbol);
     }, [props.symbol]);
     useEffect(() => {
       const cur = proRef.current?.getPeriod();
-      if (cur && cur.text === props.period.text && cur.multiplier === props.period.multiplier) return;
+      if (cur && cur.text === props.period.text && cur.multiplier === props.period.multiplier)
+        return;
       proRef.current?.setPeriod(props.period);
     }, [props.period]);
 

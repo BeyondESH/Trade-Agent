@@ -1,29 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Period, SymbolInfo as ProSymbolInfo } from '@klinecharts/pro';
-import type { SymbolInfo, ThemeMode } from '../../types/trading';
-import { BitgetDatafeed, periodFromTimeframe } from '../../api/datafeed';
-import { KLineChartProView, type KLineChartProHandle } from './KLineChartProView';
-import type { Chart } from 'klinecharts';
-import { ChartContextMenu } from './ChartContextMenu';
-import { PriceLineSettingsModal } from './PriceLineSettingsModal';
+import type { Period, SymbolInfo as ProSymbolInfo } from "@klinecharts/pro";
+import type { Chart } from "klinecharts";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BitgetDatafeed, periodFromTimeframe } from "../../api/datafeed";
 import {
-  alertLinesToDraw,
-  isInsidePane,
-  pixelToPrice,
-  syncPriceLineOverlays,
-} from '../../lib/chartController';
-import {
-  createAlert,
+  type Alert,
   loadAlertsForSymbol,
-  mirrorAlertCreate,
   mirrorAlertDelete,
   mirrorAlertUpdate,
   removeAlert,
   subscribeAlerts,
   updateAlert,
-  upsertAlert,
-  type Alert,
-} from '../../lib/alertsStore';
+} from "../../lib/alertsStore";
+import {
+  alertLinesToDraw,
+  isInsidePane,
+  pixelToPrice,
+  syncPriceLineOverlays,
+} from "../../lib/chartController";
+import { pushToast } from "../../lib/toastStore";
+import type { SymbolInfo, ThemeMode } from "../../types/trading";
+import { ChartContextMenu } from "./ChartContextMenu";
+import { type KLineChartProHandle, KLineChartProView } from "./KLineChartProView";
+import { PriceLineSettingsModal } from "./PriceLineSettingsModal";
 
 interface Props {
   symbol: SymbolInfo;
@@ -43,14 +41,14 @@ function toProSymbol(s: SymbolInfo): ProSymbolInfo {
     shortName: s.ticker,
     name: s.name,
     exchange: s.exchange,
-    market: 'USDT-FUTURES',
+    market: "USDT-FUTURES",
     pricePrecision: s.digits,
     volumePrecision: 4,
   };
 }
 
-export { toProSymbol };
 export type { KLineChartProHandle };
+export { toProSymbol };
 
 /**
  * Single native klinecharts-pro chart. Replaces the former multi-cell grid:
@@ -82,28 +80,26 @@ export const NativeChart: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [symbol.id, symbol.ticker],
   );
-  const period: Period = useMemo(
-    () => periodFromTimeframe(timeframe),
-    [timeframe],
-  );
+  const period: Period = useMemo(() => periodFromTimeframe(timeframe), [timeframe]);
 
   const chartRef = useRef<Chart | null>(null);
+  const proHandleRef = useRef<KLineChartProHandle | null>(null);
   const symbolRef = useRef(symbol);
   symbolRef.current = symbol;
   const [chartReady, setChartReady] = useState(false);
 
   // Current symbol's price-line entities (source of truth for overlays).
-  const [alerts, setAlerts] = useState<Alert[]>(() =>
-    loadAlertsForSymbol(symbol.ticker),
-  );
-  const [menu, setMenu] = useState<{ x: number; y: number; price: number } | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>(() => loadAlertsForSymbol(symbol.ticker));
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    price: number;
+  } | null>(null);
   const [settingsAlertId, setSettingsAlertId] = useState<string | null>(null);
 
   // Keep the local snapshot in sync with the store (external changes, drags...).
   useEffect(() => {
-    const off = subscribeAlerts(() =>
-      setAlerts(loadAlertsForSymbol(symbolRef.current.ticker)),
-    );
+    const off = subscribeAlerts(() => setAlerts(loadAlertsForSymbol(symbolRef.current.ticker)));
     return off;
   }, []);
 
@@ -136,24 +132,12 @@ export const NativeChart: React.FC<Props> = ({
     const chart = chartRef.current;
     if (!chart) return;
     // Only the canvas area of the candle main pane opens the menu.
-    if ((e.target as HTMLElement)?.tagName !== 'CANVAS') return;
-    if (!isInsidePane(chart, 'candle_pane', e.clientX, e.clientY)) return;
+    if ((e.target as HTMLElement)?.tagName !== "CANVAS") return;
+    if (!isInsidePane(chart, "candle_pane", e.clientX, e.clientY)) return;
     const price = pixelToPrice(chart, e.clientX, e.clientY);
     if (price === null) return;
     e.preventDefault();
     setMenu({ x: e.clientX, y: e.clientY, price });
-  };
-
-  const handleAddPriceLine = (price: number) => {
-    const alert = createAlert({
-      symbol: symbolRef.current.ticker,
-      condition: 'above',
-      threshold: price,
-      enabled: false,
-    });
-    upsertAlert(alert);
-    mirrorAlertCreate(alert);
-    setMenu(null);
   };
 
   const handleCreateAlertAt = (price: number) => {
@@ -161,9 +145,34 @@ export const NativeChart: React.FC<Props> = ({
     onCreateAlertAt?.(price);
   };
 
+  const handleAddIndicator = () => {
+    setMenu(null);
+    proHandleRef.current?.openIndicatorPicker();
+  };
+
+  const handleOpenSettings = () => {
+    setMenu(null);
+    proHandleRef.current?.openSettings();
+  };
+
+  const handleResetView = () => {
+    setMenu(null);
+    proHandleRef.current?.resetView();
+  };
+
+  const handleCopyPrice = (price: number) => {
+    setMenu(null);
+    void navigator.clipboard?.writeText(String(price)).catch(() => undefined);
+    pushToast({
+      id: `copy-price-${Date.now()}`,
+      title: "已复制价格",
+      message: `${symbolRef.current.ticker} ${price}`,
+    });
+  };
+
   const handleSaveSettings = (
     id: string,
-    patch: Partial<Omit<Alert, 'id' | 'symbol' | 'createdAt'>>,
+    patch: Partial<Omit<Alert, "id" | "symbol" | "createdAt">>,
   ) => {
     updateAlert(id, patch);
     mirrorAlertUpdate(id, patch);
@@ -174,9 +183,7 @@ export const NativeChart: React.FC<Props> = ({
     mirrorAlertDelete(id);
   };
 
-  const settingsAlert = settingsAlertId
-    ? alerts.find((a) => a.id === settingsAlertId)
-    : null;
+  const settingsAlert = settingsAlertId ? alerts.find((a) => a.id === settingsAlertId) : null;
 
   return (
     <div
@@ -184,6 +191,7 @@ export const NativeChart: React.FC<Props> = ({
       onContextMenu={handleContextMenu}
     >
       <KLineChartProView
+        ref={proHandleRef}
         symbol={proSymbol}
         period={period}
         datafeed={datafeed}
@@ -202,8 +210,11 @@ export const NativeChart: React.FC<Props> = ({
           price={menu.price}
           symbol={symbol.ticker}
           theme={theme}
-          onAddPriceLine={handleAddPriceLine}
           onCreateAlertAt={handleCreateAlertAt}
+          onAddIndicator={handleAddIndicator}
+          onCopyPrice={handleCopyPrice}
+          onOpenSettings={handleOpenSettings}
+          onResetView={handleResetView}
           onClose={() => setMenu(null)}
         />
       )}

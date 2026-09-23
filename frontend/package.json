@@ -8,6 +8,10 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
     "preview": "vite preview",
     "diagnose:kline": "node scripts/diagnose-kline-realtime.mjs",
     "test:e2e": "playwright test"
@@ -30,6 +34,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.1.14",
     "@testing-library/dom": "^10.4.0",
@@ -39,6 +44,7 @@
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-v8": "^3.2.7",
     "jsdom": "^24.1.0",
     "playwright": "1.62.1",
     "tailwindcss": "^4.1.14",

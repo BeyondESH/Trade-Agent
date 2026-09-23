@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
+
 import { renderHook, waitFor } from "@testing-library/react";
-import type { Ticker } from "../api/types";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
+import type { Ticker } from "../api/types";
 import { dedupeSymbols, tickerToSymbolInfo, useRealSymbols } from "./useRealSymbols";
 
 vi.mock("../api/client", () => ({
@@ -45,7 +46,13 @@ describe("tickerToSymbolInfo category label", () => {
 
 describe("dedupeSymbols", () => {
   const symbol = (instId: string, category: string, price: string) =>
-    tickerToSymbolInfo({ instId, symbol: instId, category, lastPr: price, price24hPcnt: "0.01" } as Ticker);
+    tickerToSymbolInfo({
+      instId,
+      symbol: instId,
+      category,
+      lastPr: price,
+      price24hPcnt: "0.01",
+    } as Ticker);
 
   it("collapses the same instId across categories, preferring USDT-FUTURES", () => {
     const byKey = {
@@ -60,7 +67,9 @@ describe("dedupeSymbols", () => {
   });
 
   it("keeps a single-category symbol unchanged", () => {
-    const byKey = { "USDT-FUTURES:BTCUSDT": symbol("BTCUSDT", "USDT-FUTURES", "60000") };
+    const byKey = {
+      "USDT-FUTURES:BTCUSDT": symbol("BTCUSDT", "USDT-FUTURES", "60000"),
+    };
     const out = dedupeSymbols(byKey);
     expect(out).toHaveLength(1);
     expect(out[0].id).toBe("BTCUSDT");
@@ -94,9 +103,27 @@ describe("useRealSymbols unique ids", () => {
   it("returns a unique-id symbol list when the same instId is in SPOT and USDT-FUTURES", async () => {
     (api.tickers as ReturnType<typeof vi.fn>).mockResolvedValue({
       tickers: [
-        { instId: "ARIAUSDT", symbol: "ARIAUSDT", category: "SPOT", lastPr: "1.5", price24hPcnt: "0.01" },
-        { instId: "ARIAUSDT", symbol: "ARIAUSDT", category: "USDT-FUTURES", lastPr: "1.6", price24hPcnt: "0.01" },
-        { instId: "BTCUSDT", symbol: "BTCUSDT", category: "USDT-FUTURES", lastPr: "60000", price24hPcnt: "0.01" },
+        {
+          instId: "ARIAUSDT",
+          symbol: "ARIAUSDT",
+          category: "SPOT",
+          lastPr: "1.5",
+          price24hPcnt: "0.01",
+        },
+        {
+          instId: "ARIAUSDT",
+          symbol: "ARIAUSDT",
+          category: "USDT-FUTURES",
+          lastPr: "1.6",
+          price24hPcnt: "0.01",
+        },
+        {
+          instId: "BTCUSDT",
+          symbol: "BTCUSDT",
+          category: "USDT-FUTURES",
+          lastPr: "60000",
+          price24hPcnt: "0.01",
+        },
       ],
     });
     const { result } = renderHook(() => useRealSymbols());

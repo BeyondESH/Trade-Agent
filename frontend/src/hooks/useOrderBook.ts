@@ -13,7 +13,12 @@ export interface OrderBookState {
   spread: number | null;
 }
 
-export const EMPTY_BOOK: OrderBookState = { asks: [], bids: [], seq: null, spread: null };
+export const EMPTY_BOOK: OrderBookState = {
+  asks: [],
+  bids: [],
+  seq: null,
+  spread: null,
+};
 
 function mergeInto(levels: Map<number, number>, rows: unknown[]): void {
   for (const row of rows) {
@@ -52,7 +57,10 @@ export function useOrderBook(symbol: string, category = "USDT-FUTURES"): OrderBo
   }, [symbol, category]);
 
   const apply = useCallback(
-    (rows: { asks?: unknown[]; bids?: unknown[]; seq?: number | null }, action: "snapshot" | "update") => {
+    (
+      rows: { asks?: unknown[]; bids?: unknown[]; seq?: number | null },
+      action: "snapshot" | "update",
+    ) => {
       setBook((prev) => {
         let next: OrderBookState;
         if (action === "snapshot") {
@@ -68,8 +76,7 @@ export function useOrderBook(symbol: string, category = "USDT-FUTURES"): OrderBo
             asks: askList.map(([price, size]) => ({ price, size })),
             bids: bidList.map(([price, size]) => ({ price, size })),
             seq: rows.seq ?? null,
-            spread:
-              askList.length && bidList.length ? askList[0][0] - bidList[0][0] : null,
+            spread: askList.length && bidList.length ? askList[0][0] - bidList[0][0] : null,
           };
         } else {
           // Incremental update on top of the current book.
@@ -85,8 +92,7 @@ export function useOrderBook(symbol: string, category = "USDT-FUTURES"): OrderBo
             asks: askList.map(([price, size]) => ({ price, size })),
             bids: bidList.map(([price, size]) => ({ price, size })),
             seq: rows.seq ?? prev.seq,
-            spread:
-              askList.length && bidList.length ? askList[0][0] - bidList[0][0] : null,
+            spread: askList.length && bidList.length ? askList[0][0] - bidList[0][0] : null,
           };
         }
         // Skip re-render when the visible book is unchanged, avoiding a full
@@ -98,13 +104,22 @@ export function useOrderBook(symbol: string, category = "USDT-FUTURES"): OrderBo
     [],
   );
 
-  useExchangeSocket("books", symbol, (frame) => {
-    if (frame.action !== "snapshot" && frame.action !== "update") return;
-    if (frame.data && typeof frame.data === "object") {
-      const d = frame.data as { asks?: unknown[]; bids?: unknown[]; seq?: number | null };
-      apply(d, frame.action);
-    }
-  }, { category });
+  useExchangeSocket(
+    "books",
+    symbol,
+    (frame) => {
+      if (frame.action !== "snapshot" && frame.action !== "update") return;
+      if (frame.data && typeof frame.data === "object") {
+        const d = frame.data as {
+          asks?: unknown[];
+          bids?: unknown[];
+          seq?: number | null;
+        };
+        apply(d, frame.action);
+      }
+    },
+    { category },
+  );
 
   return book;
 }

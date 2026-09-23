@@ -165,8 +165,8 @@ export function useTickerList(): TickerListState {
 
   const symbols = useMemo(
     () =>
-      Array.from(new Set(Object.values(snapshot).map((t) => symbolKey(t.instId, t.category)))).sort((a, b) =>
-        a.localeCompare(b),
+      Array.from(new Set(Object.values(snapshot).map((t) => symbolKey(t.instId, t.category)))).sort(
+        (a, b) => a.localeCompare(b),
       ),
     [snapshot],
   );

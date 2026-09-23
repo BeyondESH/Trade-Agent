@@ -1,7 +1,7 @@
 import type { Chart, DomPosition, KLineData, OverlayCreate } from "klinecharts";
-import { priceLineToOverlay } from "./transform";
-import { priceLineColor, type Alert } from "./alertsStore";
 import type { ThemeMode } from "../types/trading";
+import { type Alert, priceLineColor } from "./alertsStore";
+import { priceLineToOverlay } from "./transform";
 
 export type IndicatorSpec = { name: string; pane: "candle" | "sub" };
 
@@ -47,7 +47,9 @@ export class AutoLayerController {
     }
     if (this.indicatorPanes[spec.name]) return;
     const paneId = `${SUB_PANE_PREFIX}_${paneSeq++}`;
-    const created = this.widget.createIndicator({ name: spec.name }, false, { id: paneId });
+    const created = this.widget.createIndicator({ name: spec.name }, false, {
+      id: paneId,
+    });
     this.indicatorPanes[spec.name] = created ?? paneId;
   }
 
@@ -172,19 +174,15 @@ export function alertLinesToDraw(
 // --- pixel <-> price helpers (chart context menu) -------------------------------
 
 /** Convert a client (screen) position into a price on the candle pane, or null. */
-export function pixelToPrice(
-  chart: Chart | null,
-  clientX: number,
-  clientY: number,
-): number | null {
+export function pixelToPrice(chart: Chart | null, clientX: number, clientY: number): number | null {
   if (!chart) return null;
   const root = chart.getDom();
   if (!root) return null;
   const rect = root.getBoundingClientRect();
-  const point = chart.convertFromPixel(
-    [{ x: clientX - rect.left, y: clientY - rect.top }],
-    { paneId: "candle_pane", absolute: true },
-  );
+  const point = chart.convertFromPixel([{ x: clientX - rect.left, y: clientY - rect.top }], {
+    paneId: "candle_pane",
+    absolute: true,
+  });
   const p = Array.isArray(point) ? point[0] : point;
   const value = p?.value;
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -202,9 +200,6 @@ export function isInsidePane(
   if (!dom) return false;
   const rect = dom.getBoundingClientRect();
   return (
-    clientX >= rect.left &&
-    clientX <= rect.right &&
-    clientY >= rect.top &&
-    clientY <= rect.bottom
+    clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
   );
 }

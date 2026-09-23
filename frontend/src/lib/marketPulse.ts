@@ -41,9 +41,7 @@ export function flattenValue(v: unknown, depth = 0): string {
     if (depth > 1) return "…";
     const entries = Object.entries(v as Record<string, unknown>);
     if (entries.length === 0) return "N/A";
-    return entries
-      .map(([k, val]) => `${k}: ${flattenValue(val, depth + 1)}`)
-      .join("  ");
+    return entries.map(([k, val]) => `${k}: ${flattenValue(val, depth + 1)}`).join("  ");
   }
   return String(v);
 }
@@ -97,7 +95,9 @@ export function summarizeIndicatorStatus(raw: unknown): string {
   const counts: Record<string, number> = {};
   for (const r of raw) {
     if (typeof r !== "object" || r === null) continue;
-    const s = String((r as Record<string, unknown>).status ?? "").trim().toUpperCase();
+    const s = String((r as Record<string, unknown>).status ?? "")
+      .trim()
+      .toUpperCase();
     if (s === "BUY" || s === "SELL" || s === "HOLD") {
       const key = s[0] + s.slice(1).toLowerCase();
       counts[key] = (counts[key] ?? 0) + 1;
@@ -109,13 +109,19 @@ export function summarizeIndicatorStatus(raw: unknown): string {
 }
 
 /** Fetch one data endpoint and normalize to a MarketPulseEntry. */
-export async function fetchMarketPulseEntry(endpoint: string, label: string): Promise<MarketPulseEntry> {
+export async function fetchMarketPulseEntry(
+  endpoint: string,
+  label: string,
+): Promise<MarketPulseEntry> {
   try {
     const res = await api.blockbeatsData(endpoint);
     return {
       endpoint,
       label,
-      value: endpoint === "bottom_top_indicator" ? summarizeIndicatorStatus(res?.data) : flattenValue(res?.data),
+      value:
+        endpoint === "bottom_top_indicator"
+          ? summarizeIndicatorStatus(res?.data)
+          : flattenValue(res?.data),
       trend: extractTrend(res?.data),
       raw: res?.data,
     };

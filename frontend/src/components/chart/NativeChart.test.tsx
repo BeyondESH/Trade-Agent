@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { act, fireEvent, render } from "@testing-library/react";
-import { NativeChart } from "./NativeChart";
-import type { SymbolInfo } from "../../types/trading";
+
 import type { Period, SymbolInfo as ProSymbolInfo } from "@klinecharts/pro";
+import { act, fireEvent, render } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAlert, loadAlerts } from "../../lib/alertsStore";
+import type { SymbolInfo } from "../../types/trading";
+import { NativeChart } from "./NativeChart";
 
 const renderCalls: Array<{ symbol: ProSymbolInfo; period: Period }> = [];
 let capturedOnSymbolChange: ((s: ProSymbolInfo) => void) | undefined;
@@ -18,33 +19,46 @@ const mocks = vi.hoisted(() => {
     createOverlay: vi.fn(),
     removeOverlay: vi.fn(),
   };
-  return { chart, rect: { left: 0, top: 0, right: 1000, bottom: 600 } };
+  const proApi = {
+    openIndicatorPicker: vi.fn(),
+    openSettings: vi.fn(),
+    resetView: vi.fn(),
+  };
+  return { chart, proApi, rect: { left: 0, top: 0, right: 1000, bottom: 600 } };
 });
 
-vi.mock("./KLineChartProView", () => ({
-  NATIVE_PERIODS: [
-    { multiplier: 1, timespan: "hour", text: "1h" },
-    { multiplier: 4, timespan: "hour", text: "4h" },
-  ],
-  KLineChartProView: (props: {
-    symbol: ProSymbolInfo;
-    period: Period;
-    onSymbolChange?: (s: ProSymbolInfo) => void;
-    onPeriodChange?: (p: Period) => void;
-    onReady?: (c: never) => void;
-  }) => {
+vi.mock("./KLineChartProView", async () => {
+  const { forwardRef, useImperativeHandle } = await import("react");
+  const KLineChartProView = forwardRef<
+    { openIndicatorPicker: () => void; openSettings: () => void; resetView: () => void },
+    {
+      symbol: ProSymbolInfo;
+      period: Period;
+      onSymbolChange?: (s: ProSymbolInfo) => void;
+      onPeriodChange?: (p: Period) => void;
+      onReady?: (c: never) => void;
+    }
+  >((props, ref) => {
     renderCalls.push({ symbol: props.symbol, period: props.period });
     capturedOnSymbolChange = props.onSymbolChange;
     capturedOnPeriodChange = props.onPeriodChange;
     capturedOnReady = props.onReady;
+    useImperativeHandle(ref, () => mocks.proApi);
     return (
       <div>
         <div data-testid="klinepro-toolbar" />
         <canvas data-testid="klinepro-canvas" />
       </div>
     );
-  },
-}));
+  });
+  return {
+    NATIVE_PERIODS: [
+      { multiplier: 1, timespan: "hour", text: "1h" },
+      { multiplier: 4, timespan: "hour", text: "4h" },
+    ],
+    KLineChartProView,
+  };
+});
 
 function makeSymbol(id: string): SymbolInfo {
   return {
@@ -76,8 +90,17 @@ beforeEach(() => {
   mocks.chart.convertFromPixel.mockReset();
   mocks.chart.createOverlay.mockReset();
   mocks.chart.removeOverlay.mockReset();
-  mocks.chart.getDom.mockReturnValue({ getBoundingClientRect: () => mocks.rect });
+  mocks.chart.getDom.mockReturnValue({
+    getBoundingClientRect: () => mocks.rect,
+  });
   mocks.chart.convertFromPixel.mockReturnValue({ value: 95000 });
+  mocks.proApi.openIndicatorPicker.mockReset();
+  mocks.proApi.openSettings.mockReset();
+  mocks.proApi.resetView.mockReset();
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: vi.fn().mockResolvedValue(undefined) },
+  });
 });
 
 function renderChart(extraProps: Partial<React.ComponentProps<typeof NativeChart>> = {}) {
@@ -126,16 +149,26 @@ describe("NativeChart single-chart wrapper", () => {
     expect(capturedOnSymbolChange).toBeDefined();
     expect(capturedOnPeriodChange).toBeDefined();
     capturedOnSymbolChange!({ ticker: "SOLUSDT", market: "USDT-FUTURES" });
-    expect(onSymbolChange).toHaveBeenCalledWith({ ticker: "SOLUSDT", market: "USDT-FUTURES" });
+    expect(onSymbolChange).toHaveBeenCalledWith({
+      ticker: "SOLUSDT",
+      market: "USDT-FUTURES",
+    });
     capturedOnPeriodChange!({ multiplier: 4, timespan: "hour", text: "4h" });
-    expect(onPeriodChange).toHaveBeenCalledWith({ multiplier: 4, timespan: "hour", text: "4h" });
+    expect(onPeriodChange).toHaveBeenCalledWith({
+      multiplier: 4,
+      timespan: "hour",
+      text: "4h",
+    });
   });
 });
 
 describe("NativeChart price-line context menu", () => {
   it("opens a menu with the converted price when right-clicking the candle canvas", () => {
     const { getByTestId, queryByTestId } = renderChart();
-    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), {
+      clientX: 500,
+      clientY: 300,
+    });
     const menu = queryByTestId("chart-context-menu");
     expect(menu).toBeTruthy();
     expect(menu!.textContent).toContain("95000");
@@ -144,14 +177,20 @@ describe("NativeChart price-line context menu", () => {
 
   it("does not open the menu when right-clicking a non-canvas (pro toolbar) area", () => {
     const { getByTestId, queryByTestId } = renderChart();
-    fireEvent.contextMenu(getByTestId("klinepro-toolbar"), { clientX: 500, clientY: 300 });
+    fireEvent.contextMenu(getByTestId("klinepro-toolbar"), {
+      clientX: 500,
+      clientY: 300,
+    });
     expect(queryByTestId("chart-context-menu")).toBeNull();
   });
 
   it("does not open the menu when the pixel->price conversion fails", () => {
     mocks.chart.convertFromPixel.mockReturnValue({});
     const { getByTestId, queryByTestId } = renderChart();
-    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), {
+      clientX: 500,
+      clientY: 300,
+    });
     expect(queryByTestId("chart-context-menu")).toBeNull();
   });
 
@@ -159,42 +198,73 @@ describe("NativeChart price-line context menu", () => {
     const { getByTestId, queryByTestId } = render(
       <NativeChart symbol={makeSymbol("BTCUSDT")} timeframe="1h" theme="dark" />,
     );
-    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), {
+      clientX: 500,
+      clientY: 300,
+    });
     expect(queryByTestId("chart-context-menu")).toBeNull();
   });
 
-  it("adds a reference price line entity at the cursor price", () => {
+  it("renders all five required menu items", () => {
     const { getByTestId } = renderChart();
     fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
-    fireEvent.click(getByTestId("menu-add-price-line"));
+    for (const id of [
+      "menu-create-alert",
+      "menu-add-indicator",
+      "menu-copy-price",
+      "menu-open-settings",
+      "menu-reset-view",
+    ]) {
+      expect(getByTestId(id)).toBeTruthy();
+    }
+    expect(document.querySelectorAll('[role="menuitem"]')).toHaveLength(5);
+  });
+
+  it("adds an indicator through the pro handle", () => {
+    const { getByTestId } = renderChart();
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
+    fireEvent.click(getByTestId("menu-add-indicator"));
+    expect(mocks.proApi.openIndicatorPicker).toHaveBeenCalledTimes(1);
     expect(queryMenu()).toBeNull();
-    const alerts = loadAlerts();
-    expect(alerts).toHaveLength(1);
-    expect(alerts[0]).toMatchObject({
-      symbol: "BTCUSDT",
-      threshold: 95000,
-      enabled: false,
-    });
-    const overlay = mocks.chart.createOverlay.mock.calls.at(-1)?.[0];
-    expect(overlay).toMatchObject({
-      name: "priceLine",
-      groupId: "manual-price-lines",
-      extendData: { alertId: alerts[0].id },
-    });
+  });
+
+  it("opens settings and resets the view through the pro handle", () => {
+    const { getByTestId } = renderChart();
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
+    fireEvent.click(getByTestId("menu-open-settings"));
+    expect(mocks.proApi.openSettings).toHaveBeenCalledTimes(1);
+
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
+    fireEvent.click(getByTestId("menu-reset-view"));
+    expect(mocks.proApi.resetView).toHaveBeenCalledTimes(1);
+  });
+
+  it("copies the cursor price to the clipboard and closes the menu", () => {
+    const { getByTestId } = renderChart();
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
+    fireEvent.click(getByTestId("menu-copy-price"));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("95000");
+    expect(queryMenu()).toBeNull();
   });
 
   it("forwards the alert action to onCreateAlertAt and closes the menu", () => {
     const onCreateAlertAt = vi.fn();
     const { getByTestId } = renderChart({ onCreateAlertAt });
-    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
-    fireEvent.click(getByTestId("menu-set-alert"));
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), {
+      clientX: 500,
+      clientY: 300,
+    });
+    fireEvent.click(getByTestId("menu-create-alert"));
     expect(onCreateAlertAt).toHaveBeenCalledWith(95000);
     expect(queryMenu()).toBeNull();
   });
 
   it("closes the menu on Escape", () => {
     const { getByTestId } = renderChart();
-    fireEvent.contextMenu(getByTestId("klinepro-canvas"), { clientX: 500, clientY: 300 });
+    fireEvent.contextMenu(getByTestId("klinepro-canvas"), {
+      clientX: 500,
+      clientY: 300,
+    });
     expect(queryMenu()).toBeTruthy();
     fireEvent.keyDown(window, { key: "Escape" });
     expect(queryMenu()).toBeNull();

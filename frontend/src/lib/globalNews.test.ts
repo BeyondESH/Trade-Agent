@@ -1,12 +1,12 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import type { GlobalNewsItem } from "../types/trading";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
+import type { GlobalNewsItem } from "../types/trading";
 import {
-  NEWS_WINDOW_SIZE,
-  REVEAL_CHUNK,
-  GlobalNewsClient,
   allSourcesUnavailable,
   formatNewsTime,
+  GlobalNewsClient,
+  NEWS_WINDOW_SIZE,
+  REVEAL_CHUNK,
 } from "./globalNews";
 
 vi.mock("../api/client", async (importOriginal) => {
@@ -59,7 +59,15 @@ afterEach(() => {
 });
 
 function item(id: string, category: GlobalNewsItem["category"] = "crypto"): GlobalNewsItem {
-  return { id, source: "em", category, title: `t-${id}`, content: "", url: null, ts: 1_700_000_000 };
+  return {
+    id,
+    source: "em",
+    category,
+    title: `t-${id}`,
+    content: "",
+    url: null,
+    ts: 1_700_000_000,
+  };
 }
 
 describe("GlobalNewsClient", () => {
@@ -83,7 +91,10 @@ describe("GlobalNewsClient", () => {
     client.connect();
     const es = FakeEventSource.instances[0];
 
-    es.emit("snapshot", { items: [item("n1"), item("n2"), item("n3")], sources: {} });
+    es.emit("snapshot", {
+      items: [item("n1"), item("n2"), item("n3")],
+      sources: {},
+    });
     expect(client.items.map((i) => i.id)).toEqual(["n1", "n2", "n3"]);
   });
 
@@ -122,7 +133,10 @@ describe("GlobalNewsClient", () => {
 
     es.emit("snapshot", { items: [item("a"), item("b")], sources: {} });
     // EventSource dropped; backend replays the snapshot on reconnect.
-    es.emit("snapshot", { items: [item("a"), item("b"), item("c")], sources: {} });
+    es.emit("snapshot", {
+      items: [item("a"), item("b"), item("c")],
+      sources: {},
+    });
 
     expect(client.items.map((i) => i.id)).toEqual(["a", "b", "c"]);
     expect(client.items).toHaveLength(3);
@@ -133,11 +147,19 @@ describe("GlobalNewsClient", () => {
     client.connect();
     const es = FakeEventSource.instances[0];
 
-    es.emit("snapshot", { items: [item("a"), item("b")], sources: {}, total: 2 });
+    es.emit("snapshot", {
+      items: [item("a"), item("b")],
+      sources: {},
+      total: 2,
+    });
     es.emit("item", item("z"));
     expect(client.pendingCount).toBe(1);
 
-    es.emit("snapshot", { items: [item("z"), item("a"), item("b")], sources: {}, total: 3 });
+    es.emit("snapshot", {
+      items: [item("z"), item("a"), item("b")],
+      sources: {},
+      total: 3,
+    });
     expect(client.pendingCount).toBe(0);
     expect(client.items.map((i) => i.id)).toEqual(["z", "a", "b"]);
   });
@@ -161,7 +183,11 @@ describe("GlobalNewsClient", () => {
     });
     const client = new GlobalNewsClient();
     client.connect();
-    FakeEventSource.instances[0].emit("snapshot", { items: [item("a")], sources: {}, total: 3 });
+    FakeEventSource.instances[0].emit("snapshot", {
+      items: [item("a")],
+      sources: {},
+      total: 3,
+    });
 
     await client.loadMore();
     expect(api.newsHistory).toHaveBeenCalledWith(1, 100, undefined);
@@ -223,11 +249,19 @@ describe("GlobalNewsClient", () => {
     const client = new GlobalNewsClient();
     client.connect();
     const es = FakeEventSource.instances[0];
-    es.emit("snapshot", { items: [item("a", "crypto"), item("b", "crypto")], sources: {}, total: 10 });
+    es.emit("snapshot", {
+      items: [item("a", "crypto"), item("b", "crypto")],
+      sources: {},
+      total: 10,
+    });
     await client.loadMore("crypto"); // 2 buffered < 3 -> still more
     expect(client.hasMoreFor("crypto")).toBe(true);
 
-    es.emit("snapshot", { items: [item("a", "crypto"), item("b", "crypto")], sources: {}, total: 2 });
+    es.emit("snapshot", {
+      items: [item("a", "crypto"), item("b", "crypto")],
+      sources: {},
+      total: 2,
+    });
     expect(client.hasMoreFor("crypto")).toBe(false); // global exhausted -> fallback false
   });
 

@@ -1,4 +1,5 @@
 export type AlertCondition = "above" | "below";
+
 import { api } from "../api/client";
 import type { ThemeMode } from "../types/trading";
 
@@ -9,6 +10,8 @@ export interface Alert {
   threshold: number;
   enabled: boolean;
   triggered: boolean;
+  /** ISO timestamp recorded when the alert fired (absent while pending). */
+  triggerTime?: string;
   createdAt: number;
   /** Custom line color override; falls back to the semantic default when absent. */
   color?: string;
@@ -22,10 +25,7 @@ export const ALERT_LINE_COLOR = "#ff9800";
 export const REFERENCE_LINE_COLOR_DARK = "#787b86";
 export const REFERENCE_LINE_COLOR_LIGHT = "#5d606b";
 
-export function priceLineColor(
-  alert: Pick<Alert, "enabled" | "color">,
-  theme: ThemeMode,
-): string {
+export function priceLineColor(alert: Pick<Alert, "enabled" | "color">, theme: ThemeMode): string {
   if (alert.color) return alert.color;
   return alert.enabled
     ? ALERT_LINE_COLOR
@@ -92,6 +92,33 @@ export function evalAlert(alert: Alert, price: number): boolean {
   return alert.condition === "above" ? price >= alert.threshold : price <= alert.threshold;
 }
 
+/** A hit produced by `evaluateAlerts`; carries the timestamp to persist. */
+export interface AlertTrigger {
+  id: string;
+  triggerTime: string;
+}
+
+/**
+ * Pure evaluation pass over a price snapshot. Returns the alerts that fired,
+ * each with the ISO timestamp to persist. Reuses `evalAlert` so disabled,
+ * already-triggered and non-finite-price cases are short-circuited.
+ */
+export function evaluateAlerts(
+  alerts: Alert[],
+  priceMap: Record<string, number | undefined>,
+  now: () => number = Date.now,
+): AlertTrigger[] {
+  const hits: AlertTrigger[] = [];
+  for (const alert of alerts) {
+    const price = priceMap[alert.symbol];
+    if (price == null) continue;
+    if (evalAlert(alert, price)) {
+      hits.push({ id: alert.id, triggerTime: new Date(now()).toISOString() });
+    }
+  }
+  return hits;
+}
+
 // --- server sync (cross-device; silent fallback keeps local as source of truth) ---
 
 function asAlert(r: unknown): Alert | null {
@@ -105,6 +132,7 @@ function asAlert(r: unknown): Alert | null {
     threshold: Number(o.threshold) || 0,
     enabled: !!o.enabled,
     triggered: !!o.triggered,
+    triggerTime: typeof o.triggerTime === "string" && o.triggerTime ? o.triggerTime : undefined,
     createdAt: Number(o.createdAt) || Date.now(),
     color: typeof o.color === "string" && o.color ? o.color : undefined,
   };
@@ -140,6 +168,18 @@ export function removeAlert(id: string): void {
   saveAlerts(loadAlerts().filter((a) => a.id !== id));
 }
 
+/** Re-arm a triggered alert: clear the trigger flag/time and persist + mirror. */
+export function resetAlert(id: string): void {
+  updateAlert(id, { triggered: false, triggerTime: undefined });
+  mirrorAlertUpdate(id, { triggered: false, triggerTime: undefined });
+}
+
+/** Enable/disable an alert, persist locally and mirror the change to the server. */
+export function setAlertEnabled(id: string, enabled: boolean): void {
+  updateAlert(id, { enabled });
+  mirrorAlertUpdate(id, { enabled });
+}
+
 /**
  * Pull the alert list from the backend. Returns the merged list (server wins
  * for shared ids; local-only items survive so nothing is lost offline) and
@@ -165,7 +205,10 @@ export function mirrorAlertCreate(alert: Alert): void {
   void api.saveAlert(alert).catch(() => {});
 }
 
-export function mirrorAlertUpdate(id: string, patch: Partial<Omit<Alert, "id" | "createdAt">>): void {
+export function mirrorAlertUpdate(
+  id: string,
+  patch: Partial<Omit<Alert, "id" | "createdAt">>,
+): void {
   void api.updateAlert(id, patch).catch(() => {});
 }
 

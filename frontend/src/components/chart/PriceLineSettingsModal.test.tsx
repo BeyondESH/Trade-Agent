@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+
 import { fireEvent, render } from "@testing-library/react";
-import { PriceLineSettingsModal } from "./PriceLineSettingsModal";
+import { describe, expect, it, vi } from "vitest";
 import type { Alert } from "../../lib/alertsStore";
+import { PriceLineSettingsModal } from "./PriceLineSettingsModal";
 
 function makeAlert(partial: Partial<Alert> = {}): Alert {
   return {
@@ -17,7 +18,10 @@ function makeAlert(partial: Partial<Alert> = {}): Alert {
   };
 }
 
-function renderModal(alert: Alert, extra: Partial<React.ComponentProps<typeof PriceLineSettingsModal>> = {}) {
+function renderModal(
+  alert: Alert,
+  extra: Partial<React.ComponentProps<typeof PriceLineSettingsModal>> = {},
+) {
   const onSave = vi.fn();
   const onDelete = vi.fn();
   const onClose = vi.fn();
@@ -36,9 +40,17 @@ function renderModal(alert: Alert, extra: Partial<React.ComponentProps<typeof Pr
 
 describe("PriceLineSettingsModal", () => {
   it("echoes the current alert values", () => {
-    const { getByTestId } = renderModal(makeAlert({ threshold: 90000, enabled: true, condition: "below" }));
+    const { getByTestId } = renderModal(
+      makeAlert({ threshold: 90000, enabled: true, condition: "below" }),
+    );
     expect(getByTestId("price-line-settings-modal")).toBeTruthy();
-    expect((getByTestId("price-line-settings-modal").querySelector('input[type="number"]') as HTMLInputElement).value).toBe("90000");
+    expect(
+      (
+        getByTestId("price-line-settings-modal").querySelector(
+          'input[type="number"]',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("90000");
   });
 
   it("shows the condition selector only for alert lines", () => {
@@ -50,8 +62,12 @@ describe("PriceLineSettingsModal", () => {
   });
 
   it("saves price, color, type and condition together", () => {
-    const { getByTestId, getByText, onSave } = renderModal(makeAlert({ enabled: false, color: "" }));
-    const priceInput = getByTestId("price-line-settings-modal").querySelector('input[type="number"]') as HTMLInputElement;
+    const { getByTestId, getByText, onSave } = renderModal(
+      makeAlert({ enabled: false, color: "" }),
+    );
+    const priceInput = getByTestId("price-line-settings-modal").querySelector(
+      'input[type="number"]',
+    ) as HTMLInputElement;
     fireEvent.change(priceInput, { target: { value: "96000" } });
     fireEvent.click(getByText("价格警报"));
     fireEvent.click(getByText("低于"));
@@ -66,7 +82,9 @@ describe("PriceLineSettingsModal", () => {
 
   it("rejects an invalid price and keeps the modal open", () => {
     const { getByTestId, onSave } = renderModal(makeAlert());
-    const priceInput = getByTestId("price-line-settings-modal").querySelector('input[type="number"]') as HTMLInputElement;
+    const priceInput = getByTestId("price-line-settings-modal").querySelector(
+      'input[type="number"]',
+    ) as HTMLInputElement;
     fireEvent.change(priceInput, { target: { value: "" } });
     fireEvent.click(getByTestId("save-price-line"));
     expect(onSave).not.toHaveBeenCalled();
