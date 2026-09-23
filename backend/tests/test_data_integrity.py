@@ -86,7 +86,18 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     settings = Settings()
     found = _discover_series(settings.parquet_dir)
     if not found:
-        metafunc.parametrize("series_data", [("EMPTY", None)], ids=["empty"])
+        metafunc.parametrize(
+            "series_data",
+            [
+                pytest.param(
+                    ("EMPTY", None),
+                    marks=pytest.mark.skip(
+                        reason="no parquet series found under data directory; skipping L1 gate"
+                    ),
+                )
+            ],
+            ids=["empty"],
+        )
         return
     store = ParquetStore(settings.parquet_dir)
     args: list[tuple[str, pd.DataFrame]] = []

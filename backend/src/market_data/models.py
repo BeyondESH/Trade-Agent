@@ -204,5 +204,8 @@ class Series:
     symbol: str
     timeframe: str
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "timeframe", _normalize_timeframe(self.timeframe))
+
     def relative_path(self) -> str:
         return f"{self.category}/{self.symbol}/{self.timeframe}"
