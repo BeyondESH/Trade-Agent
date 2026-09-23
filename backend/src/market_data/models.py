@@ -32,6 +32,7 @@ def category_ticker_api(category: str) -> str:
     except KeyError as exc:
         raise ValueError(f"Unsupported category: {category!r}") from exc
 
+
 # Our internal timeframe -> step in milliseconds.
 # Covers every Bitget-native level that provides history. `1s` is realtime-only
 # and therefore intentionally excluded: it never paginates, persists or
@@ -129,9 +130,8 @@ def is_realtime_only_timeframe(timeframe: str) -> bool:
 
 # All valid persistence-level timeframes, newest first (realtime-only excluded).
 VALID_TIMEFRAMES: list[str] = [
-    tf for tf, _ in sorted(
-        _TIMEFRAME_STEP_MS.items(), key=lambda kv: kv[1], reverse=True
-    )
+    tf
+    for tf, _ in sorted(_TIMEFRAME_STEP_MS.items(), key=lambda kv: kv[1], reverse=True)
     if tf not in _REALTIME_ONLY_TIMEFRAMES
 ]
 
@@ -187,9 +187,7 @@ def granularity_to_timeframe(granularity: str) -> str:
     """
     global _granularity_reverse
     if _granularity_reverse is None:
-        _granularity_reverse = {
-            token: key for key, token in _TIMEFRAME_GRANULARITY.items()
-        }
+        _granularity_reverse = {token: key for key, token in _TIMEFRAME_GRANULARITY.items()}
         if len(_granularity_reverse) != len(_TIMEFRAME_GRANULARITY):
             raise RuntimeError("Duplicate granularity token in map")
     try:

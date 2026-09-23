@@ -13,7 +13,7 @@ import json
 import websockets
 from websockets.asyncio.server import ServerConnection
 
-from market_data.realtime import BitgetWsStream, PONG_FRAME
+from market_data.realtime import PONG_FRAME, BitgetWsStream
 
 CAT = "USDT-FUTURES"
 SYM = "BTCUSDT"
@@ -80,8 +80,11 @@ def test_month_frame_routes_to_mo_not_minute() -> None:
     s.add_listener(CAT, SYM, "1mo", mo_listener.append)
     s.add_listener(CAT, SYM, "1m", m_listener.append)
     frame = json.dumps(
-        {"action": "update", "arg": {"instType": CAT, "channel": "candle1M", "instId": SYM},
-         "data": [["1700000000000", "100", "101", "99", "123.4", "7.5"]]}
+        {
+            "action": "update",
+            "arg": {"instType": CAT, "channel": "candle1M", "instId": SYM},
+            "data": [["1700000000000", "100", "101", "99", "123.4", "7.5"]],
+        }
     )
     asyncio.run(s._handle_frame(_FakeWs(), frame))
     assert len(mo_listener) == 1 and mo_listener[0]["close"] == 123.4
@@ -96,8 +99,11 @@ def test_second_frame_routes_to_second() -> None:
     s.add_listener(CAT, SYM, "1s", sec_listener.append)
     s.add_listener(CAT, SYM, "1m", m_listener.append)
     frame = json.dumps(
-        {"action": "update", "arg": {"instType": CAT, "channel": "candle1s", "instId": SYM},
-         "data": [["1700000000000", "100", "101", "99", "88.8", "7.5"]]}
+        {
+            "action": "update",
+            "arg": {"instType": CAT, "channel": "candle1s", "instId": SYM},
+            "data": [["1700000000000", "100", "101", "99", "88.8", "7.5"]],
+        }
     )
     asyncio.run(s._handle_frame(_FakeWs(), frame))
     assert len(sec_listener) == 1 and sec_listener[0]["close"] == 88.8
@@ -144,18 +150,28 @@ def test_snapshot_action_caches_batch() -> None:
     )
     asyncio.run(s._handle_frame(_FakeWs(), frame))
     recent = s.recent(CAT, SYM, "5m")
-    assert [b["open_time"] for b in recent] == [1_700_000_000_000, 1_700_000_300_000, 1_700_000_600_000]
+    assert [b["open_time"] for b in recent] == [
+        1_700_000_000_000,
+        1_700_000_300_000,
+        1_700_000_600_000,
+    ]
     assert recent[-1]["close"] == 12
     assert s.latest(CAT, SYM, "5m")["close"] == 12
 
 
 def test_recent_respects_limit() -> None:
     s = _stream()
-    rows = [[str(1_700_000_000_000 + i * 300_000), "100", "101", "99", str(10 + i), "1"]
-            for i in range(10)]
-    frame = json.dumps({"action": "snapshot",
-                        "arg": {"instType": CAT, "channel": "candle5m", "instId": SYM},
-                        "data": rows})
+    rows = [
+        [str(1_700_000_000_000 + i * 300_000), "100", "101", "99", str(10 + i), "1"]
+        for i in range(10)
+    ]
+    frame = json.dumps(
+        {
+            "action": "snapshot",
+            "arg": {"instType": CAT, "channel": "candle5m", "instId": SYM},
+            "data": rows,
+        }
+    )
     asyncio.run(s._handle_frame(_FakeWs(), frame))
     recent = s.recent(CAT, SYM, "5m", limit=3)
     assert len(recent) == 3
@@ -210,8 +226,11 @@ def test_listeners_isolated_per_series() -> None:
     s.add_listener(CAT, "ETHUSDT", "5m", eth.append)
     asyncio.run(s._handle_frame(_FakeWs(), _update_frame("99")))
     eth_frame = json.dumps(
-        {"action": "update", "arg": {"instType": CAT, "channel": "candle5m", "instId": "ETHUSDT"},
-         "data": [["1700000000000", "10", "11", "9", "10.5", "1"]]}
+        {
+            "action": "update",
+            "arg": {"instType": CAT, "channel": "candle5m", "instId": "ETHUSDT"},
+            "data": [["1700000000000", "10", "11", "9", "10.5", "1"]],
+        }
     )
     asyncio.run(s._handle_frame(_FakeWs(), eth_frame))
     assert len(btc) == 1 and btc[0]["close"] == 99
@@ -223,11 +242,17 @@ def test_buffer_trims_to_capacity() -> None:
     from market_data.realtime import MAX_BARS_PER_SERIES
 
     s = _stream()
-    rows = [[str(1_700_000_000_000 + i * 300_000), "100", "101", "99", "1", "1"]
-            for i in range(MAX_BARS_PER_SERIES + 50)]
-    frame = json.dumps({"action": "snapshot",
-                        "arg": {"instType": CAT, "channel": "candle5m", "instId": SYM},
-                        "data": rows})
+    rows = [
+        [str(1_700_000_000_000 + i * 300_000), "100", "101", "99", "1", "1"]
+        for i in range(MAX_BARS_PER_SERIES + 50)
+    ]
+    frame = json.dumps(
+        {
+            "action": "snapshot",
+            "arg": {"instType": CAT, "channel": "candle5m", "instId": SYM},
+            "data": rows,
+        }
+    )
     asyncio.run(s._handle_frame(_FakeWs(), frame))
     recent = s.recent(CAT, SYM, "5m")
     assert len(recent) == MAX_BARS_PER_SERIES
@@ -238,8 +263,11 @@ def test_buffer_trims_to_capacity() -> None:
 def test_multi_series_isolated() -> None:
     s = _stream(symbols=[SYM, "ETHUSDT"])
     eth = json.dumps(
-        {"action": "update", "arg": {"instType": CAT, "channel": "candle5m", "instId": "ETHUSDT"},
-         "data": [["1700000000000", "10", "11", "9", "10.5", "1"]]}
+        {
+            "action": "update",
+            "arg": {"instType": CAT, "channel": "candle5m", "instId": "ETHUSDT"},
+            "data": [["1700000000000", "10", "11", "9", "10.5", "1"]],
+        }
     )
     asyncio.run(s._handle_frame(_FakeWs(), _update_frame("99")))
     asyncio.run(s._handle_frame(_FakeWs(), eth))
@@ -341,8 +369,14 @@ def test_dynamic_subscribe_adds_extra_channel() -> None:
 def test_dynamic_unsubscribe_removes_channel_and_buffer() -> None:
     s = _stream(symbols=[SYM], timeframes=["5m"])
     s.subscribe(CAT, "XRPUSDT", "1h")
-    bar = {"open_time": 1700000000000, "open": 1.0, "high": 2.0,
-           "low": 0.0, "close": 1.5, "volume": 1.0}
+    bar = {
+        "open_time": 1700000000000,
+        "open": 1.0,
+        "high": 2.0,
+        "low": 0.0,
+        "close": 1.5,
+        "volume": 1.0,
+    }
     with s._lock:
         s._buffer[s._series_key(CAT, "XRPUSDT", "1h")] = [dict(bar)]
     s.unsubscribe(CAT, "XRPUSDT", "1h")
@@ -359,6 +393,68 @@ def test_dynamic_unsubscribe_refcount_keeps_channel() -> None:
     assert len(s._channels()) == 2
     s.unsubscribe(CAT, "XRPUSDT", "1h")
     assert len(s._channels()) == 1
+
+
+def test_subscribe_from_worker_thread_reaches_feed() -> None:
+    """Regression: a subscribe issued off-loop (FastAPI runs sync endpoints in
+    a worker thread) must be dispatched onto the stream's loop and reach the
+    feed. It used to be silently dropped — the refcount claimed the series was
+    subscribed while the feed never received the op, freezing live updates."""
+
+    async def scenario() -> None:
+        s = _stream()
+        fake = _FakeWs()
+        s._ws = fake  # type: ignore[assignment] - duck-typed transport
+        s._loop = asyncio.get_running_loop()  # what start() captures
+        await asyncio.to_thread(s.subscribe, CAT, SYM, "1h")
+        await asyncio.sleep(0.05)  # let the loop-bound op task run
+        payloads = [p for p in fake.sent if "candle1H" in p]
+        assert payloads, "subscribe op never reached the feed"
+        assert json.loads(payloads[-1])["op"] == "subscribe"
+
+    asyncio.run(scenario())
+
+
+def test_subscribe_before_start_defers_to_connect() -> None:
+    """Before start() there is no loop to dispatch to; the op must stay in
+    `_extra` so `_channels()` applies it on the next connect (no crash)."""
+
+    async def scenario() -> None:
+        s = _stream()
+        fake = _FakeWs()
+        s._ws = fake  # type: ignore[assignment]
+        assert s._loop is None
+        await asyncio.to_thread(s.subscribe, CAT, SYM, "1h")
+        await asyncio.sleep(0.05)
+        assert fake.sent == []
+        assert {"instType": CAT, "channel": "candle1H", "instId": SYM} in s._channels()
+
+    asyncio.run(scenario())
+
+
+def test_send_op_failure_forces_feed_reconnect() -> None:
+    """A failed op send must not be swallowed: the upstream socket is closed so
+    the reconnect path re-issues every subscription from `_channels()`."""
+
+    class _BrokenWs(_FakeWs):
+        def __init__(self) -> None:
+            super().__init__()
+            self.closed = False
+
+        async def send(self, text: str) -> None:
+            raise ConnectionError("write side wedged")
+
+        async def close(self) -> None:
+            self.closed = True
+
+    async def scenario() -> None:
+        s = _stream()
+        broken = _BrokenWs()
+        s._ws = broken  # type: ignore[assignment]
+        await s._send_op("subscribe", '{"op": "subscribe"}')
+        assert broken.closed, "failure must close the socket to force reconnect"
+
+    asyncio.run(scenario())
 
 
 def _run_all() -> None:

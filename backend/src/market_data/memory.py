@@ -8,9 +8,9 @@ interpretable situation features. Parameter suggestions are advisory only.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Callable
 
 Complete = Callable[[str, str], str]
 
@@ -71,8 +71,12 @@ def features_from_context(context: dict) -> dict:
     kdj = ind.get("kdj_j")
     levels = context.get("levels", []) or []
 
-    supports = [l["price"] for l in levels if l.get("kind") == "support" and l["price"] <= price]
-    resistances = [l["price"] for l in levels if l.get("kind") == "resistance" and l["price"] >= price]
+    supports = [
+        lvl["price"] for lvl in levels if lvl.get("kind") == "support" and lvl["price"] <= price
+    ]
+    resistances = [
+        lvl["price"] for lvl in levels if lvl.get("kind") == "resistance" and lvl["price"] >= price
+    ]
     dist_sup = (price - max(supports)) / price if supports and price else 1.0
     dist_res = (min(resistances) - price) / price if resistances and price else 1.0
 
@@ -128,9 +132,7 @@ class MemoryStore:
             trades = [t for t in trades if t.side == side]
         if not trades:
             return []
-        ranked = sorted(
-            trades, key=lambda t: similarity(features, t.features or {}), reverse=True
-        )
+        ranked = sorted(trades, key=lambda t: similarity(features, t.features or {}), reverse=True)
         return ranked[:k]
 
 
@@ -170,8 +172,8 @@ class Reflector:
         winrate = wins / len(closed)
         suggestions: dict = {}
         if winrate < self.LOW_WINRATE:
-            suggestions["min_strength"] = "+1"        # be more selective
-            suggestions["near_pct"] = "narrow"        # require closer to level
+            suggestions["min_strength"] = "+1"  # be more selective
+            suggestions["near_pct"] = "narrow"  # require closer to level
             suggestions["_rationale"] = f"win rate {winrate:.0%} over {len(closed)} trades"
         return suggestions
 
@@ -180,13 +182,15 @@ class Reflector:
         rules: list[str] = []
         # Losing longs when MACD strongly negative.
         losing_long_neg = [
-            t for t in closed
+            t
+            for t in closed
             if t.side == "long" and (t.pnl or 0) < 0 and t.features.get("macd_sign") == -1
         ]
         if len(losing_long_neg) >= 2:
             rules.append("Avoid opening long when MACD histogram is strongly negative.")
         losing_short_pos = [
-            t for t in closed
+            t
+            for t in closed
             if t.side == "short" and (t.pnl or 0) < 0 and t.features.get("macd_sign") == 1
         ]
         if len(losing_short_pos) >= 2:

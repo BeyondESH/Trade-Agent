@@ -34,7 +34,7 @@ class ConfigStore:
     def save(self, data: dict) -> dict:
         """Validate then persist. Raises ValueError on invalid provider/risk."""
         provider = ProviderConfig(**data.get("provider", {}))  # validates
-        risk = RiskConfig(**data.get("risk", {}))              # validates
+        risk = RiskConfig(**data.get("risk", {}))  # validates
         payload = {
             "provider": asdict(provider),
             "risk": asdict(risk),

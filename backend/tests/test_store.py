@@ -20,14 +20,16 @@ BASE = 1_700_000_000_000
 
 
 def _frame(times: list, close: float = 1.0) -> pd.DataFrame:
-    return pd.DataFrame({
-        "open_time": times,
-        "open": [close] * len(times),
-        "high": [close + 1] * len(times),
-        "low": [close - 1] * len(times),
-        "close": [close] * len(times),
-        "volume": [1.0] * len(times),
-    })
+    return pd.DataFrame(
+        {
+            "open_time": times,
+            "open": [close] * len(times),
+            "high": [close + 1] * len(times),
+            "low": [close - 1] * len(times),
+            "close": [close] * len(times),
+            "volume": [1.0] * len(times),
+        }
+    )
 
 
 def _store(tmp: str) -> ParquetStore:

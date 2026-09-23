@@ -146,14 +146,10 @@ class RiskEngine:
             return OrderDecision(False, 0.0, 0.0, 0.0, "max adds reached for symbol")
 
         # 2) leverage cap + 3/4) margin caps via sizing.
-        sizing = size_position(
-            portfolio.equity, intended_leverage, cfg, portfolio, symbol
-        )
+        sizing = size_position(portfolio.equity, intended_leverage, cfg, portfolio, symbol)
         if sizing.margin <= 0.0:
             return OrderDecision(False, 0.0, 0.0, sizing.leverage, sizing.reason)
-        return OrderDecision(
-            True, sizing.margin, sizing.notional, sizing.leverage, sizing.reason
-        )
+        return OrderDecision(True, sizing.margin, sizing.notional, sizing.leverage, sizing.reason)
 
     def check_circuit_breaker(self, portfolio: Portfolio) -> tuple[bool, str]:
         dd = drawdown_pct(portfolio)

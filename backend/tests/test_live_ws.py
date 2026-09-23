@@ -17,6 +17,8 @@ import pytest
 import websockets
 from websockets.asyncio.client import ClientConnection
 
+pytestmark = pytest.mark.live
+
 CAT = "USDT-FUTURES"
 
 
@@ -37,17 +39,24 @@ async def _recv_until(ws: ClientConnection, predicate, timeout: float = 5.0) -> 
             if predicate(obj):
                 return obj
     except TimeoutError:
-        raise AssertionError("timed out waiting for a matching WS frame")
+        raise AssertionError("timed out waiting for a matching WS frame") from None
 
 
 def _sub_candle(symbol: str = "BTCUSDT", timeframe: str = "1m") -> str:
-    return json.dumps({"op": "subscribe", "args": [
-        {"channel": "candle", "symbol": symbol, "category": CAT, "timeframe": timeframe}]})
+    return json.dumps(
+        {
+            "op": "subscribe",
+            "args": [
+                {"channel": "candle", "symbol": symbol, "category": CAT, "timeframe": timeframe}
+            ],
+        }
+    )
 
 
 def _sub(channel: str, symbol: str = "BTCUSDT") -> str:
-    return json.dumps({"op": "subscribe", "args": [
-        {"channel": channel, "symbol": symbol, "category": CAT}]})
+    return json.dumps(
+        {"op": "subscribe", "args": [{"channel": channel, "symbol": symbol, "category": CAT}]}
+    )
 
 
 def _unsub(channel: str, symbol: str = "BTCUSDT", timeframe: str | None = None) -> str:
@@ -67,6 +76,7 @@ def test_ws_connect_and_ping_pong(live_server: str) -> None:
             await ws.send(json.dumps({"event": "ping"}))
             pong = await _recv_until(ws, lambda o: o.get("event") == "pong")
             assert pong["event"] == "pong"
+
     _run(scenario())
 
 
@@ -83,6 +93,7 @@ def test_ws_candle_snapshot(live_server: str) -> None:
             assert isinstance(snap["data"], dict)
             ev = await _recv_until(ws, lambda o: o.get("event") == "subscribed")
             assert ev["channel"] == "candle"
+
     _run(scenario())
 
 
@@ -97,6 +108,7 @@ def test_ws_candle_empty_series_error_frame(live_server: str) -> None:
             )
             assert snap["symbol"] == "UNIUSDT"
             assert "error" in snap["data"] or "price" in snap["data"]
+
     _run(scenario())
 
 
@@ -106,8 +118,11 @@ def test_ws_ticker_subscription(live_server: str) -> None:
             await ws.send(_sub("ticker", ""))
             # Offline the REST-seeded mirror may be empty; the subscribed
             # event is the stable protocol signal.
-            ev = await _recv_until(ws, lambda o: o.get("event") == "subscribed" and o.get("channel") == "ticker")
+            ev = await _recv_until(
+                ws, lambda o: o.get("event") == "subscribed" and o.get("channel") == "ticker"
+            )
             assert ev["symbol"] == ""
+
     _run(scenario())
 
 
@@ -118,8 +133,11 @@ def test_ws_books_subscription(live_server: str) -> None:
             # Offline (no upstream market hub) the snapshot may be absent
             # because _market_snapshot returns None; the subscribed event is
             # the stable protocol-level signal.
-            ev = await _recv_until(ws, lambda o: o.get("event") == "subscribed" and o.get("channel") == "books")
+            ev = await _recv_until(
+                ws, lambda o: o.get("event") == "subscribed" and o.get("channel") == "books"
+            )
             assert ev["symbol"] == "BTCUSDT"
+
     _run(scenario())
 
 
@@ -127,8 +145,11 @@ def test_ws_trade_subscription(live_server: str) -> None:
     async def scenario() -> None:
         async with await _connect(live_server) as ws:
             await ws.send(_sub("trade"))
-            ev = await _recv_until(ws, lambda o: o.get("event") == "subscribed" and o.get("channel") == "trade")
+            ev = await _recv_until(
+                ws, lambda o: o.get("event") == "subscribed" and o.get("channel") == "trade"
+            )
             assert ev["symbol"] == "BTCUSDT"
+
     _run(scenario())
 
 
@@ -136,17 +157,26 @@ def test_ws_dynamic_subscribe_and_unsubscribe(live_server: str) -> None:
     async def scenario() -> None:
         async with await _connect(live_server) as ws:
             await ws.send(_sub_candle("BTCUSDT", "1m"))
-            await _recv_until(ws, lambda o: o.get("action") == "snapshot" and o.get("symbol") == "BTCUSDT")
+            await _recv_until(
+                ws, lambda o: o.get("action") == "snapshot" and o.get("symbol") == "BTCUSDT"
+            )
             await _recv_until(ws, lambda o: o.get("event") == "subscribed")
 
             await ws.send(_sub_candle("ETHUSDT", "1h"))
-            snap2 = await _recv_until(ws, lambda o: o.get("action") == "snapshot" and o.get("symbol") == "ETHUSDT")
+            snap2 = await _recv_until(
+                ws, lambda o: o.get("action") == "snapshot" and o.get("symbol") == "ETHUSDT"
+            )
             assert snap2["timeframe"] == "1h"
-            await _recv_until(ws, lambda o: o.get("event") == "subscribed" and o.get("symbol") == "ETHUSDT")
+            await _recv_until(
+                ws, lambda o: o.get("event") == "subscribed" and o.get("symbol") == "ETHUSDT"
+            )
 
             await ws.send(_unsub("candle", "BTCUSDT", "1m"))
-            unsub = await _recv_until(ws, lambda o: o.get("event") == "unsubscribed" and o.get("symbol") == "BTCUSDT")
+            unsub = await _recv_until(
+                ws, lambda o: o.get("event") == "unsubscribed" and o.get("symbol") == "BTCUSDT"
+            )
             assert unsub["channel"] == "candle"
+
     _run(scenario())
 
 
@@ -158,17 +188,20 @@ def test_ws_ping_after_subscription(live_server: str) -> None:
             await ws.send(json.dumps({"event": "ping"}))
             pong = await _recv_until(ws, lambda o: o.get("event") == "pong")
             assert pong["event"] == "pong"
+
     _run(scenario())
 
 
 def test_ws_malformed_frames_ignored(live_server: str) -> None:
     """Malformed JSON must not kill the connection."""
+
     async def scenario() -> None:
         async with await _connect(live_server) as ws:
             await ws.send("not-json{{{")
             await ws.send(_sub_candle("BTCUSDT", "1m"))
             snap = await _recv_until(ws, lambda o: o.get("action") == "snapshot")
             assert snap["symbol"] == "BTCUSDT"
+
     _run(scenario())
 
 
@@ -178,6 +211,7 @@ def test_ws_event_frames_monotonic_if_live(live_server: str) -> None:
     Offline (no upstream) this simply checks the connection survives the
     observation window.
     """
+
     async def scenario() -> None:
         async with await _connect(live_server) as ws:
             await ws.send(_sub_candle("BTCUSDT", "1m"))
@@ -198,4 +232,5 @@ def test_ws_event_frames_monotonic_if_live(live_server: str) -> None:
                     last_open = ot
             except TimeoutError:
                 pass  # quiet market / no upstream: nothing to assert
+
     _run(scenario())

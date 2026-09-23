@@ -103,9 +103,7 @@ class KlineIngestor:
         if not pages:
             return pd.DataFrame(columns=OHLCV_COLUMNS)
         combined = pd.concat(pages, ignore_index=True)
-        combined = combined[
-            (combined["open_time"] >= start_ms) & (combined["open_time"] <= end_ms)
-        ]
+        combined = combined[(combined["open_time"] >= start_ms) & (combined["open_time"] <= end_ms)]
         return (
             combined.drop_duplicates(subset="open_time")
             .sort_values("open_time")
@@ -238,8 +236,17 @@ class KlineIngestor:
 
         if parallel:
             return self._backfill_before_rest_parallel(
-                series, before_ms, fetcher, granularity, page_limit,
-                max_pages, max_retries, backoff_base, pause, step, earliest,
+                series,
+                before_ms,
+                fetcher,
+                granularity,
+                page_limit,
+                max_pages,
+                max_retries,
+                backoff_base,
+                pause,
+                step,
+                earliest,
             )
 
         cursor_end = before_ms
@@ -251,16 +258,30 @@ class KlineIngestor:
 
         for _page in range(max(1, max_pages)):
             page = self._fetch_v2_page_normalized(
-                fetcher, series, granularity, cursor_end, page_limit,
-                strict, max_retries, backoff_base, pause,
+                fetcher,
+                series,
+                granularity,
+                cursor_end,
+                page_limit,
+                strict,
+                max_retries,
+                backoff_base,
+                pause,
             )
             if page.empty:
                 # Retry the same cursor once (transient empty / boundary) before
                 # concluding the exchange has no older data.
                 pause(min(backoff_base, 0.2))
                 page = self._fetch_v2_page_normalized(
-                    fetcher, series, granularity, cursor_end, page_limit,
-                    strict, max_retries, backoff_base, pause,
+                    fetcher,
+                    series,
+                    granularity,
+                    cursor_end,
+                    page_limit,
+                    strict,
+                    max_retries,
+                    backoff_base,
+                    pause,
                 )
                 if page.empty:
                     return appended, True
@@ -306,8 +327,15 @@ class KlineIngestor:
         def fetch_one(cursor_end: int) -> tuple[int, pd.DataFrame]:
             strict = cursor_end == cursors[0]
             page = self._fetch_v2_page_normalized(
-                fetcher, series, granularity, cursor_end, page_limit,
-                strict, max_retries, backoff_base, pause,
+                fetcher,
+                series,
+                granularity,
+                cursor_end,
+                page_limit,
+                strict,
+                max_retries,
+                backoff_base,
+                pause,
             )
             return cursor_end, page
 
@@ -353,8 +381,14 @@ class KlineIngestor:
         pause: Callable[[float], None],
     ) -> pd.DataFrame:
         rows = self._call_v2_with_backoff(
-            fetcher, series, granularity, cursor_end, page_limit,
-            max_retries, backoff_base, pause,
+            fetcher,
+            series,
+            granularity,
+            cursor_end,
+            page_limit,
+            max_retries,
+            backoff_base,
+            pause,
         )
         page = self._normalize_payload({"data": rows})
         if strict:
@@ -364,9 +398,7 @@ class KlineIngestor:
         if page.empty:
             return page
         return (
-            page.drop_duplicates(subset="open_time")
-            .sort_values("open_time")
-            .reset_index(drop=True)
+            page.drop_duplicates(subset="open_time").sort_values("open_time").reset_index(drop=True)
         )
 
     def _call_v2_with_backoff(
@@ -390,7 +422,10 @@ class KlineIngestor:
                     raise
                 logger.warning(
                     "v2 REST rate limited fetching %s (%s); retry %d/%d.",
-                    series.relative_path(), granularity, attempt + 1, max_retries,
+                    series.relative_path(),
+                    granularity,
+                    attempt + 1,
+                    max_retries,
                 )
                 if attempt < max_retries - 1:
                     pause(backoff_base * (attempt + 1))
@@ -432,7 +467,9 @@ class KlineIngestor:
         code = str(body.get("code"))
         msg = str(body.get("msg") or body.get("message") or "")
         if code not in ("00000", "0"):
-            if "429" in code or any(hint in msg.lower() for hint in KlineIngestor._RATE_LIMIT_HINTS):
+            if "429" in code or any(
+                hint in msg.lower() for hint in KlineIngestor._RATE_LIMIT_HINTS
+            ):
                 raise V2RestError(f"rate limit: {code} {msg}")
             raise V2RestError(f"v2 candles error {code}: {msg}")
         return body.get("data") or []
@@ -470,7 +507,9 @@ class KlineIngestor:
         code = str(body.get("code"))
         msg = str(body.get("msg") or body.get("message") or "")
         if code not in ("00000", "0"):
-            if "429" in code or any(hint in msg.lower() for hint in KlineIngestor._RATE_LIMIT_HINTS):
+            if "429" in code or any(
+                hint in msg.lower() for hint in KlineIngestor._RATE_LIMIT_HINTS
+            ):
                 raise V2RestError(f"rate limit: {code} {msg}")
             raise V2RestError(f"v3 history-candles error {code}: {msg}")
         return body.get("data") or []
@@ -504,7 +543,10 @@ class KlineIngestor:
                     raise
                 logger.warning(
                     "Rate limited fetching %s (%s); retry %d/%d.",
-                    series.relative_path(), interval, attempt + 1, max_retries,
+                    series.relative_path(),
+                    interval,
+                    attempt + 1,
+                    max_retries,
                 )
                 if attempt < max_retries - 1:
                     pause(backoff_base * (attempt + 1))

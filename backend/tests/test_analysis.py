@@ -13,6 +13,7 @@ import pandas as pd
 from market_data import indicators, levels
 from market_data.smc import bos_choch, liquidity_levels, order_blocks
 from market_data.structure import detect_box, find_swings, fit_trendlines
+
 BASE = 1_700_000_000_000
 STEP = 300_000
 
@@ -61,8 +62,7 @@ def test_kdj_in_range() -> None:
 
 
 def test_fib_midpoint() -> None:
-    df = _df([100.0 + (i % 10) for i in range(120)],
-             highs=[110.0] * 120, lows=[100.0] * 120)
+    df = _df([100.0 + (i % 10) for i in range(120)], highs=[110.0] * 120, lows=[100.0] * 120)
     fib = indicators.fib_levels(df["high"], df["low"])
     assert abs(fib[0.5] - 105.0) < 1e-9  # (110+100)/2
 
@@ -130,7 +130,7 @@ def test_trendline_rising_support() -> None:
     swing_lows = [s for s in find_swings(df, k=2) if s.kind == "low"]
     assert len(swing_lows) >= 2
     lines = fit_trendlines(df)
-    support = [l for l in lines if l.kind == "support"]
+    support = [ln for ln in lines if ln.kind == "support"]
     assert support and support[0].slope > 0
 
 
@@ -180,25 +180,57 @@ def test_no_box_on_trend() -> None:
 def test_liquidity_levels_sides_and_equal() -> None:
     # Two equal swing highs (110) + swing lows -> both sides + an equal cluster.
     closes = [
-        105, 103, 100, 103, 105,   # low 100
-        107, 109, 110, 109, 107,   # high 110
-        105, 103, 102, 103, 105,   # low 102
-        107, 109, 110, 109, 107,   # high 110 (equal)
+        105,
+        103,
+        100,
+        103,
+        105,  # low 100
+        107,
+        109,
+        110,
+        109,
+        107,  # high 110
+        105,
+        103,
+        102,
+        103,
+        105,  # low 102
+        107,
+        109,
+        110,
+        109,
+        107,  # high 110 (equal)
     ]
     df = _df(closes, highs=[c + 0.5 for c in closes], lows=[c - 0.5 for c in closes])
     liq = liquidity_levels(df, tol=0.001)
-    sides = {l.side for l in liq}
+    sides = {lvl.side for lvl in liq}
     assert "high" in sides and "low" in sides
-    assert any(l.equal and l.side == "high" for l in liq), "equal highs should be flagged"
+    assert any(lvl.equal and lvl.side == "high" for lvl in liq), "equal highs should be flagged"
 
 
 def test_choch_on_reversal() -> None:
     # Rising highs establish up-trend, then a lower low breaks structure -> CHOCH.
     closes = [
-        107, 109, 110, 109, 107,   # high 110
-        109, 111, 112, 111, 109,   # higher high 112 -> up
-        108, 106, 105, 106, 108,   # low 105
-        103, 101, 100, 101, 103,   # lower low 100 -> CHOCH down
+        107,
+        109,
+        110,
+        109,
+        107,  # high 110
+        109,
+        111,
+        112,
+        111,
+        109,  # higher high 112 -> up
+        108,
+        106,
+        105,
+        106,
+        108,  # low 105
+        103,
+        101,
+        100,
+        101,
+        103,  # lower low 100 -> CHOCH down
     ]
     df = _df(closes, highs=[c + 0.5 for c in closes], lows=[c - 0.5 for c in closes])
     events = bos_choch(df)

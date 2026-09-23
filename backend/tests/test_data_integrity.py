@@ -15,18 +15,17 @@ Run:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
+from data_registry import KNOWN_GAPS, STRUCTURAL_EXEMPTIONS
 
 from market_data.config import Settings
 from market_data.models import Series, timeframe_step_ms
 from market_data.store import ParquetStore
-
-from data_registry import KNOWN_GAPS, STRUCTURAL_EXEMPTIONS
 
 TYPE_A_MIN_STEPS = 5
 
@@ -116,17 +115,22 @@ def _verify_ohlc(df: pd.DataFrame) -> list[str]:
     try:
         o = df["open"].to_numpy(dtype="float64")
         h = df["high"].to_numpy(dtype="float64")
-        l = df["low"].to_numpy(dtype="float64")
+        lo = df["low"].to_numpy(dtype="float64")
         c = df["close"].to_numpy(dtype="float64")
         v = df["volume"].to_numpy(dtype="float64")
     except KeyError:
         return [f"missing columns {cols}"]
-    if not np.all(np.isfinite(o)) or not np.all(np.isfinite(h)) or not np.all(np.isfinite(l)) or not np.all(np.isfinite(c)):
+    if (
+        not np.all(np.isfinite(o))
+        or not np.all(np.isfinite(h))
+        or not np.all(np.isfinite(lo))
+        or not np.all(np.isfinite(c))
+    ):
         problems.append("non-finite OHLC values present")
     bad_high = int((h < np.maximum(o, c)).sum())
     if bad_high:
         problems.append(f"high < max(open,close) x{bad_high}")
-    bad_low = int((l > np.minimum(o, c)).sum())
+    bad_low = int((lo > np.minimum(o, c)).sum())
     if bad_low:
         problems.append(f"low > min(open,close) x{bad_low}")
     if int((v < 0).sum()):
@@ -134,7 +138,9 @@ def _verify_ohlc(df: pd.DataFrame) -> list[str]:
     return problems
 
 
-def _classify_gaps(t: np.ndarray, step: int) -> tuple[list[tuple[int, int, int]], list[tuple[int, int, int]]]:
+def _classify_gaps(
+    t: np.ndarray, step: int
+) -> tuple[list[tuple[int, int, int]], list[tuple[int, int, int]]]:
     """Return (type_a, type_b) gap lists; each item is (lo_ms, hi_ms, steps)."""
     d = np.diff(t)
     mult = np.rint(d / step).astype(int)
@@ -215,8 +221,8 @@ def test_data_freshness(series_data: tuple[str, pd.DataFrame]) -> None:
     step = timeframe_step_ms(series.timeframe)
     t = df["open_time"].to_numpy(dtype="int64")
     latest = int(t[-1])
-    now = int(datetime.now(timezone.utc).timestamp() * 1000)
+    now = int(datetime.now(UTC).timestamp() * 1000)
     assert now - latest <= 2 * step, (
-        f"{key}: stale, latest={datetime.fromtimestamp(latest / 1000, timezone.utc)} "
-        f"now={datetime.fromtimestamp(now / 1000, timezone.utc)}"
+        f"{key}: stale, latest={datetime.fromtimestamp(latest / 1000, UTC)} "
+        f"now={datetime.fromtimestamp(now / 1000, UTC)}"
     )

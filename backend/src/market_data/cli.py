@@ -14,9 +14,7 @@ from __future__ import annotations
 import argparse
 import logging
 import time
-from datetime import datetime, timezone
-
-import pandas as pd
+from datetime import UTC, datetime
 
 from market_data.config import get_settings, setup_logging
 from market_data.excel_export import export_series
@@ -35,7 +33,7 @@ def _to_ms(value: str) -> int:
         return int(value)
     dt = datetime.fromisoformat(value)
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return int(dt.timestamp() * 1000)
 
 
@@ -216,7 +214,10 @@ def main() -> None:
         )
         result = agent.act(decision, price)
         if isinstance(result, ExecutionResult):
-            print(f"execution: approved={result.approved} filled={result.filled} reason='{result.reason}'")
+            print(
+                f"execution: approved={result.approved} filled={result.filled} "
+                f"reason='{result.reason}'"
+            )
         elif result is None:
             print("execution: no action (hold)")
         return
@@ -256,7 +257,9 @@ def main() -> None:
         print(f"place: approved={res.approved} filled={res.filled} reason='{res.reason}'")
         if res.filled and res.position:
             p = res.position
-            print(f"  position: margin={p.margin:.2f} notional={p.notional:.2f} entry={p.entry_price}")
+            print(
+                f"  position: margin={p.margin:.2f} notional={p.notional:.2f} entry={p.entry_price}"
+            )
             pnl = engine.close(args.symbol, args.exit)
             print(f"close @ {args.exit}: pnl={pnl:.2f} | equity={engine.portfolio.equity:.2f}")
         return
@@ -272,7 +275,9 @@ def main() -> None:
             print(f"Not enough data for {series.relative_path()} (rows={len(df)}, need >=30).")
             return
         ind = indicators.compute(df).iloc[-1]
-        print(f"=== {series.relative_path()} | rows={len(df)} | close={df['close'].iloc[-1]:.2f} ===")
+        print(
+            f"=== {series.relative_path()} | rows={len(df)} | close={df['close'].iloc[-1]:.2f} ==="
+        )
         print(
             "MACD dif={:.2f} dea={:.2f} hist={:.2f} | KDJ k={:.1f} d={:.1f} j={:.1f}".format(
                 ind["dif"], ind["dea"], ind["macd_hist"], ind["kdj_k"], ind["kdj_d"], ind["kdj_j"]
@@ -280,8 +285,11 @@ def main() -> None:
         )
         print(
             "BOLL [{:.2f}, {:.2f}, {:.2f}] | VEGAS144={:.2f} VEGAS169={:.2f}".format(
-                ind["boll_lower"], ind["boll_mid"], ind["boll_upper"],
-                ind["vegas_ema144"], ind["vegas_ema169"],
+                ind["boll_lower"],
+                ind["boll_mid"],
+                ind["boll_upper"],
+                ind["vegas_ema144"],
+                ind["vegas_ema169"],
             )
         )
         print(f"--- Top-{args.top} S/R candidates ---")
@@ -312,7 +320,10 @@ def main() -> None:
         print(f"Added {added} rows to {series.relative_path()}.")
         if args.export:
             paths = export_series(store, series, settings.excel_dir)
-            print(f"Exported {len(paths)} daily file(s) to {settings.excel_dir / series.relative_path()}.")
+            print(
+                f"Exported {len(paths)} daily file(s) to "
+                f"{settings.excel_dir / series.relative_path()}."
+            )
         return
 
     if args.command == "schedule":

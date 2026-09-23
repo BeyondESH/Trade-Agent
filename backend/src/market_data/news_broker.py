@@ -117,7 +117,9 @@ class NewsBroker:
         now = time.time()
         new_items: list[dict] = []
         for source in newsfeed.SOURCES:
-            health = self._health.setdefault(source, {"last_ts": None, "last_error": None, "failures": 0})
+            health = self._health.setdefault(
+                source, {"last_ts": None, "last_error": None, "failures": 0}
+            )
             if now < skip.get(source, 0.0):
                 continue
             try:
@@ -202,7 +204,9 @@ class NewsBroker:
             items = sorted(self._buffer, key=lambda i: i["ts"], reverse=True)
         return items[:max_items], len(items)
 
-    def page(self, offset: int = 0, limit: int = 100, categories: str | None = None) -> tuple[list[dict], int]:
+    def page(
+        self, offset: int = 0, limit: int = 100, categories: str | None = None
+    ) -> tuple[list[dict], int]:
         """Page the ring buffer newest-first; returns ``(items, total)``."""
         cats = {c.strip() for c in categories.split(",") if c.strip()} if categories else None
         with self._lock:

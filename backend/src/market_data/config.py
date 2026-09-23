@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # Scheduler.
     schedule_interval_seconds: int = 300
 
+    # Scheduled Agent trading + DL retrain are opt-in (default off). The
+    # circuit-breaker protective-close safety job always runs regardless of this
+    # flag; only automatic ordering and model retraining require it.
+    agent_schedule_enabled: bool = False
+
     # BlockBeats data cache: daily snapshots are fetched once per day and
     # served from local disk. `blockbeats_refresh_hour/minute` set the cron
     # time (default 12:00) for the daily refresh job.

@@ -14,6 +14,7 @@ Usage (from the running event loop, e.g. FastAPI lifespan):
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import threading
@@ -59,23 +60,40 @@ class BitgetWsStream:
         self._listeners: dict[tuple[str, str, str], set[Callable[[dict[str, Any]], None]]] = {}
         self._lock = threading.Lock()
         self._task: asyncio.Task | None = None
+        # The event loop that owns this stream, captured at `start()`. Needed
+        # because `subscribe`/`unsubscribe` are legitimately called from worker
+        # threads (FastAPI runs sync endpoints in a threadpool), where there is
+        # no running loop to attach a task to.
+        self._loop: asyncio.AbstractEventLoop | None = None
+        # Strong references to in-flight subscription-op sends. asyncio only
+        # keeps weak references to tasks, and an unreferenced task can vanish
+        # before it ever runs — silently dropping a subscribe/unsubscribe and
+        # freezing the series until the next reconnect.
+        self._op_tasks: set[asyncio.Task] = set()
+        self._op_futures: set[concurrent.futures.Future] = set()
         self._stopping = False
         self._ws: ClientConnection | None = None
 
     # -- channels ----------------------------------------------------------
     def _channels(self) -> list[dict[str, str]]:
         channels = [
-            {"instType": self._category, "channel": f"candle{timeframe_to_granularity(tf)}", "instId": symbol}
+            {
+                "instType": self._category,
+                "channel": f"candle{timeframe_to_granularity(tf)}",
+                "instId": symbol,
+            }
             for symbol in self._symbols
             for tf in self._timeframes
         ]
         with self._lock:
-            for (category, symbol, timeframe) in self._extra:
-                channels.append({
-                    "instType": category,
-                    "channel": f"candle{timeframe_to_granularity(timeframe)}",
-                    "instId": symbol,
-                })
+            for category, symbol, timeframe in self._extra:
+                channels.append(
+                    {
+                        "instType": category,
+                        "channel": f"candle{timeframe_to_granularity(timeframe)}",
+                        "instId": symbol,
+                    }
+                )
         return channels
 
     @staticmethod
@@ -111,8 +129,9 @@ class BitgetWsStream:
         with self._lock:
             self._buffer.pop(self._series_key(category, symbol, timeframe), None)
 
-    def add_listener(self, category: str, symbol: str, timeframe: str,
-                     callback: Callable[[dict[str, Any]], None]) -> None:
+    def add_listener(
+        self, category: str, symbol: str, timeframe: str, callback: Callable[[dict[str, Any]], None]
+    ) -> None:
         """Register a callback invoked with the latest bar when a series changes.
 
         The callback is called with a copy of the series' most recent bar after
@@ -123,8 +142,9 @@ class BitgetWsStream:
         with self._lock:
             self._listeners.setdefault(key, set()).add(callback)
 
-    def remove_listener(self, category: str, symbol: str, timeframe: str,
-                        callback: Callable[[dict[str, Any]], None]) -> None:
+    def remove_listener(
+        self, category: str, symbol: str, timeframe: str, callback: Callable[[dict[str, Any]], None]
+    ) -> None:
         """Unregister a listener; idempotent."""
         key = (category, symbol, timeframe)
         with self._lock:
@@ -148,28 +168,87 @@ class BitgetWsStream:
                 logger.exception("candle listener failed for %s", self._series_key(*key))
 
     def _request(self, op: str, category: str, symbol: str, timeframe: str) -> None:
-        payload = json.dumps({"op": op, "args": [{
-            "instType": category,
-            "channel": f"candle{timeframe_to_granularity(timeframe)}",
-            "instId": symbol,
-        }]})
+        payload = json.dumps(
+            {
+                "op": op,
+                "args": [
+                    {
+                        "instType": category,
+                        "channel": f"candle{timeframe_to_granularity(timeframe)}",
+                        "instId": symbol,
+                    }
+                ],
+            }
+        )
         try:
-            loop = asyncio.get_running_loop()
+            running = asyncio.get_running_loop()
         except RuntimeError:
-            # No running loop (e.g. called from a test thread); the op is
-            # still registered in _extra and will be applied on (re)connect.
+            running = None
+        target = running if running is not None else self._loop
+        if target is None or target.is_closed():
+            # No loop yet (before start()); the op is still registered in
+            # `_extra` and `_channels()` applies it on (re)connect.
+            logger.debug(
+                "candle %s %s/%s/%s: no loop yet; applied on connect",
+                op,
+                category,
+                symbol,
+                timeframe,
+            )
             return
-        loop.create_task(self._safe_send(self._ws, payload))
+        if running is not None:
+            task = target.create_task(self._send_op(op, payload))
+            # Keep a strong reference until completion: asyncio holds only a
+            # weak reference and an unreferenced task may be collected before
+            # it runs, which would silently drop the op.
+            self._op_tasks.add(task)
+            task.add_done_callback(self._op_tasks.discard)
+        else:
+            # Called from a worker thread (sync FastAPI endpoint): hand the op
+            # to the stream's loop so it actually reaches the feed.
+            fut = asyncio.run_coroutine_threadsafe(self._send_op(op, payload), target)
+            self._op_futures.add(fut)
+            fut.add_done_callback(self._op_futures.discard)
+
+    async def _send_op(self, op: str, payload: str, timeout: float = 5.0) -> None:
+        """Send one subscription op with a bound and real failure handling.
+
+        Historically this was fire-and-forget and silent: a dropped op left the
+        refcount claiming the series was subscribed while the feed never
+        received it, freezing live updates until the next reconnect. On any
+        failure, close the upstream socket so the reconnect path re-issues all
+        subscriptions from `_channels()`.
+        """
+        ws = self._ws
+        if ws is None:
+            logger.warning("candle %s: feed not connected; re-applied on reconnect", op)
+            return
+        try:
+            await asyncio.wait_for(ws.send(payload), timeout)
+        except Exception as exc:  # noqa: BLE001 - recover by cycling the feed
+            logger.warning("candle %s send failed (%r); forcing feed reconnect", op, exc)
+            try:
+                await asyncio.wait_for(ws.close(), timeout)
+            except Exception:  # noqa: BLE001 - heartbeat path still heals
+                logger.warning("candle %s: feed close timed out; awaiting heartbeat", op)
 
     # -- lifecycle ---------------------------------------------------------
     def start(self) -> None:
         if self._task is not None:
             return
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = None
         self._stopping = False
         self._task = asyncio.create_task(self._run_loop())
 
     async def stop(self) -> None:
         self._stopping = True
+        for t in list(self._op_tasks):
+            t.cancel()
+        for f in list(self._op_futures):
+            f.cancel()
         task, self._task = self._task, None
         if task is not None:
             task.cancel()
@@ -236,11 +315,11 @@ class BitgetWsStream:
         while True:
             try:
                 raw = await asyncio.wait_for(ws.recv(), timeout=self._heartbeat)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 silent += 1
                 if silent >= 2:
                     logger.warning("Bitget WS silent; forcing reconnect.")
-                    raise ConnectionError("no messages within heartbeat window")
+                    raise ConnectionError("no messages within heartbeat window") from None
                 await self._safe_send(ws, PING_FRAME)
                 continue
             silent = 0
@@ -293,7 +372,7 @@ class BitgetWsStream:
         if not channel.startswith("candle"):
             return
         try:
-            timeframe = granularity_to_timeframe(channel[len("candle"):])
+            timeframe = granularity_to_timeframe(channel[len("candle") :])
         except ValueError:
             return
         if not (inst_type and inst_id):

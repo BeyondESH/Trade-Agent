@@ -22,7 +22,7 @@ import json
 import logging
 import os
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -78,7 +78,7 @@ def load_cache(endpoint: str, network: str | None = None, type: str | None = Non
     """Return `{"fetched_at", "data"}` for a cached endpoint, or None on miss/corruption."""
     p = path_for(endpoint, network, type)
     try:
-        with open(p, "r", encoding="utf-8") as f:
+        with open(p, encoding="utf-8") as f:
             obj = json.load(f)
         if not isinstance(obj, dict) or "data" not in obj:
             return None
@@ -87,14 +87,16 @@ def load_cache(endpoint: str, network: str | None = None, type: str | None = Non
         return None
 
 
-def save_cache(endpoint: str, data: Any, network: str | None = None, type: str | None = None) -> Path:
+def save_cache(
+    endpoint: str, data: Any, network: str | None = None, type: str | None = None
+) -> Path:
     """Persist `data` for an endpoint; atomic write via temp file + rename.
 
     Returns the written path. Raises OSError on write failure, but a failed
     write never corrupts an existing cache file (rename replaces atomically).
     """
     p = path_for(endpoint, network, type)
-    obj = {"fetched_at": datetime.now(timezone.utc).isoformat(), "data": data}
+    obj = {"fetched_at": datetime.now(UTC).isoformat(), "data": data}
     fd, tmp = tempfile.mkstemp(dir=str(p.parent), suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:

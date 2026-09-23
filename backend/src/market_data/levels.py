@@ -60,9 +60,7 @@ def _touch_count(df: pd.DataFrame, price: float, tol: float) -> int:
     return int((near_high | near_low).sum())
 
 
-def build_levels(
-    df: pd.DataFrame, tol: float = 0.001, top_n: int | None = None
-) -> list[Level]:
+def build_levels(df: pd.DataFrame, tol: float = 0.001, top_n: int | None = None) -> list[Level]:
     if df.empty:
         return []
     last_close = float(df["close"].iloc[-1])
@@ -86,5 +84,5 @@ def build_levels(
         lvl.kind = "resistance" if lvl.price >= last_close else "support"
         lvl.sources = sorted(set(lvl.sources))
 
-    clusters.sort(key=lambda l: l.strength, reverse=True)
+    clusters.sort(key=lambda cluster: cluster.strength, reverse=True)
     return clusters[:top_n] if top_n else clusters

@@ -10,7 +10,14 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from market_data.agent import TradingAgent, build_agent_context
+from market_data.agent import (
+    NEWS_DIGEST_CATEGORIES,
+    NEWS_DIGEST_HOURS,
+    NEWS_DIGEST_MAX_ITEMS,
+    TradingAgent,
+    build_agent_context,
+    format_news_digest,
+)
 from market_data.execution import ExecutionEngine
 from market_data.llm import (
     AgentDecision,
@@ -28,16 +35,27 @@ STEP = 300_000
 def _df(closes) -> pd.DataFrame:
     n = len(closes)
     closes = np.array(closes, dtype="float64")
-    return pd.DataFrame({
-        "open_time": [BASE + i * STEP for i in range(n)],
-        "open": closes, "high": closes + 1.0, "low": closes - 1.0,
-        "close": closes, "volume": [1.0] * n,
-    })
+    return pd.DataFrame(
+        {
+            "open_time": [BASE + i * STEP for i in range(n)],
+            "open": closes,
+            "high": closes + 1.0,
+            "low": closes - 1.0,
+            "close": closes,
+            "volume": [1.0] * n,
+        }
+    )
 
 
 def _ctx(price, levels) -> dict:
-    return {"symbol": "BTCUSDT", "timeframe": "1d", "price": price,
-            "indicators": {}, "levels": levels, "news": ""}
+    return {
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+        "price": price,
+        "indicators": {},
+        "levels": levels,
+        "news": "",
+    }
 
 
 # -- 5.1 rule-based left-side ---------------------------------------------
@@ -68,7 +86,10 @@ def test_rule_hold_when_weak() -> None:
 # -- 5.2 LLM text provider -------------------------------------------------
 def test_llm_parses_valid_json() -> None:
     def complete(system, user):  # noqa: ANN001
-        return '{"action":"open","side":"long","reference_price":99.5,"reason":"x","confidence":0.7}'
+        return (
+            '{"action":"open","side":"long","reference_price":99.5,"reason":"x","confidence":0.7}'
+        )
+
     d = LLMTextProvider(complete).propose(_ctx(100.0, []))
     assert d.action == "open" and d.side == "long" and d.confidence == 0.7
 
@@ -76,6 +97,7 @@ def test_llm_parses_valid_json() -> None:
 def test_llm_wraps_prose_json() -> None:
     def complete(system, user):  # noqa: ANN001
         return 'Sure! {"action":"hold","side":null,"reason":"wait"} done'
+
     d = LLMTextProvider(complete).propose(_ctx(100.0, []))
     assert d.action == "hold" and d.side is None
 
@@ -83,6 +105,7 @@ def test_llm_wraps_prose_json() -> None:
 def test_llm_fallback_on_garbage() -> None:
     def complete(system, user):  # noqa: ANN001
         return "no json here"
+
     d = LLMTextProvider(complete).propose(_ctx(100.0, []))
     assert d.action == "hold" and "fallback" in d.reason
 
@@ -102,6 +125,62 @@ def test_context_news_optional() -> None:
     assert ctx["news"] == ""
 
 
+# -- 5.6 news digest + injection ------------------------------------------
+def _news(news_id: str, category: str, ts: int, content: str = "body") -> dict:
+    return {
+        "id": news_id,
+        "source": "em",
+        "category": category,
+        "title": news_id,
+        "content": content,
+        "url": None,
+        "ts": ts,
+    }
+
+
+def test_news_digest_defaults() -> None:
+    assert NEWS_DIGEST_CATEGORIES == ("crypto", "macro")
+    assert NEWS_DIGEST_HOURS == 24 and NEWS_DIGEST_MAX_ITEMS == 10
+
+
+def test_news_digest_filters_category_and_sorts_desc() -> None:
+    items = [
+        _news("a", "crypto", 100),
+        _news("b", "a-share", 200),  # not in default categories -> dropped
+        _news("c", "macro", 300),
+    ]
+    assert format_news_digest(items) == "c：body\na：body"
+
+
+def test_news_digest_truncates_to_max_items() -> None:
+    items = [_news(f"n{i}", "crypto", i) for i in range(5)]
+    assert format_news_digest(items, max_items=2) == "n4：body\nn3：body"
+
+
+def test_news_digest_truncates_total_chars() -> None:
+    out = format_news_digest([_news("n", "crypto", 1, content="x" * 100)], max_chars=8)
+    assert len(out) == 8 and out == "n：" + "x" * 6
+
+
+def test_news_digest_empty_and_no_match() -> None:
+    assert format_news_digest([]) == ""
+    assert format_news_digest([_news("x", "a-share", 1)]) == ""
+
+
+def test_context_injects_explicit_news() -> None:
+    df = _df([100 + i for i in range(60)])
+    ctx = build_agent_context(df, "BTCUSDT", "1d", news="X")
+    assert ctx["news"] == "X"
+    assert "price" in ctx and "indicators" in ctx and ctx["levels"]
+
+
+def test_context_valid_when_news_empty() -> None:
+    df = _df([100 + i for i in range(60)])
+    ctx = build_agent_context(df, "BTCUSDT", "1d", news="")
+    assert ctx["news"] == ""
+    assert "price" in ctx and "indicators" in ctx and isinstance(ctx["levels"], list)
+
+
 # -- 5.4 execution routing -------------------------------------------------
 def test_agent_open_routes_through_risk() -> None:
     engine = ExecutionEngine(portfolio=Portfolio(equity=1000.0))
@@ -114,6 +193,7 @@ def test_agent_open_routes_through_risk() -> None:
 
 def test_agent_open_blocked_by_risk() -> None:
     from market_data.risk import Position
+
     pf = Portfolio(equity=1000.0)
     pf.positions["ETHUSDT"] = Position("ETHUSDT", "long", 50.0, 5000.0, 1.0, 100)  # full
     engine = ExecutionEngine(portfolio=pf)

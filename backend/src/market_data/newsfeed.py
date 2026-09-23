@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta, timezone
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -30,51 +31,131 @@ CATEGORY_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "crypto",
         (
-            "比特币", "以太坊", "区块链", "加密", "虚拟货币", "数字货币", "稳定币",
-            "Web3", "ETF", "Coinbase", "币安", "Binance", "链上", "交易所",
-            "加密货币", "代币",
+            "比特币",
+            "以太坊",
+            "区块链",
+            "加密",
+            "虚拟货币",
+            "数字货币",
+            "稳定币",
+            "Web3",
+            "ETF",
+            "Coinbase",
+            "币安",
+            "Binance",
+            "链上",
+            "交易所",
+            "加密货币",
+            "代币",
         ),
     ),
     (
         "macro",
         (
-            "美联储", "央行", "降息", "加息", "CPI", "PPI", "GDP", "非农",
-            "就业", "通胀", "美元", "美债", "国债收益率", "黄金", "原油", "石油",
+            "美联储",
+            "央行",
+            "降息",
+            "加息",
+            "CPI",
+            "PPI",
+            "GDP",
+            "非农",
+            "就业",
+            "通胀",
+            "美元",
+            "美债",
+            "国债收益率",
+            "黄金",
+            "原油",
+            "石油",
         ),
     ),
     (
         "policy",
         (
-            "证监会", "国务院", "发改委", "财政部", "监管", "政策", "牌照",
-            "条例", "新规", "审核", "批准", "立案",
+            "证监会",
+            "国务院",
+            "发改委",
+            "财政部",
+            "监管",
+            "政策",
+            "牌照",
+            "条例",
+            "新规",
+            "审核",
+            "批准",
+            "立案",
         ),
     ),
     (
         "a-share",
         (
-            "A股", "沪指", "深成指", "创业板", "上证", "深证", "板块", "涨停",
-            "跌停", "北向", "主力", "大盘", "个股",
+            "A股",
+            "沪指",
+            "深成指",
+            "创业板",
+            "上证",
+            "深证",
+            "板块",
+            "涨停",
+            "跌停",
+            "北向",
+            "主力",
+            "大盘",
+            "个股",
         ),
     ),
     (
         "global-market",
         (
-            "美股", "道指", "纳指", "标普", "港股", "恒指", "欧股", "日经",
-            "亚太", "亚洲股市", "美国股市",
+            "美股",
+            "道指",
+            "纳指",
+            "标普",
+            "港股",
+            "恒指",
+            "欧股",
+            "日经",
+            "亚太",
+            "亚洲股市",
+            "美国股市",
         ),
     ),
     (
         "industry",
         (
-            "半导体", "新能源", "光伏", "锂电", "芯片", "人工智能", "AI", "医药",
-            "汽车", "消费", "地产", "房地产", "钢铁", "科技",
+            "半导体",
+            "新能源",
+            "光伏",
+            "锂电",
+            "芯片",
+            "人工智能",
+            "AI",
+            "医药",
+            "汽车",
+            "消费",
+            "地产",
+            "房地产",
+            "钢铁",
+            "科技",
         ),
     ),
     (
         "company",
         (
-            "财报", "业绩", "并购", "收购", "增持", "减持", "回购", "营收",
-            "净利", "亏损", "分红", "中标", "合作",
+            "财报",
+            "业绩",
+            "并购",
+            "收购",
+            "增持",
+            "减持",
+            "回购",
+            "营收",
+            "净利",
+            "亏损",
+            "分红",
+            "中标",
+            "合作",
         ),
     ),
 )
@@ -97,7 +178,7 @@ def _parse_ts(raw: Any) -> int:
         return int(raw) if raw < 1e12 else int(raw // 1000)
     s = _str(raw)
     if not s:
-        return int(datetime.now(timezone.utc).timestamp())
+        return int(datetime.now(UTC).timestamp())
     dt: datetime | None = None
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
         try:
@@ -106,7 +187,7 @@ def _parse_ts(raw: Any) -> int:
         except ValueError:
             dt = None
     if dt is None:
-        return int(datetime.now(timezone.utc).timestamp())
+        return int(datetime.now(UTC).timestamp())
     return int(dt.replace(tzinfo=BEIJING).timestamp())
 
 
@@ -120,7 +201,7 @@ def classify(text: str) -> str:
 
 
 def _item_id(source: str, text: str) -> str:
-    digest = hashlib.sha1(f"{source}:{text}".encode("utf-8")).hexdigest()[:8]
+    digest = hashlib.sha1(f"{source}:{text}".encode()).hexdigest()[:8]
     return f"{source}_{digest}"
 
 
@@ -142,6 +223,7 @@ def build_item(source: str, row: dict) -> dict:
 
 # -- source adapters (each maps one akshare DataFrame to normalized rows) ---
 
+
 def _fetch_em(ak: Any) -> list[dict]:
     """East Money global finance flash: 标题 / 摘要 / 发布时间 / 链接."""
     df = ak.stock_info_global_em()
@@ -151,12 +233,14 @@ def _fetch_em(ak: Any) -> list[dict]:
         content = _str(row.get("摘要"))
         if not title and not content:
             continue
-        out.append({
-            "title": title,
-            "content": content,
-            "url": _str(row.get("链接")) or None,
-            "ts": _parse_ts(row.get("发布时间")),
-        })
+        out.append(
+            {
+                "title": title,
+                "content": content,
+                "url": _str(row.get("链接")) or None,
+                "ts": _parse_ts(row.get("发布时间")),
+            }
+        )
     return out
 
 
@@ -168,12 +252,14 @@ def _fetch_sina(ak: Any) -> list[dict]:
         content = _str(row.get("内容"))
         if not content:
             continue
-        out.append({
-            "title": content,
-            "content": "",
-            "url": None,
-            "ts": _parse_ts(row.get("时间")),
-        })
+        out.append(
+            {
+                "title": content,
+                "content": "",
+                "url": None,
+                "ts": _parse_ts(row.get("时间")),
+            }
+        )
     return out
 
 
@@ -186,12 +272,14 @@ def _fetch_ths(ak: Any) -> list[dict]:
         content = _str(row.get("内容"))
         if not title and not content:
             continue
-        out.append({
-            "title": title,
-            "content": content,
-            "url": _str(row.get("链接")) or None,
-            "ts": _parse_ts(row.get("时间")),
-        })
+        out.append(
+            {
+                "title": title,
+                "content": content,
+                "url": _str(row.get("链接")) or None,
+                "ts": _parse_ts(row.get("时间")),
+            }
+        )
     return out
 
 
@@ -207,12 +295,14 @@ def _fetch_cls(ak: Any) -> list[dict]:
         date = _str(row.get("发布日期"))
         time = _str(row.get("发布时间"))
         ts_raw = f"{date} {time}".strip() if date else time
-        out.append({
-            "title": title,
-            "content": content,
-            "url": _str(row.get("链接")) or None,
-            "ts": _parse_ts(ts_raw),
-        })
+        out.append(
+            {
+                "title": title,
+                "content": content,
+                "url": _str(row.get("链接")) or None,
+                "ts": _parse_ts(ts_raw),
+            }
+        )
     return out
 
 

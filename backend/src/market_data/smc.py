@@ -68,9 +68,7 @@ def order_blocks(df: pd.DataFrame) -> dict[str, OrderBlock | None]:
     return {"bullish": bullish, "bearish": bearish}
 
 
-def bos_choch(
-    df: pd.DataFrame, swings: list[Swing] | None = None
-) -> list[StructureEvent]:
+def bos_choch(df: pd.DataFrame, swings: list[Swing] | None = None) -> list[StructureEvent]:
     swings = swings if swings is not None else find_swings(df)
     swings = sorted(swings, key=lambda s: s.open_time)
     events: list[StructureEvent] = []

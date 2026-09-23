@@ -23,13 +23,25 @@ from market_data.memory import (
 
 def _trade(tid, side="long", pnl=10.0, macd_sign=1, closed=True) -> TradeRecord:
     return TradeRecord(
-        id=tid, symbol="BTCUSDT", timeframe="1d", side=side,
-        entry_price=100.0, exit_price=(101.0 if closed else None),
-        notional=5000.0, margin=50.0, leverage=100.0,
-        pnl=(pnl if closed else None), opened_at=1, closed_at=(2 if closed else None),
-        reason="near support", features={"macd_sign": macd_sign, "kdj_zone": "low",
-                                         "dist_to_support_pct": 0.001,
-                                         "dist_to_resistance_pct": 0.02},
+        id=tid,
+        symbol="BTCUSDT",
+        timeframe="1d",
+        side=side,
+        entry_price=100.0,
+        exit_price=(101.0 if closed else None),
+        notional=5000.0,
+        margin=50.0,
+        leverage=100.0,
+        pnl=(pnl if closed else None),
+        opened_at=1,
+        closed_at=(2 if closed else None),
+        reason="near support",
+        features={
+            "macd_sign": macd_sign,
+            "kdj_zone": "low",
+            "dist_to_support_pct": 0.001,
+            "dist_to_resistance_pct": 0.02,
+        },
     )
 
 
@@ -47,9 +59,19 @@ def test_journal_roundtrip_and_closed() -> None:
 
 # -- 7.2 similarity + retrieval -------------------------------------------
 def test_similarity_high_and_low() -> None:
-    a = {"macd_sign": 1, "kdj_zone": "low", "dist_to_support_pct": 0.001, "dist_to_resistance_pct": 0.02}
+    a = {
+        "macd_sign": 1,
+        "kdj_zone": "low",
+        "dist_to_support_pct": 0.001,
+        "dist_to_resistance_pct": 0.02,
+    }
     same = dict(a)
-    diff = {"macd_sign": -1, "kdj_zone": "high", "dist_to_support_pct": 0.5, "dist_to_resistance_pct": 0.5}
+    diff = {
+        "macd_sign": -1,
+        "kdj_zone": "high",
+        "dist_to_support_pct": 0.5,
+        "dist_to_resistance_pct": 0.5,
+    }
     assert similarity(a, same) > 0.95
     assert similarity(a, diff) < similarity(a, same)
 
@@ -61,8 +83,12 @@ def test_retrieve_topk_and_side_filter() -> None:
         j.append(_trade("l2", side="long", macd_sign=-1))
         j.append(_trade("s1", side="short", macd_sign=1))
         store = MemoryStore(j)
-        feats = {"macd_sign": 1, "kdj_zone": "low", "dist_to_support_pct": 0.001,
-                 "dist_to_resistance_pct": 0.02}
+        feats = {
+            "macd_sign": 1,
+            "kdj_zone": "low",
+            "dist_to_support_pct": 0.001,
+            "dist_to_resistance_pct": 0.02,
+        }
         longs = store.retrieve(feats, k=2, side="long")
         assert all(t.side == "long" for t in longs)
         assert longs[0].id == "l1"  # most similar (macd_sign matches)
@@ -83,6 +109,7 @@ def test_reflect_heuristic() -> None:
 def test_reflect_llm_fallback() -> None:
     def boom(system, user):  # noqa: ANN001
         raise RuntimeError("llm down")
+
     txt = Reflector().reflect(_trade("a", pnl=-5.0), complete=boom)
     assert "loss" in txt  # fell back to heuristic
 

@@ -90,15 +90,11 @@ def run_incremental_pull_rest(store: Any, settings: Settings) -> None:
                 frame = KlineIngestor._normalize_payload(rows)
                 if frame.empty:
                     continue
-                frame = frame[
-                    (frame["open_time"] >= start_ms) & (frame["open_time"] <= end_ms)
-                ]
+                frame = frame[(frame["open_time"] >= start_ms) & (frame["open_time"] <= end_ms)]
                 if frame.empty:
                     continue
                 added = store.save(series, frame)
-                logger.info(
-                    "REST incremental %s: +%d rows.", series.relative_path(), added
-                )
+                logger.info("REST incremental %s: +%d rows.", series.relative_path(), added)
             except Exception:  # noqa: BLE001 - isolate per-target failures
                 logger.error(
                     "REST incremental failed for %s.", series.relative_path(), exc_info=True

@@ -16,7 +16,7 @@ from market_data.models import OHLCV_COLUMNS, Series
 logger = logging.getLogger(__name__)
 
 
-def _day_key(open_time_ms: "pd.Series") -> "pd.Series":
+def _day_key(open_time_ms: pd.Series) -> pd.Series:
     return pd.to_datetime(open_time_ms, unit="ms", utc=True).dt.strftime("%Y-%m-%d")
 
 

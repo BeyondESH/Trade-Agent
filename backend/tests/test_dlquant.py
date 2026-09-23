@@ -30,11 +30,16 @@ STEP = 300_000
 def _df(closes) -> pd.DataFrame:
     n = len(closes)
     closes = np.asarray(closes, dtype="float64")
-    return pd.DataFrame({
-        "open_time": [BASE + i * STEP for i in range(n)],
-        "open": closes, "high": closes + 1.0, "low": closes - 1.0,
-        "close": closes, "volume": [1.0] * n,
-    })
+    return pd.DataFrame(
+        {
+            "open_time": [BASE + i * STEP for i in range(n)],
+            "open": closes,
+            "high": closes + 1.0,
+            "low": closes - 1.0,
+            "close": closes,
+            "volume": [1.0] * n,
+        }
+    )
 
 
 # -- 6.1 features/labels ---------------------------------------------------
@@ -79,9 +84,7 @@ def test_model_hgb_supported() -> None:
     m = SklearnModel(kind="hgb").fit(X, y)
     proba = m.predict_proba(X)
     assert proba.min() >= 0.0 and proba.max() <= 1.0
-    assert np.allclose(
-        m.predict_proba(X), SklearnModel(kind="hgb").fit(X, y).predict_proba(X)
-    )
+    assert np.allclose(m.predict_proba(X), SklearnModel(kind="hgb").fit(X, y).predict_proba(X))
 
 
 def test_model_rejects_unknown_kind() -> None:
@@ -190,8 +193,9 @@ def test_backtest_empty_trades() -> None:
 def test_backtest_deterministic() -> None:
     closes = 100 * np.exp(np.cumsum(np.random.default_rng(0).normal(0, 0.01, 200)))
     df = _df(closes)
-    signals = ((np.arange(len(closes)) % 5 == 0).astype(float)
-               - (np.arange(len(closes)) % 5 == 1).astype(float))
+    signals = (np.arange(len(closes)) % 5 == 0).astype(float) - (
+        np.arange(len(closes)) % 5 == 1
+    ).astype(float)
     a = backtest(df, signals, fee=0.0004, slippage=0.0005)
     b = backtest(df, signals, fee=0.0004, slippage=0.0005)
     assert a["total_return"] == b["total_return"]
@@ -206,8 +210,16 @@ def test_backtest_trade_list_contract() -> None:
     m = backtest(df, signals, fee=0.0, slippage=0.0)
     assert len(m["trade_list"]) == 1
     t = m["trade_list"][0]
-    assert {"side", "entry_time", "entry_price", "exit_time", "exit_price",
-            "bars", "gross_return", "net_return"} <= set(t)
+    assert {
+        "side",
+        "entry_time",
+        "entry_price",
+        "exit_time",
+        "exit_price",
+        "bars",
+        "gross_return",
+        "net_return",
+    } <= set(t)
     assert t["side"] == "long"
     assert t["entry_time"] == int(df["open_time"].iloc[0])
     assert t["exit_time"] == int(df["open_time"].iloc[2])
@@ -319,9 +331,19 @@ def test_walk_forward_run_folds_ordered() -> None:
     assert "folds" in m
     assert len(m["folds"]) == 3
     for f in m["folds"]:
-        assert {"fold", "train_start", "train_end", "test_start", "test_end",
-                "total_return", "max_drawdown", "win_rate", "trades",
-                "roc_auc", "log_loss"} <= set(f)
+        assert {
+            "fold",
+            "train_start",
+            "train_end",
+            "test_start",
+            "test_end",
+            "total_return",
+            "max_drawdown",
+            "win_rate",
+            "trades",
+            "roc_auc",
+            "log_loss",
+        } <= set(f)
         assert f["train_end"] < f["test_start"], "test must strictly follow train"
         assert f["test_start"] < f["test_end"]
         assert f["fold"] == len([x for x in m["folds"] if x["fold"] < f["fold"]])

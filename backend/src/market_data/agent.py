@@ -10,8 +10,34 @@ from __future__ import annotations
 import pandas as pd
 
 from market_data import indicators, levels
-from market_data.execution import ExecutionEngine, ExecutionResult, OrderRequest
+from market_data.execution import ExecutionEngine, OrderRequest
 from market_data.llm import AgentDecision, ProviderConfig, RuleBasedProvider
+
+# News digest defaults: crypto/macro over a 24h window, bounded for prompts.
+NEWS_DIGEST_CATEGORIES = ("crypto", "macro")
+NEWS_DIGEST_HOURS = 24
+NEWS_DIGEST_MAX_ITEMS = 10
+
+
+def format_news_digest(
+    items: list[dict],
+    *,
+    categories: tuple[str, ...] = NEWS_DIGEST_CATEGORIES,
+    max_items: int = NEWS_DIGEST_MAX_ITEMS,
+    max_chars: int = 1200,
+) -> str:
+    """Filter `items` by category, keep the newest `max_items` and join each as
+    `title：content`; the whole digest is truncated to `max_chars`.
+
+    Pure and broker-agnostic: an empty (or fully filtered-out) input yields `""`.
+    """
+    cats = set(categories)
+    matched = [item for item in items if item.get("category") in cats]
+    matched.sort(key=lambda item: item.get("ts") or 0, reverse=True)
+    lines = [
+        f"{item.get('title') or ''}：{item.get('content') or ''}" for item in matched[:max_items]
+    ]
+    return "\n".join(lines)[:max_chars]
 
 
 def build_agent_context(
@@ -36,8 +62,13 @@ def build_agent_context(
             "vegas144": _num(ind.get("vegas_ema144")),
         },
         "levels": [
-            {"price": l.price, "kind": l.kind, "strength": l.strength, "sources": l.sources}
-            for l in lv
+            {
+                "price": level.price,
+                "kind": level.kind,
+                "strength": level.strength,
+                "sources": level.sources,
+            }
+            for level in lv
         ],
         "news": news or "",
     }
@@ -52,8 +83,12 @@ def _num(v) -> float | None:  # noqa: ANN001
 
 
 class TradingAgent:
-    def __init__(self, provider=None, engine: ExecutionEngine | None = None,  # noqa: ANN001
-                 cfg: ProviderConfig | None = None) -> None:
+    def __init__(
+        self,
+        provider=None,
+        engine: ExecutionEngine | None = None,  # noqa: ANN001
+        cfg: ProviderConfig | None = None,
+    ) -> None:
         self.cfg = cfg or ProviderConfig()
         self.provider = provider or RuleBasedProvider(self.cfg)
         self.engine = engine or ExecutionEngine()

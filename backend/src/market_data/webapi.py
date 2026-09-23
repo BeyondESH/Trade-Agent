@@ -11,11 +11,13 @@ import asyncio
 import json
 import logging
 import threading
+import time
 import uuid
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
-from datetime import datetime, timezone
-from typing import Any, Callable
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 import numpy as np
@@ -24,23 +26,30 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from market_data import blockbeats, blockbeats_cache, dlquant, indicators, levels
-from market_data.agent import build_agent_context
+from market_data.agent import (
+    NEWS_DIGEST_CATEGORIES,
+    NEWS_DIGEST_HOURS,
+    build_agent_context,
+    format_news_digest,
+)
 from market_data.alertstore import AlertStore
 from market_data.appconfig import ConfigStore
 from market_data.backtest_history import BacktestHistoryStore
 from market_data.chartstore import ChartStore
 from market_data.config import Settings, get_settings
-from market_data.execution import ExecutionEngine, LiveBroker, OrderRequest
+from market_data.events import EventLog
+from market_data.execution import BrokerError, ExecutionEngine, LiveBroker, OrderRequest
 from market_data.factors import compute_factors
 from market_data.ingestion import KlineIngestor
-from market_data.news_broker import HEARTBEAT_SECONDS, NewsBroker, sse_frame
 from market_data.llm import (
     LLMTextProvider,
     ProviderConfig,
     RuleBasedProvider,
     build_ollama_complete,
     build_openai_complete,
+    make_complete,
 )
+from market_data.mcp_client import McpError
 from market_data.memory import (
     MemoryStore,
     Reflector,
@@ -49,7 +58,8 @@ from market_data.memory import (
     features_from_context,
 )
 from market_data.models import Series
-from market_data.orchestration import AgentCycle, RunControl
+from market_data.news_broker import HEARTBEAT_SECONDS, NewsBroker, sse_frame
+from market_data.orchestration import AgentCycle, RunControl, build_orchestrator
 from market_data.realtime import BitgetWsStream
 from market_data.risk import Portfolio, RiskEngine
 from market_data.smc import SmcEngine
@@ -59,11 +69,19 @@ from market_data.structure import StructureEngine
 
 logger = logging.getLogger(__name__)
 
+# Bounded in-memory retention for background jobs (oldest-first eviction).
+MAX_JOBS = 200
+# Bounded lifetime of a live-order confirm token (lazy-swept; token stays one-shot).
+PENDING_TOKEN_TTL_SECONDS = 300
+# Upper bound on `GET /candles` limit (matches `/candles/recent`'s 500 contract).
+MAX_CANDLE_LIMIT = 500
+
 
 # -- request bodies --------------------------------------------------------
 class ControlBody(BaseModel):
     kill_switch: bool | None = None
     live_enabled: bool | None = None
+    enabled: bool | None = None
 
 
 class OrderBody(BaseModel):
@@ -86,18 +104,21 @@ class SeriesBody(BaseModel):
 
 class WindowBody(BaseModel):
     """Optional time-window (UTC ms) for candle reads; absent → full range."""
+
     start: int | None = None
     end: int | None = None
 
 
 class BacktestBody(SeriesBody, WindowBody):
     """Optional factor set + training params; absent → defaults (backward compat)."""
+
     factors: list[dict] | None = None
     params: dict | None = None
 
 
 class SweepBody(SeriesBody, WindowBody):
     """Parameter grid scan over thresholds (and optional fees/slippages)."""
+
     factors: list[dict] | None = None
     params: dict | None = None
     thresholds: list[float]
@@ -107,6 +128,7 @@ class SweepBody(SeriesBody, WindowBody):
 
 class WalkForwardBody(SeriesBody, WindowBody):
     """Multi-fold walk-forward: TimeSeriesSplit folds, each backtested."""
+
     factors: list[dict] | None = None
     params: dict | None = None
     n_splits: int | None = None
@@ -161,8 +183,15 @@ def _build_provider(cfg: ProviderConfig, system_prompt: str | None):
 
 
 def _levels_json(lst) -> list[dict]:  # noqa: ANN001
-    return [{"price": l.price, "kind": l.kind, "strength": l.strength, "sources": l.sources}
-            for l in lst]
+    return [
+        {
+            "price": level.price,
+            "kind": level.kind,
+            "strength": level.strength,
+            "sources": level.sources,
+        }
+        for level in lst
+    ]
 
 
 def create_app(
@@ -207,7 +236,9 @@ def create_app(
                 logger.warning("BlockBeats cache warm-up failed: %s", exc)
         cache_scheduler.add_job(
             blockbeats_cache.refresh_all,
-            CronTrigger(hour=settings.blockbeats_refresh_hour, minute=settings.blockbeats_refresh_minute),
+            CronTrigger(
+                hour=settings.blockbeats_refresh_hour, minute=settings.blockbeats_refresh_minute
+            ),
             id="blockbeats_cache_refresh",
             max_instances=1,
             coalesce=True,
@@ -224,13 +255,40 @@ def create_app(
         from market_data.scheduler import build_rest_scheduler
 
         ingest_scheduler: BackgroundScheduler | None = None
-        # interval 0 disables incremental persistence (tests / isolated runs).
+        orchestrator: BackgroundScheduler | None = None
+        # interval 0 disables background scheduling (tests / isolated runs): in
+        # that case NEITHER the ingest nor the orchestration scheduler starts.
         if settings.schedule_interval_seconds > 0:
             try:
                 ingest_scheduler = build_rest_scheduler(store, settings)
                 ingest_scheduler.start()
             except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
                 logger.warning("Incremental persistence scheduler start failed: %s", exc)
+            # Orchestration: the circuit-breaker safety job always runs; Agent
+            # trading / DL retrain are only registered when explicitly enabled.
+            # `data_pull=None` avoids double-pulling (the ingest scheduler owns
+            # incremental persistence). Reuses engine / journal / run_control.
+            try:
+                cycle = AgentCycle(
+                    engine=engine,
+                    journal=journal,
+                    memory_store=MemoryStore(journal),
+                    run_control=run_control,
+                    news_provider=_news_digest,
+                    complete=make_complete(config_store.provider_config()),
+                )
+                orchestrator = build_orchestrator(
+                    cycle,
+                    None,
+                    store=store,
+                    settings=settings,
+                    run_control=run_control,
+                )
+                orchestrator.start()
+            except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
+                logger.warning("Orchestration scheduler start failed: %s", exc)
+        _app.state.ingest_scheduler = ingest_scheduler
+        _app.state.orchestrator = orchestrator
         try:
             stream.start()
         except Exception as exc:  # noqa: BLE001 - stream is best-effort
@@ -258,6 +316,8 @@ def create_app(
             cache_scheduler.shutdown(wait=False)
             if ingest_scheduler is not None:
                 ingest_scheduler.shutdown(wait=False)
+            if orchestrator is not None:
+                orchestrator.shutdown(wait=False)
 
     app = FastAPI(title="AI Trading API", version="0.1.0", lifespan=_lifespan)
 
@@ -267,14 +327,38 @@ def create_app(
     alert_store = AlertStore(settings.data_dir / "alerts" / "alerts.json")
     history_store = BacktestHistoryStore(settings.data_dir / "backtest_history" / "history.json")
     journal = TradeJournal(settings.data_dir / "memory" / "trades.jsonl")
-    engine = ExecutionEngine(portfolio=Portfolio(equity=1000.0))
+    event_log = EventLog(settings.data_dir / "events" / "circuit_breaker.jsonl")
+    engine = ExecutionEngine(portfolio=Portfolio(equity=1000.0), event_log=event_log)
     run_control = RunControl()
     jobs: dict[str, dict] = {}
-    pending: dict[str, OrderBody] = {}
+    pending: dict[str, tuple[OrderBody, float]] = {}
+
+    def _register_job(job_id: str, state: dict) -> None:
+        """Write a job state, evicting the oldest job once MAX_JOBS is reached."""
+        if job_id not in jobs and len(jobs) >= MAX_JOBS:
+            jobs.pop(next(iter(jobs)))  # dict preserves insertion order (oldest first)
+        jobs[job_id] = state
+
+    def _sweep_pending() -> None:
+        """Drop expired confirm tokens (lazy cleanup, no background thread)."""
+        now = time.monotonic()
+        for token in [t for t, (_body, expires_at) in pending.items() if expires_at <= now]:
+            pending.pop(token, None)
 
     # Global news pipeline: dedicated polling thread + SSE hub. Tests inject a
     # fake broker so no real AKShare network traffic happens in offline runs.
     news_broker = news_broker or NewsBroker()
+
+    def _news_digest() -> str:
+        """Filtered, truncated news digest for Agent-context injection.
+
+        Reads the in-process ring buffer; an empty/mismatched buffer yields `""`
+        so the decision context stays valid without news.
+        """
+        items = news_broker.recent(
+            hours=NEWS_DIGEST_HOURS, categories=",".join(NEWS_DIGEST_CATEGORIES)
+        )
+        return format_news_digest(items)
 
     # Backfill throttling: per-series serialization + a small cross-series
     # concurrency cap (the MCP bridge is the bottleneck and Bitget rate
@@ -343,23 +427,42 @@ def create_app(
     async def _value_error(_req, exc: ValueError):  # noqa: ANN001
         return JSONResponse(status_code=400, content={"error": str(exc)})
 
+    @app.exception_handler(BrokerError)
+    @app.exception_handler(McpError)
+    async def _broker_error(_req, exc: Exception):  # noqa: ANN001
+        # Upstream broker/MCP failures are a dependency outage (502), not an
+        # unhandled 500; always surface a structured JSON body.
+        return JSONResponse(status_code=502, content={"error": str(exc)})
+
     # -- core --------------------------------------------------------------
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "kill_switch": run_control.kill_switch,
-                "live_enabled": run_control.paper_only is False}
+        return {
+            "status": "ok",
+            "kill_switch": run_control.kill_switch,
+            "live_enabled": run_control.paper_only is False,
+        }
 
     # -- market ------------------------------------------------------------
     @app.get("/candles")
-    def candles(symbol: str, timeframe: str, category: str = "USDT-FUTURES",
-                start: int | None = None, end: int | None = None, limit: int = 500) -> dict:
+    def candles(
+        symbol: str,
+        timeframe: str,
+        category: str = "USDT-FUTURES",
+        start: int | None = None,
+        end: int | None = None,
+        limit: int = 500,
+    ) -> dict:
+        if limit < 1 or limit > MAX_CANDLE_LIMIT:
+            raise HTTPException(status_code=422, detail="limit must be within 1..500")
         df = _read(category, symbol, timeframe, start, end, limit)
         rows = df.to_dict(orient="records")
         return {"series": f"{category}/{symbol}/{timeframe}", "count": len(rows), "candles": rows}
 
     @app.get("/candles/recent")
-    def candles_recent(symbol: str, timeframe: str, category: str = "USDT-FUTURES",
-                       limit: int = 200) -> dict:
+    def candles_recent(
+        symbol: str, timeframe: str, category: str = "USDT-FUTURES", limit: int = 200
+    ) -> dict:
         if limit > 500:
             raise HTTPException(status_code=422, detail="limit must be <= 500")
         bars = stream.recent(category, symbol, timeframe, limit=limit)
@@ -400,12 +503,14 @@ def create_app(
                         page_limit=settings.v3_candle_page_limit,
                     )
                 except Exception as exc:  # noqa: BLE001 - REST failure -> MCP fallback
-                    logger.warning(
-                        "REST backfill failed for %s, falling back to MCP: %s", key, exc
-                    )
+                    logger.warning("REST backfill failed for %s, falling back to MCP: %s", key, exc)
                     with client_factory() as client:
-                        ingestor = KlineIngestor(client, store, page_limit=settings.candle_page_limit)
-                        return ingestor.backfill_before(series, body.before, max_pages=body.max_pages)
+                        ingestor = KlineIngestor(
+                            client, store, page_limit=settings.candle_page_limit
+                        )
+                        return ingestor.backfill_before(
+                            series, body.before, max_pages=body.max_pages
+                        )
 
         try:
             appended, earliest_reached = await asyncio.to_thread(_run)
@@ -420,17 +525,31 @@ def create_app(
         if len(df) < 30:
             raise HTTPException(status_code=422, detail=f"insufficient data (rows={len(df)})")
         ind = indicators.compute(df).iloc[-1]
-        keys = ["dif", "dea", "macd_hist", "kdj_k", "kdj_d", "kdj_j",
-                "boll_lower", "boll_mid", "boll_upper", "vegas_ema144", "vegas_ema169"]
+        keys = [
+            "dif",
+            "dea",
+            "macd_hist",
+            "kdj_k",
+            "kdj_d",
+            "kdj_j",
+            "boll_lower",
+            "boll_mid",
+            "boll_upper",
+            "vegas_ema144",
+            "vegas_ema169",
+        ]
         return {
             "price": float(df["close"].iloc[-1]),
-            "indicators": {k: (None if ind.get(k) != ind.get(k) else float(ind.get(k))) for k in keys},
+            "indicators": {
+                k: (None if ind.get(k) != ind.get(k) else float(ind.get(k))) for k in keys
+            },
             "levels": _levels_json(levels.build_levels(df, top_n=top)),
         }
 
     @app.get("/levels")
-    def levels_endpoint(symbol: str, timeframe: str, category: str = "USDT-FUTURES",
-                        top: int = 8) -> dict:
+    def levels_endpoint(
+        symbol: str, timeframe: str, category: str = "USDT-FUTURES", top: int = 8
+    ) -> dict:
         df = _read(category, symbol, timeframe)
         if df.empty:
             raise HTTPException(status_code=422, detail="no data")
@@ -463,22 +582,42 @@ def create_app(
         book = market.orderbook(symbol, category=category)
         if book is None:
             return {"symbol": symbol, "category": category, "asks": [], "bids": [], "seq": None}
-        return {"symbol": symbol, "category": category, "asks": book["asks"], "bids": book["bids"], "seq": book["seq"]}
+        return {
+            "symbol": symbol,
+            "category": category,
+            "asks": book["asks"],
+            "bids": book["bids"],
+            "seq": book["seq"],
+        }
 
     @app.get("/books/{category}/{symbol}")
     def books_categorized(category: str, symbol: str) -> dict:
         book = market.orderbook(symbol, category=category)
         if book is None:
             return {"symbol": symbol, "category": category, "asks": [], "bids": [], "seq": None}
-        return {"symbol": symbol, "category": category, "asks": book["asks"], "bids": book["bids"], "seq": book["seq"]}
+        return {
+            "symbol": symbol,
+            "category": category,
+            "asks": book["asks"],
+            "bids": book["bids"],
+            "seq": book["seq"],
+        }
 
     @app.get("/trades/{symbol}")
     def trades(symbol: str, limit: int = 50, category: str = "USDT-FUTURES") -> dict:
-        return {"symbol": symbol, "category": category, "trades": market.trades(symbol, limit=limit, category=category)}
+        return {
+            "symbol": symbol,
+            "category": category,
+            "trades": market.trades(symbol, limit=limit, category=category),
+        }
 
     @app.get("/trades/{category}/{symbol}")
     def trades_categorized(category: str, symbol: str, limit: int = 50) -> dict:
-        return {"symbol": symbol, "category": category, "trades": market.trades(symbol, limit=limit, category=category)}
+        return {
+            "symbol": symbol,
+            "category": category,
+            "trades": market.trades(symbol, limit=limit, category=category),
+        }
 
     @app.get("/funding")
     def funding(category: str | None = None) -> dict:
@@ -500,14 +639,18 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
-            raise HTTPException(status_code=502, detail=f"blockbeats upstream error: {exc}") from exc
+            raise HTTPException(
+                status_code=502, detail=f"blockbeats upstream error: {exc}"
+            ) from exc
 
     @app.get("/blockbeats/data/{endpoint}")
     def blockbeats_data(endpoint: str, network: str | None = None, type: str | None = None) -> dict:
         # Cache key resolution: for type-bearing endpoints (us10y/dxy) the
         # pre-cached granularity is 1M; top10_netflow is keyed by `network`.
         # Unknown endpoints raise (400) below via fetch_data's whitelist.
-        cache_type = type or (blockbeats_cache.DEFAULT_TYPE if endpoint in blockbeats_cache.TYPE_END_POINTS else None)
+        cache_type = type or (
+            blockbeats_cache.DEFAULT_TYPE if endpoint in blockbeats_cache.TYPE_END_POINTS else None
+        )
         try:
             cached = blockbeats_cache.load_cache(endpoint, network=network, type=cache_type)
             if cached is not None:
@@ -526,14 +669,21 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
-            raise HTTPException(status_code=502, detail=f"blockbeats upstream error: {exc}") from exc
+            raise HTTPException(
+                status_code=502, detail=f"blockbeats upstream error: {exc}"
+            ) from exc
 
     @app.post("/blockbeats/data/refresh")
     def blockbeats_data_refresh() -> dict:
         try:
-            return {"refreshed_at": datetime.now(timezone.utc).isoformat(), "results": blockbeats_cache.refresh_all()}
+            return {
+                "refreshed_at": datetime.now(UTC).isoformat(),
+                "results": blockbeats_cache.refresh_all(),
+            }
         except Exception as exc:  # noqa: BLE001
-            raise HTTPException(status_code=502, detail=f"blockbeats cache refresh failed: {exc}") from exc
+            raise HTTPException(
+                status_code=502, detail=f"blockbeats cache refresh failed: {exc}"
+            ) from exc
 
     # -- Global news pipeline (AKShare -> SSE / context) ------------------
     @app.get("/news/categories")
@@ -544,7 +694,7 @@ def create_app(
     def news_context(hours: int | None = None, category: str | None = None) -> dict:
         return {
             "items": news_broker.recent(hours=hours, categories=category),
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
     @app.get("/news/history")
@@ -566,15 +716,18 @@ def create_app(
             news_broker.subscribe(queue)
             try:
                 snap_items, snap_total = news_broker.snapshot()
-                yield sse_frame("snapshot", {
-                    "items": snap_items,
-                    "total": snap_total,
-                    "sources": news_broker.health().get("sources", {}),
-                })
+                yield sse_frame(
+                    "snapshot",
+                    {
+                        "items": snap_items,
+                        "total": snap_total,
+                        "sources": news_broker.health().get("sources", {}),
+                    },
+                )
                 while True:
                     try:
                         item = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         yield ": ping\n\n"
                         continue
                     if item is None:
@@ -596,14 +749,17 @@ def create_app(
     _VALID_MODELS = ("lr", "hgb")
     # sklearn hyperparameters forwarded to SklearnModel (lr / hgb respective).
     _MODEL_PARAM_KEYS = (
-        "C", "max_iter", "solver",
-        "max_depth", "learning_rate", "min_samples_leaf",
+        "C",
+        "max_iter",
+        "solver",
+        "max_depth",
+        "learning_rate",
+        "min_samples_leaf",
     )
     # vbt.Portfolio.from_signals money/size knobs.
     _BACKTEST_MONEY_KEYS = ("init_cash", "size")
     _BACKTEST_ALLOWED_KEYS = frozenset(
-        {*_BACKTEST_PARAM_KEYS, "model", "scale",
-         *_MODEL_PARAM_KEYS, *_BACKTEST_MONEY_KEYS}
+        {*_BACKTEST_PARAM_KEYS, "model", "scale", *_MODEL_PARAM_KEYS, *_BACKTEST_MONEY_KEYS}
     )
 
     def _validate_window(start: int | None, end: int | None) -> None:
@@ -631,11 +787,19 @@ def create_app(
             return dlquant.SklearnModel(kind=params["model"], **kwargs)
         return None
 
-    def _run_backtest(job_id: str, category: str, symbol: str, timeframe: str,
-                      factors: list[dict] | None = None, params: dict | None = None,
-                      start: int | None = None, end: int | None = None) -> None:
+    def _run_backtest(
+        job_id: str,
+        category: str,
+        symbol: str,
+        timeframe: str,
+        factors: list[dict] | None = None,
+        params: dict | None = None,
+        start: int | None = None,
+        end: int | None = None,
+    ) -> None:
         try:
             from market_data.models import validate_timeframe
+
             validate_timeframe(timeframe)
             _validate_window(start, end)
             _validate_model(params.get("model") if params else None)
@@ -654,16 +818,18 @@ def create_app(
                     if key in params:
                         kwargs[key] = params[key]
             result = dlquant.run_pipeline(df, **kwargs)
-            jobs[job_id] = {"status": "done", "result": result}
+            _register_job(job_id, {"status": "done", "result": result})
             try:
                 history_store.save(
                     {"category": category, "symbol": symbol, "timeframe": timeframe},
-                    params, factors, result,
+                    params,
+                    factors,
+                    result,
                 )
             except Exception:  # noqa: BLE001
                 logger.exception("failed to persist backtest history")
         except Exception as exc:  # noqa: BLE001
-            jobs[job_id] = {"status": "error", "error": str(exc)}
+            _register_job(job_id, {"status": "error", "error": str(exc)})
 
     @app.post("/backtest")
     def backtest(body: BacktestBody, bg: BackgroundTasks) -> dict:
@@ -674,9 +840,18 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         job_id = uuid.uuid4().hex[:12]
-        jobs[job_id] = {"status": "running"}
-        bg.add_task(_run_backtest, job_id, body.category, body.symbol, body.timeframe,
-                    body.factors, body.params, body.start, body.end)
+        _register_job(job_id, {"status": "running"})
+        bg.add_task(
+            _run_backtest,
+            job_id,
+            body.category,
+            body.symbol,
+            body.timeframe,
+            body.factors,
+            body.params,
+            body.start,
+            body.end,
+        )
         return {"job_id": job_id}
 
     @app.get("/jobs/{job_id}")
@@ -688,11 +863,15 @@ def create_app(
     # -- parameter sweep + walk-forward (synchronous) ----------------------
     def _read_quant_window(body: SeriesBody) -> Any:
         from market_data.models import validate_timeframe
+
         validate_timeframe(body.timeframe)
         _validate_window(body.start, body.end)
         df = _read(body.category, body.symbol, body.timeframe, body.start, body.end)
         if df.empty:
-            raise HTTPException(status_code=422, detail="no data in the requested window (run /candles/backfill first)")
+            raise HTTPException(
+                status_code=422,
+                detail="no data in the requested window (run /candles/backfill first)",
+            )
         return df
 
     @app.post("/backtest/sweep")
@@ -771,11 +950,15 @@ def create_app(
     @app.post("/dl/features")
     def dl_features(body: FeaturesBody) -> dict:
         from market_data.models import validate_timeframe
+
         validate_timeframe(body.timeframe)
         _validate_window(body.start, body.end)
         df = _read(body.category, body.symbol, body.timeframe, body.start, body.end)
         if df.empty:
-            raise HTTPException(status_code=422, detail="no data in the requested window (run /candles/backfill first)")
+            raise HTTPException(
+                status_code=422,
+                detail="no data in the requested window (run /candles/backfill first)",
+            )
         feats = compute_factors(df, body.factors)
         if len(feats.columns) == 0:
             raise HTTPException(status_code=422, detail="no factors selected")
@@ -790,15 +973,17 @@ def create_app(
             xs = x[mask].rank()
             ys = label[mask].rank()
             ic = _num_or_none(xs.corr(ys, method="pearson"))
-            out.append({
-                "id": col,
-                "ic": ic,
-                "ic_abs": abs(ic) if ic is not None else None,
-                "mean": _num_or_none(x.mean()),
-                "std": _num_or_none(x.std()),
-                "coverage": round(float(x.notna().mean()), 6),
-                "last_value": _num_or_none(x.iloc[-1]),
-            })
+            out.append(
+                {
+                    "id": col,
+                    "ic": ic,
+                    "ic_abs": abs(ic) if ic is not None else None,
+                    "mean": _num_or_none(x.mean()),
+                    "std": _num_or_none(x.std()),
+                    "coverage": round(float(x.notna().mean()), 6),
+                    "last_value": _num_or_none(x.iloc[-1]),
+                }
+            )
         return {
             "factors": out,
             "n_rows": int(len(feats)),
@@ -849,11 +1034,11 @@ def create_app(
         return {"ok": True}
 
     # -- agent -------------------------------------------------------------
-    def _augmented_decision(df, category, symbol, timeframe):  # noqa: ANN001
+    def _augmented_decision(df, category, symbol, timeframe, news):  # noqa: ANN001
         cfg_data = config_store.load()
         cfg = ProviderConfig(**cfg_data["provider"])
         cfg.category = category
-        ctx = build_agent_context(df, symbol, timeframe)
+        ctx = build_agent_context(df, symbol, timeframe, news)
         feats = features_from_context(ctx)
         memories = MemoryStore(journal).retrieve(feats, k=3)
         rules = list(cfg_data.get("manual_rules", [])) + Reflector().distill_rules(journal.all())
@@ -866,7 +1051,9 @@ def create_app(
         df = _read(body.category, body.symbol, body.timeframe)
         if len(df) < 30:
             raise HTTPException(status_code=422, detail="insufficient data")
-        decision, _cfg = _augmented_decision(df, body.category, body.symbol, body.timeframe)
+        decision, _cfg = _augmented_decision(
+            df, body.category, body.symbol, body.timeframe, _news_digest()
+        )
         return asdict(decision)
 
     @app.post("/agent/cycle")
@@ -876,17 +1063,27 @@ def create_app(
             raise HTTPException(status_code=422, detail="insufficient data")
         cfg = config_store.provider_config()
         cfg.category = body.category
-        cycle = AgentCycle(provider=_build_provider(cfg, config_store.load().get("system_prompt")),
-                           engine=engine, memory_store=MemoryStore(journal),
-                           journal=journal, run_control=run_control, cfg=cfg)
+        cycle = AgentCycle(
+            provider=_build_provider(cfg, config_store.load().get("system_prompt")),
+            engine=engine,
+            memory_store=MemoryStore(journal),
+            journal=journal,
+            run_control=run_control,
+            cfg=cfg,
+            complete=make_complete(cfg),
+            news_provider=_news_digest,
+        )
         price = float(df["close"].iloc[-1])
         return cycle.step(df, body.symbol, body.timeframe, price)
 
     @app.get("/portfolio")
     def portfolio() -> dict:
         p = engine.portfolio
-        return {"equity": p.equity, "peak_equity": p.peak_equity,
-                "positions": {s: asdict(pos) for s, pos in p.positions.items()}}
+        return {
+            "equity": p.equity,
+            "peak_equity": p.peak_equity,
+            "positions": {s: asdict(pos) for s, pos in p.positions.items()},
+        }
 
     @app.get("/journal")
     def get_journal() -> dict:
@@ -899,43 +1096,70 @@ def create_app(
             run_control.kill_switch = body.kill_switch
         if body.live_enabled is not None:
             run_control.paper_only = not body.live_enabled
-        return {"kill_switch": run_control.kill_switch, "live_enabled": not run_control.paper_only}
+        if body.enabled is not None:
+            run_control.enabled = body.enabled
+        return {
+            "kill_switch": run_control.kill_switch,
+            "live_enabled": not run_control.paper_only,
+            "enabled": run_control.enabled,
+        }
 
     @app.post("/order")
     def order(body: OrderBody) -> dict:
         if not run_control.can_trade():
             raise HTTPException(status_code=403, detail="kill-switch active")
         decision = RiskEngine(config_store.risk_config()).check_order(
-            engine.portfolio, body.symbol, body.leverage)
+            engine.portfolio, body.symbol, body.leverage
+        )
         if not decision.approved:
             raise HTTPException(status_code=400, detail=f"risk rejected: {decision.reason}")
         token = uuid.uuid4().hex
-        pending[token] = body
-        return {"token": token, "preview": {"margin": decision.margin,
-                "notional": decision.notional, "leverage": decision.leverage}}
+        _sweep_pending()
+        pending[token] = (body, time.monotonic() + PENDING_TOKEN_TTL_SECONDS)
+        return {
+            "token": token,
+            "preview": {
+                "margin": decision.margin,
+                "notional": decision.notional,
+                "leverage": decision.leverage,
+            },
+        }
 
     @app.post("/order/confirm")
     def order_confirm(body: ConfirmBody) -> dict:
         if not run_control.can_trade():
             raise HTTPException(status_code=403, detail="kill-switch active")
-        ob = pending.pop(body.token, None)
-        if ob is None:
+        _sweep_pending()
+        entry = pending.pop(body.token, None)
+        if entry is None:
+            raise HTTPException(status_code=400, detail="invalid or used token")
+        ob, expires_at = entry
+        if expires_at <= time.monotonic():
             raise HTTPException(status_code=400, detail="invalid or used token")
         req = OrderRequest(ob.category, ob.symbol, ob.side, ob.leverage, ob.price)
         if not run_control.paper_only:  # live
             from market_data.mcp_client import McpDataClient
+
             client = McpDataClient(settings.mcp_command, settings.mcp_args)
             client.start()
             try:
                 broker = LiveBroker(client, ob.category, enabled=True, confirm=lambda: True)
-                live = ExecutionEngine(risk_engine=RiskEngine(config_store.risk_config()),
-                                       broker=broker, portfolio=engine.portfolio)
+                live = ExecutionEngine(
+                    risk_engine=RiskEngine(config_store.risk_config()),
+                    broker=broker,
+                    portfolio=engine.portfolio,
+                )
                 res = live.place(req, ob.price)
             finally:
                 client.close()
         else:
             res = engine.place(req, ob.price)
-        return {"approved": res.approved, "filled": res.filled, "reason": res.reason, "live": not run_control.paper_only}
+        return {
+            "approved": res.approved,
+            "filled": res.filled,
+            "reason": res.reason,
+            "live": not run_control.paper_only,
+        }
 
     # -- websocket subscription protocol -----------------------------------
     def _snapshot(category: str, symbol: str, timeframe: str) -> dict:
@@ -949,19 +1173,29 @@ def create_app(
             df = _read(category, symbol, timeframe)
             if len(df) < 1:
                 return {"error": "no data"}
-            return {"price": float(df["close"].iloc[-1]),
-                    "portfolio": {"equity": engine.portfolio.equity,
-                                  "positions": list(engine.portfolio.positions.keys())}}
+            return {
+                "price": float(df["close"].iloc[-1]),
+                "portfolio": {
+                    "equity": engine.portfolio.equity,
+                    "positions": list(engine.portfolio.positions.keys()),
+                },
+            }
         df = _read(category, symbol, timeframe)
         price = float(bar["close"])
-        snap = {"price": price,
-                "portfolio": {"equity": engine.portfolio.equity,
-                              "positions": list(engine.portfolio.positions.keys())},
-                "last_candle": bar}
+        snap = {
+            "price": price,
+            "portfolio": {
+                "equity": engine.portfolio.equity,
+                "positions": list(engine.portfolio.positions.keys()),
+            },
+            "last_candle": bar,
+        }
         if len(df) >= 30:
             snap["levels"] = _levels_json(levels.build_levels(df, top_n=5))
             ind = indicators.compute(df).iloc[-1]
-            snap["macd_hist"] = None if ind["macd_hist"] != ind["macd_hist"] else float(ind["macd_hist"])
+            snap["macd_hist"] = (
+                None if ind["macd_hist"] != ind["macd_hist"] else float(ind["macd_hist"])
+            )
         return snap
 
     @app.websocket("/ws")
@@ -978,7 +1212,9 @@ def create_app(
             async with send_lock:
                 await sock.send_json(obj)
 
-        def series_key(channel: str, category: str, symbol: str, timeframe: str) -> tuple[str, str, str, str]:
+        def series_key(
+            channel: str, category: str, symbol: str, timeframe: str
+        ) -> tuple[str, str, str, str]:
             # a ticker subscription without a symbol means "full market"
             if channel == "ticker" and symbol in (None, "", "default", "*"):
                 return "ticker", category, "*", ""
@@ -986,12 +1222,23 @@ def create_app(
 
         def listener(category: str, channel: str, symbol: str, action: str, data) -> None:  # noqa: ANN001
             # Exact (cat,sym), per-symbol wildcard, or all-category wildcard.
-            if ((channel, category, symbol, "") in subs
-                    or (channel, category, "*", "") in subs
-                    or (channel, "*", "*", "") in subs):
-                asyncio.create_task(send(
-                    {"category": category, "channel": channel, "symbol": symbol,
-                     "timeframe": "", "action": action, "data": data}))
+            if (
+                (channel, category, symbol, "") in subs
+                or (channel, category, "*", "") in subs
+                or (channel, "*", "*", "") in subs
+            ):
+                asyncio.create_task(
+                    send(
+                        {
+                            "category": category,
+                            "channel": channel,
+                            "symbol": symbol,
+                            "timeframe": "",
+                            "action": action,
+                            "data": data,
+                        }
+                    )
+                )
 
         def hub_args(channel: str, symbol: str) -> tuple[str, str]:
             # full-market ticker is served from the REST-seeded mirror; no WS
@@ -1004,7 +1251,7 @@ def create_app(
             # Real-time price updates are event-driven via stream listeners.
             while True:
                 await asyncio.sleep(5.0)
-                for (channel, category, symbol, tf), arg in list(subs.items()):
+                for (channel, category, symbol, tf), _arg in list(subs.items()):
                     if channel != "candle":
                         continue
                     snap = _snapshot(category, symbol, tf)
@@ -1021,9 +1268,16 @@ def create_app(
                         prev = candle_sent_open_time.get(skey)
                         if prev is not None and open_time < prev:
                             snap = {**snap, "last_candle": None}
-                    await send({"channel": "candle", "category": category, "symbol": symbol,
-                                "timeframe": tf, "action": "update",
-                                "data": snap})
+                    await send(
+                        {
+                            "channel": "candle",
+                            "category": category,
+                            "symbol": symbol,
+                            "timeframe": tf,
+                            "action": "update",
+                            "data": snap,
+                        }
+                    )
 
         # Event-driven real-time candle pushes. Each subscribed series gets a
         # stream listener whose update frames carry only `last_candle` + `price`
@@ -1052,7 +1306,9 @@ def create_app(
                     candle_sent_open_time[skey] = open_time
             loop.create_task(send(frame))
 
-        def candle_update_listener(category: str, symbol: str, timeframe: str) -> Callable[[dict], None]:
+        def candle_update_listener(
+            category: str, symbol: str, timeframe: str
+        ) -> Callable[[dict], None]:
             """Build a stream listener for one series of this connection."""
             skey = candle_series_key(category, symbol, timeframe)
 
@@ -1066,11 +1322,16 @@ def create_app(
 
             def _on_bar(bar: dict) -> None:
                 # Only forward while this connection still holds the candle sub.
-                if (("candle", category, symbol, timeframe) not in subs):
+                if ("candle", category, symbol, timeframe) not in subs:
                     return
-                frame = {"channel": "candle", "category": category, "symbol": symbol,
-                         "timeframe": timeframe, "action": "update",
-                         "data": {"price": float(bar["close"]), "last_candle": bar}}
+                frame = {
+                    "channel": "candle",
+                    "category": category,
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "action": "update",
+                    "data": {"price": float(bar["close"]), "last_candle": bar},
+                }
                 now = loop.time()
                 last = candle_throttle.get(skey, 0.0)
                 if now - last >= 1.0:
@@ -1122,37 +1383,82 @@ def create_app(
                         key = series_key(channel, category, symbol, tf)
                         if op == "subscribe":
                             if channel == "candle":
+                                # Idempotent: a repeated subscribe for a series
+                                # this connection already holds must not bump
+                                # the upstream refcount again (a leak would keep
+                                # the feed subscribed and the buffer alive
+                                # after every client is gone).
+                                if key not in subs:
+                                    stream.subscribe(category, symbol, tf)
+                                    cb = candle_update_listener(category, symbol, tf)
+                                    sk = candle_series_key(category, symbol, tf)
+                                    candle_listener_regs[sk] = cb
+                                    stream.add_listener(category, symbol, tf, cb)
                                 subs[key] = arg
-                                stream.subscribe(category, symbol, tf)
-                                cb = candle_update_listener(category, symbol, tf)
-                                candle_listener_regs[candle_series_key(category, symbol, tf)] = cb
-                                stream.add_listener(category, symbol, tf, cb)
-                                await send({"category": category, "channel": channel, "symbol": symbol,
-                                            "timeframe": tf, "action": "snapshot",
-                                            "data": _snapshot(category, symbol, tf)})
+                                await send(
+                                    {
+                                        "category": category,
+                                        "channel": channel,
+                                        "symbol": symbol,
+                                        "timeframe": tf,
+                                        "action": "snapshot",
+                                        "data": _snapshot(category, symbol, tf),
+                                    }
+                                )
                             elif channel == "ticker" and key[2] == "*":
                                 # full-market list: served from the REST mirror;
                                 # category "*" means all categories merged
                                 subs[key] = arg
                                 snap_cat = None if category in ("*", "default", "") else category
-                                await send({"category": category, "channel": "ticker", "symbol": symbol,
-                                            "timeframe": "", "action": "snapshot",
-                                            "data": market.tickers(snap_cat)})
+                                await send(
+                                    {
+                                        "category": category,
+                                        "channel": "ticker",
+                                        "symbol": symbol,
+                                        "timeframe": "",
+                                        "action": "snapshot",
+                                        "data": market.tickers(snap_cat),
+                                    }
+                                )
                             else:
                                 hchan, hsym = hub_args(channel, symbol)
+                                # Same idempotency rule as the candle branch.
+                                if key not in subs:
+                                    market.subscribe(hchan, hsym, category)
                                 subs[key] = arg
-                                market.subscribe(hchan, hsym, category)
                                 if channel == "ticker":
-                                    await send({"category": category, "channel": "ticker", "symbol": symbol,
-                                                "timeframe": "", "action": "snapshot",
-                                                "data": market.tickers(category)})
+                                    await send(
+                                        {
+                                            "category": category,
+                                            "channel": "ticker",
+                                            "symbol": symbol,
+                                            "timeframe": "",
+                                            "action": "snapshot",
+                                            "data": market.tickers(category),
+                                        }
+                                    )
                                 else:
                                     snap = _market_snapshot(channel, symbol, category)
                                     if snap is not None:
-                                        await send({"category": category, "channel": channel, "symbol": symbol,
-                                                    "timeframe": "", "action": "snapshot", "data": snap})
-                            await send({"channel": channel, "symbol": symbol, "category": category,
-                                        "timeframe": tf, "event": "subscribed"})
+                                        await send(
+                                            {
+                                                "category": category,
+                                                "channel": channel,
+                                                "symbol": symbol,
+                                                "timeframe": "",
+                                                "action": "snapshot",
+                                                "data": snap,
+                                            }
+                                        )
+                            await send(
+                                {
+                                    "channel": channel,
+                                    "symbol": symbol,
+                                    "category": category,
+                                    "timeframe": tf,
+                                    "event": "subscribed",
+                                }
+                            )
                         else:
                             hchan, hsym = hub_args(channel, symbol)
                             arg = subs.pop(key, None)
@@ -1161,13 +1467,20 @@ def create_app(
                                 unregister_candle_listener(category, symbol, tf)
                             elif key[2] != "*":
                                 market.unsubscribe(hchan, hsym, category)
-                            await send({"channel": channel, "symbol": symbol, "category": category,
-                                        "timeframe": tf, "event": "unsubscribed"})
+                            await send(
+                                {
+                                    "channel": channel,
+                                    "symbol": symbol,
+                                    "category": category,
+                                    "timeframe": tf,
+                                    "event": "unsubscribed",
+                                }
+                            )
                 elif msg.get("event") == "ping":
                     await send({"event": "pong"})
         finally:
             candle_task.cancel()
-            for (channel, category, symbol, tf) in list(subs):
+            for channel, category, symbol, tf in list(subs):
                 if channel == "candle":
                     stream.unsubscribe(category, symbol, tf)
                     unregister_candle_listener(category, symbol, tf)

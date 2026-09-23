@@ -68,9 +68,7 @@ def _normalize_flash(row: dict) -> dict:
     out = dict(row)
     # `create_time` may be "Y-m-d H:i:s" or an epoch-seconds string.
     raw = row.get("create_time")
-    if isinstance(raw, (int, float)) or (
-        isinstance(raw, str) and raw.isdigit() and len(raw) >= 10
-    ):
+    if isinstance(raw, (int, float)) or (isinstance(raw, str) and raw.isdigit() and len(raw) >= 10):
         out["create_time"] = int(raw)
     return out
 

@@ -142,12 +142,19 @@ def test_newsflash_proxy_whitelist_and_forward(monkeypatch) -> None:
 
     def fake_get(path: str, params: dict | None = None) -> dict:
         calls.append((path, params))
-        return {"status": 0, "data": {"data": [{"id": 1, "title": "t", "content": "<p>c</p>", "create_time": 1769677313}]}}
+        return {
+            "status": 0,
+            "data": {
+                "data": [{"id": 1, "title": "t", "content": "<p>c</p>", "create_time": 1769677313}]
+            },
+        }
 
     monkeypatch.setattr(blockbeats, "_get", fake_get)
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
 
-    resp = _client(monkeypatch).get("/blockbeats/newsflash/ai", params={"page": 1, "size": 10, "lang": "cn"})
+    resp = _client(monkeypatch).get(
+        "/blockbeats/newsflash/ai", params={"page": 1, "size": 10, "lang": "cn"}
+    )
     assert resp.status_code == 200
     assert calls == [("/v1/newsflash/ai", {"page": 1, "size": 10, "lang": "cn"})]
     # epoch create_time is normalized server-side

@@ -11,7 +11,7 @@ import tempfile
 
 import pytest
 
-from market_data.chartstore import ChartStore, MAX_DRAWINGS_PER_SERIES
+from market_data.chartstore import MAX_DRAWINGS_PER_SERIES, ChartStore
 
 KEY = ("USDT-FUTURES", "BTCUSDT", "5m")
 

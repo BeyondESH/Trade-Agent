@@ -10,6 +10,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
+pytestmark = pytest.mark.live
+
 CAT = "USDT-FUTURES"
 
 
@@ -23,6 +25,7 @@ def _series_qs(symbol: str = "BTCUSDT", timeframe: str = "1m") -> str:
 
 
 # -- core ---------------------------------------------------------------
+
 
 def test_health(client: httpx.Client) -> None:
     r = client.get("/health")
@@ -95,22 +98,39 @@ def test_backtest_and_job(client: httpx.Client) -> None:
 
 
 def test_backtest_sweep_live(client: httpx.Client) -> None:
-    r = client.post("/backtest/sweep", json={
-        "category": CAT, "symbol": "BTCUSDT", "timeframe": "1m",
-        "thresholds": [0.5, 0.6],
-    })
+    r = client.post(
+        "/backtest/sweep",
+        json={
+            "category": CAT,
+            "symbol": "BTCUSDT",
+            "timeframe": "1m",
+            "thresholds": [0.5, 0.6],
+        },
+    )
     assert r.status_code == 200
     body = r.json()
     assert len(body["results"]) >= 2
-    assert {"threshold", "fee", "slippage", "total_return",
-            "max_drawdown", "win_rate", "trades"} <= set(body["results"][0])
+    assert {
+        "threshold",
+        "fee",
+        "slippage",
+        "total_return",
+        "max_drawdown",
+        "win_rate",
+        "trades",
+    } <= set(body["results"][0])
 
 
 def test_backtest_walkforward_live(client: httpx.Client) -> None:
-    r = client.post("/backtest/walkforward", json={
-        "category": CAT, "symbol": "BTCUSDT", "timeframe": "1m",
-        "n_splits": 2,
-    })
+    r = client.post(
+        "/backtest/walkforward",
+        json={
+            "category": CAT,
+            "symbol": "BTCUSDT",
+            "timeframe": "1m",
+            "n_splits": 2,
+        },
+    )
     assert r.status_code == 200
     body = r.json()
     assert len(body["folds"]) == 2
@@ -124,6 +144,7 @@ def test_job_not_found(client: httpx.Client) -> None:
 
 
 # -- market channels (offline: empty but structured) ---------------------
+
 
 def test_tickers_offline_structured(client: httpx.Client) -> None:
     r = client.get("/tickers")
@@ -165,6 +186,7 @@ def test_instruments_offline_structured(client: httpx.Client) -> None:
 
 # -- config / chart-config ----------------------------------------------
 
+
 def test_config_roundtrip(client: httpx.Client) -> None:
     r = client.get("/config")
     assert r.status_code == 200
@@ -190,9 +212,15 @@ def test_chart_config_roundtrip(client: httpx.Client) -> None:
     assert r.status_code == 200
     assert isinstance(r.json()["indicators"], list)
 
-    state = {"indicators": [{"name": "MACD", "pane": "sub"}], "drawings": [], "layers": {"sr": True}}
-    r = client.put("/chart-config", json={"category": CAT, "symbol": "BTCUSDT",
-                                          "timeframe": "1h", "state": state})
+    state = {
+        "indicators": [{"name": "MACD", "pane": "sub"}],
+        "drawings": [],
+        "layers": {"sr": True},
+    }
+    r = client.put(
+        "/chart-config",
+        json={"category": CAT, "symbol": "BTCUSDT", "timeframe": "1h", "state": state},
+    )
     assert r.status_code == 200
     r = client.get("/chart-config" + _series_qs("BTCUSDT", "1h"))
     assert r.json()["indicators"] == state["indicators"]
@@ -200,8 +228,11 @@ def test_chart_config_roundtrip(client: httpx.Client) -> None:
 
 # -- alerts CRUD --------------------------------------------------------
 
+
 def test_alerts_crud(client: httpx.Client) -> None:
-    r = client.post("/alerts", json={"symbol": "BTCUSDT", "condition": "above", "threshold": 70000.0})
+    r = client.post(
+        "/alerts", json={"symbol": "BTCUSDT", "condition": "above", "threshold": 70000.0}
+    )
     assert r.status_code == 200
     alert = r.json()["alert"]
     alert_id = alert["id"]
@@ -229,6 +260,7 @@ def test_alerts_delete_missing(client: httpx.Client) -> None:
 
 # -- order flow ---------------------------------------------------------
 
+
 def test_order_confirm_token_flow(client: httpx.Client) -> None:
     # The session-scoped live server shares portfolio state across tests;
     # skip the fill assertions if an earlier agent test consumed the margin
@@ -238,8 +270,10 @@ def test_order_confirm_token_flow(client: httpx.Client) -> None:
     if positions:
         pytest.skip(f"portfolio already holds {list(positions)}; skip order-fill assertions")
 
-    r = client.post("/order", json={"category": CAT, "symbol": "SOLUSDT", "side": "long",
-                                    "leverage": 10, "price": 100.0})
+    r = client.post(
+        "/order",
+        json={"category": CAT, "symbol": "SOLUSDT", "side": "long", "leverage": 10, "price": 100.0},
+    )
     assert r.status_code == 200, f"order failed: {r.status_code} {r.text}"
     body = r.json()
     assert "token" in body and "preview" in body
@@ -264,14 +298,23 @@ def test_order_confirm_unknown_token(client: httpx.Client) -> None:
 def test_order_kill_switch_blocked(client: httpx.Client) -> None:
     client.put("/control", json={"kill_switch": True})
     try:
-        r = client.post("/order", json={"category": CAT, "symbol": "BTCUSDT", "side": "long",
-                                        "leverage": 10, "price": 100.0})
+        r = client.post(
+            "/order",
+            json={
+                "category": CAT,
+                "symbol": "BTCUSDT",
+                "side": "long",
+                "leverage": 10,
+                "price": 100.0,
+            },
+        )
         assert r.status_code == 403
     finally:
         client.put("/control", json={"kill_switch": False})
 
 
 # -- agent / portfolio / journal / control ------------------------------
+
 
 def test_agent_decide_rule_based(client: httpx.Client) -> None:
     r = client.post("/agent/decide", json={"category": CAT, "symbol": "BTCUSDT", "timeframe": "1h"})
@@ -305,6 +348,7 @@ def test_control_roundtrip(client: httpx.Client) -> None:
 
 # -- error paths --------------------------------------------------------
 
+
 def test_invalid_timeframe_lenient(client: httpx.Client) -> None:
     """V1 finding: unknown timeframe returns 200 with empty candles, not 400."""
     r = client.get("/candles" + _series_qs("BTCUSDT", "xyz"))
@@ -331,9 +375,11 @@ def test_unknown_symbol_empty(client: httpx.Client) -> None:
 
 # -- backtest history ----------------------------------------------------
 
+
 def _run_backtest_done(client: httpx.Client, **extra: object) -> dict:
     """Submit a /backtest and poll /jobs until it finishes."""
     import time
+
     body = {"category": CAT, "symbol": "BTCUSDT", "timeframe": "1m", **extra}
     r = client.post("/backtest", json=body)
     assert r.status_code == 200
@@ -357,8 +403,15 @@ def test_backtest_history_auto_saved(client: httpx.Client) -> None:
     assert isinstance(metas, list) and len(metas) >= 1
     run_id = None
     for m in metas:
-        assert {"id", "created_at", "category", "symbol", "timeframe",
-                "metrics", "data_meta"} <= set(m)
+        assert {
+            "id",
+            "created_at",
+            "category",
+            "symbol",
+            "timeframe",
+            "metrics",
+            "data_meta",
+        } <= set(m)
         assert "trade_list" not in m and "series" not in m  # list stays light
         if m["symbol"] == "BTCUSDT" and m["timeframe"] == "1m":
             run_id = m["id"]
@@ -393,6 +446,7 @@ def test_backtest_history_delete(client: httpx.Client) -> None:
 
 # -- blockbeats (online: real upstream; offline: local cache) -----------
 
+
 @pytest.mark.online
 def test_blockbeats_data_online(client: httpx.Client) -> None:
     r = client.get("/blockbeats/data/us10y")
@@ -409,12 +463,15 @@ def test_blockbeats_news_online(client: httpx.Client) -> None:
 
 # -- live backfill (online: real Bitget v3) -----------------------------
 
+
 @pytest.mark.online
 def test_backfill_online(client: httpx.Client, bitget_reachable: bool) -> None:
     if not bitget_reachable:
         pytest.skip("Bitget REST unreachable")
-    r = client.post("/candles/backfill", json={"category": CAT, "symbol": "BTCUSDT",
-                                               "timeframe": "1m", "before": 1_700_000_000_000})
+    r = client.post(
+        "/candles/backfill",
+        json={"category": CAT, "symbol": "BTCUSDT", "timeframe": "1m", "before": 1_700_000_000_000},
+    )
     assert r.status_code == 200
     body = r.json()
     assert "appended" in body and "earliest_reached" in body

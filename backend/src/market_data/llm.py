@@ -13,8 +13,8 @@ Provides:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 Complete = Callable[[str, str], str]
 
@@ -38,8 +38,8 @@ class ProviderConfig:
     model: str = ""
     base_url: str = ""
     api_key: str = ""
-    near_pct: float = 0.005       # how close price must be to a level
-    min_strength: float = 2.0     # minimum level strength to act
+    near_pct: float = 0.005  # how close price must be to a level
+    min_strength: float = 2.0  # minimum level strength to act
     leverage: float = 100.0
     category: str = "USDT-FUTURES"
 
@@ -55,10 +55,10 @@ class ProviderConfig:
 def _nearest(levels: list[dict], price: float, kind: str) -> dict | None:
     """Nearest support (below) or resistance (above) by price distance."""
     if kind == "support":
-        cands = [l for l in levels if l["kind"] == "support" and l["price"] <= price]
-        return max(cands, key=lambda l: l["price"]) if cands else None
-    cands = [l for l in levels if l["kind"] == "resistance" and l["price"] >= price]
-    return min(cands, key=lambda l: l["price"]) if cands else None
+        cands = [lvl for lvl in levels if lvl["kind"] == "support" and lvl["price"] <= price]
+        return max(cands, key=lambda lvl: lvl["price"]) if cands else None
+    cands = [lvl for lvl in levels if lvl["kind"] == "resistance" and lvl["price"] >= price]
+    return min(cands, key=lambda lvl: lvl["price"]) if cands else None
 
 
 class RuleBasedProvider:
@@ -80,16 +80,24 @@ class RuleBasedProvider:
         if sup and sup["strength"] >= cfg.min_strength:
             if (price - sup["price"]) / price <= cfg.near_pct:
                 return AgentDecision(
-                    "open", symbol, "long", sup["price"],
+                    "open",
+                    symbol,
+                    "long",
+                    sup["price"],
                     f"price near strong support {sup['price']:.2f} "
-                    f"(strength {sup['strength']:.1f})", confidence=0.6,
+                    f"(strength {sup['strength']:.1f})",
+                    confidence=0.6,
                 )
         if res and res["strength"] >= cfg.min_strength:
             if (res["price"] - price) / price <= cfg.near_pct:
                 return AgentDecision(
-                    "open", symbol, "short", res["price"],
+                    "open",
+                    symbol,
+                    "short",
+                    res["price"],
                     f"price near strong resistance {res['price']:.2f} "
-                    f"(strength {res['strength']:.1f})", confidence=0.6,
+                    f"(strength {res['strength']:.1f})",
+                    confidence=0.6,
                 )
         return AgentDecision("hold", symbol, None, None, "no strong level nearby", 0.3)
 
@@ -105,8 +113,12 @@ _SYSTEM_PROMPT = (
 
 
 class LLMTextProvider:
-    def __init__(self, complete: Complete, cfg: ProviderConfig | None = None,
-                 system_prompt: str | None = None) -> None:
+    def __init__(
+        self,
+        complete: Complete,
+        cfg: ProviderConfig | None = None,
+        system_prompt: str | None = None,
+    ) -> None:
         self._complete = complete
         self.cfg = cfg or ProviderConfig(kind="llm")
         self._system_prompt = system_prompt or _SYSTEM_PROMPT
@@ -149,6 +161,18 @@ def make_provider(cfg: ProviderConfig, complete: Complete | None = None):
     return LLMTextProvider(complete, cfg)
 
 
+def make_complete(cfg: ProviderConfig) -> Complete | None:
+    """Text completion for non-decision uses (e.g. reflection).
+
+    Returns the adapter for providers that support text completion and `None`
+    for the offline `rule` baseline, so callers fall back to heuristics. This is
+    independent of `make_provider` and does not change the decision contract.
+    """
+    if cfg.kind == "rule":
+        return None
+    return _build_complete(cfg)
+
+
 def _build_complete(cfg: ProviderConfig) -> Complete:
     if cfg.kind == "ollama":
         return build_ollama_complete(cfg)
@@ -162,14 +186,16 @@ def build_ollama_complete(cfg: ProviderConfig) -> Complete:
     base = cfg.base_url or "http://localhost:11434"
 
     def complete(system: str, user: str) -> str:
-        payload = json.dumps({
-            "model": cfg.model or "llama3",
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            "stream": False,
-        }).encode()
+        payload = json.dumps(
+            {
+                "model": cfg.model or "llama3",
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "stream": False,
+            }
+        ).encode()
         req = urllib.request.Request(
             f"{base}/api/chat", data=payload, headers={"Content-Type": "application/json"}
         )
@@ -187,14 +213,16 @@ def build_openai_complete(cfg: ProviderConfig) -> Complete:
     base = cfg.base_url or "https://api.openai.com/v1"
 
     def complete(system: str, user: str) -> str:
-        payload = json.dumps({
-            "model": cfg.model or "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            "temperature": 0.0,
-        }).encode()
+        payload = json.dumps(
+            {
+                "model": cfg.model or "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "temperature": 0.0,
+            }
+        ).encode()
         req = urllib.request.Request(
             f"{base}/chat/completions",
             data=payload,

@@ -11,8 +11,8 @@ Two ways to define a factor:
 from __future__ import annotations
 
 import ast
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -44,7 +44,7 @@ class FactorDef:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "FactorDef":
+    def from_dict(cls, d: dict) -> FactorDef:
         return cls(
             id=str(d.get("id", "")),
             name=str(d.get("name", d.get("id", ""))),
@@ -101,7 +101,9 @@ def _rsi(frame: pd.DataFrame, params: dict, computed: dict) -> pd.Series:
 
 
 def _atr(frame: pd.DataFrame, params: dict, computed: dict) -> pd.Series:
-    return indicators.atr(frame["high"], frame["low"], frame["close"], int(params.get("period", 14)))
+    return indicators.atr(
+        frame["high"], frame["low"], frame["close"], int(params.get("period", 14))
+    )
 
 
 def _vol_ratio(frame: pd.DataFrame, params: dict, computed: dict) -> pd.Series:
@@ -118,8 +120,16 @@ FACTOR_CATALOG: dict[str, dict] = {
     "kdj_j": {"name": "KDJ-J", "fn": _kdj_j, "default_params": {}},
     "boll_pos": {"name": "布林带位置", "fn": _boll_pos, "default_params": {}},
     "vegas_dist": {"name": "VEGAS 距离", "fn": _vegas_dist, "default_params": {}},
-    "roll_mean": {"name": "滚动均值", "fn": _roll_mean, "default_params": {"source": "log_ret", "n": 5}},
-    "roll_std": {"name": "滚动标准差", "fn": _roll_std, "default_params": {"source": "log_ret", "n": 5}},
+    "roll_mean": {
+        "name": "滚动均值",
+        "fn": _roll_mean,
+        "default_params": {"source": "log_ret", "n": 5},
+    },
+    "roll_std": {
+        "name": "滚动标准差",
+        "fn": _roll_std,
+        "default_params": {"source": "log_ret", "n": 5},
+    },
     "rsi": {"name": "RSI", "fn": _rsi, "default_params": {"period": 14}},
     "atr": {"name": "ATR", "fn": _atr, "default_params": {"period": 14}},
     "vol_ratio": {"name": "成交量比", "fn": _vol_ratio, "default_params": {"n": 20}},
@@ -134,8 +144,12 @@ DEFAULT_FACTORS: list[FactorDef] = [
     FactorDef(id="kdj_j", name="KDJ-J", fn="kdj_j"),
     FactorDef(id="boll_pos", name="布林带位置", fn="boll_pos"),
     FactorDef(id="vegas_dist", name="VEGAS 距离", fn="vegas_dist"),
-    FactorDef(id="roll_mean_5", name="收益5均", fn="roll_mean", params={"source": "log_ret", "n": 5}),
-    FactorDef(id="roll_std_5", name="收益5波动", fn="roll_std", params={"source": "log_ret", "n": 5}),
+    FactorDef(
+        id="roll_mean_5", name="收益5均", fn="roll_mean", params={"source": "log_ret", "n": 5}
+    ),
+    FactorDef(
+        id="roll_std_5", name="收益5波动", fn="roll_std", params={"source": "log_ret", "n": 5}
+    ),
 ]
 
 FEATURE_COLUMNS = [f.id for f in DEFAULT_FACTORS]
@@ -143,8 +157,18 @@ FEATURE_COLUMNS = [f.id for f in DEFAULT_FACTORS]
 
 # -- whitelist expression DSL ------------------------------------------------
 _EXPR_FUNC_NAMES = {
-    "sma", "ema", "std", "pct", "rsi", "max", "min", "shift",
-    "log", "abs", "atr", "vol_ratio",
+    "sma",
+    "ema",
+    "std",
+    "pct",
+    "rsi",
+    "max",
+    "min",
+    "shift",
+    "log",
+    "abs",
+    "atr",
+    "vol_ratio",
 }
 
 _ALLOWED_BINOPS = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod)

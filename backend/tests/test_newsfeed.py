@@ -9,12 +9,10 @@ from __future__ import annotations
 from datetime import datetime
 
 import pandas as pd
-import pytest
 
-from market_data import newsfeed
 from market_data.newsfeed import (
-    CATEGORY_RULES,
     BEIJING,
+    CATEGORY_RULES,
     build_item,
     classify,
     fetch_all,
@@ -46,30 +44,51 @@ class _FakeAK:
 
     def stock_info_global_em(self) -> pd.DataFrame:  # noqa: D102
         self._maybe("em")
-        return pd.DataFrame([
-            {"标题": "比特币突破7万美元", "摘要": "加密货币大涨，以太坊跟涨",
-             "发布时间": "2026-08-20 15:00:00", "链接": "https://em.example"},
-        ])
+        return pd.DataFrame(
+            [
+                {
+                    "标题": "比特币突破7万美元",
+                    "摘要": "加密货币大涨，以太坊跟涨",
+                    "发布时间": "2026-08-20 15:00:00",
+                    "链接": "https://em.example",
+                },
+            ]
+        )
 
     def stock_info_global_sina(self) -> pd.DataFrame:  # noqa: D102
         self._maybe("sina")
-        return pd.DataFrame([
-            {"时间": "2026-08-20 14:59:00", "内容": "美联储维持利率不变，市场反应平淡"},
-        ])
+        return pd.DataFrame(
+            [
+                {"时间": "2026-08-20 14:59:00", "内容": "美联储维持利率不变，市场反应平淡"},
+            ]
+        )
 
     def stock_info_global_ths(self) -> pd.DataFrame:  # noqa: D102
         self._maybe("ths")
-        return pd.DataFrame([
-            {"标题": "A股三大指数震荡", "内容": "沪指微跌，创业板翻红",
-             "时间": "2026-08-20 14:58:00", "链接": "https://ths.example"},
-        ])
+        return pd.DataFrame(
+            [
+                {
+                    "标题": "A股三大指数震荡",
+                    "内容": "沪指微跌，创业板翻红",
+                    "时间": "2026-08-20 14:58:00",
+                    "链接": "https://ths.example",
+                },
+            ]
+        )
 
     def stock_telegraph_cls(self) -> pd.DataFrame:  # noqa: D102
         self._maybe("cls")
-        return pd.DataFrame([
-            {"标题": "某公司发布财报", "内容": "营收净利双增",
-             "发布日期": "2026-08-20", "发布时间": "14:57:00", "链接": "https://cls.example"},
-        ])
+        return pd.DataFrame(
+            [
+                {
+                    "标题": "某公司发布财报",
+                    "内容": "营收净利双增",
+                    "发布日期": "2026-08-20",
+                    "发布时间": "14:57:00",
+                    "链接": "https://cls.example",
+                },
+            ]
+        )
 
 
 def test_categories_order() -> None:

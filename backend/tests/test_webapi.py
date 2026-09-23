@@ -36,18 +36,28 @@ def _seed(tmp) -> Settings:  # noqa: ANN001
     settings = Settings(data_dir=Path(tmp))
     closes = np.array([100 + 5 * np.sin(i / 4) for i in range(150)], dtype="float64")
     closes[-1] = float(closes.min()) + 0.01  # park price near support
-    df = pd.DataFrame({
-        "open_time": [BASE + i * STEP for i in range(len(closes))],
-        "open": closes, "high": closes + 0.5, "low": closes - 0.5,
-        "close": closes, "volume": [1.0] * len(closes),
-    })
+    df = pd.DataFrame(
+        {
+            "open_time": [BASE + i * STEP for i in range(len(closes))],
+            "open": closes,
+            "high": closes + 0.5,
+            "low": closes - 0.5,
+            "close": closes,
+            "volume": [1.0] * len(closes),
+        }
+    )
     store = ParquetStore(settings.parquet_dir)
     store.save(Series("USDT-FUTURES", "BTCUSDT", "5m"), df)
-    hour_df = pd.DataFrame({
-        "open_time": [BASE + i * STEP * 12 for i in range(60)],
-        "open": closes[:60], "high": closes[:60] + 0.5, "low": closes[:60] - 0.5,
-        "close": closes[:60], "volume": [1.0] * 60,
-    })
+    hour_df = pd.DataFrame(
+        {
+            "open_time": [BASE + i * STEP * 12 for i in range(60)],
+            "open": closes[:60],
+            "high": closes[:60] + 0.5,
+            "low": closes[:60] - 0.5,
+            "close": closes[:60],
+            "volume": [1.0] * 60,
+        }
+    )
     store.save(Series("USDT-FUTURES", "BTCUSDT", "1h"), hour_df)
     return settings
 
@@ -64,11 +74,18 @@ def _tmp():
 class _FakeNewsBroker:
     """Controllable news-broker stand-in so offline tests never touch AKShare."""
 
-    def __init__(self, items: list[dict] | None = None, categories: list[str] | None = None) -> None:
+    def __init__(
+        self, items: list[dict] | None = None, categories: list[str] | None = None
+    ) -> None:
         self.items = items or []
         self._categories = categories or [
-            "crypto", "macro", "policy", "a-share",
-            "global-market", "industry", "company",
+            "crypto",
+            "macro",
+            "policy",
+            "a-share",
+            "global-market",
+            "industry",
+            "company",
         ]
         self.subscribed: list[asyncio.Queue] = []
 
@@ -105,7 +122,9 @@ class _FakeNewsBroker:
         items = sorted(self.items, key=lambda i: i["ts"], reverse=True)
         return items[:max_items], len(items)
 
-    def page(self, offset: int = 0, limit: int = 100, categories: str | None = None) -> tuple[list[dict], int]:
+    def page(
+        self, offset: int = 0, limit: int = 100, categories: str | None = None
+    ) -> tuple[list[dict], int]:
         cats = {c.strip() for c in categories.split(",")} if categories else None
         out = self.items
         if cats:
@@ -316,9 +335,12 @@ def test_chart_config_roundtrip_and_reject() -> None:
         assert other["drawings"] == []
         # oversize -> 400 (ValueError handler)
         bad = dict(body)
-        bad["state"] = {"indicators": [], "drawings": [{"name": "x"} for _ in range(101)], "layers": {}}
+        bad["state"] = {
+            "indicators": [],
+            "drawings": [{"name": "x"} for _ in range(101)],
+            "layers": {},
+        }
         assert c.put("/chart-config", json=bad).status_code == 400
-
 
 
 # -- 8.4 agent -------------------------------------------------------------
@@ -353,7 +375,9 @@ def test_kill_switch_blocks_order() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
         c.put("/control", json={"kill_switch": True})
-        r = c.post("/order", json={"symbol": "BTCUSDT", "side": "long", "leverage": 100.0, "price": 100.0})
+        r = c.post(
+            "/order", json={"symbol": "BTCUSDT", "side": "long", "leverage": 100.0, "price": 100.0}
+        )
         assert r.status_code == 403
 
 
@@ -361,11 +385,133 @@ def test_order_risk_rejection_no_token() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
         # fill the whole margin cap first
-        t = c.post("/order", json={"symbol": "ETHUSDT", "side": "long", "leverage": 100.0, "price": 100.0}).json()["token"]
+        t = c.post(
+            "/order", json={"symbol": "ETHUSDT", "side": "long", "leverage": 100.0, "price": 100.0}
+        ).json()["token"]
         c.post("/order/confirm", json={"token": t})
         # now BTC order should be risk-rejected (no room) -> 400, no token
-        r = c.post("/order", json={"symbol": "BTCUSDT", "side": "long", "leverage": 100.0, "price": 100.0})
+        r = c.post(
+            "/order", json={"symbol": "BTCUSDT", "side": "long", "leverage": 100.0, "price": 100.0}
+        )
         assert r.status_code == 400 and "token" not in r.json()
+
+
+def test_confirm_token_cannot_be_reused_within_ttl() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        order = {"symbol": "BTCUSDT", "side": "long", "leverage": 100.0, "price": 100.0}
+        token = c.post("/order", json=order).json()["token"]
+        assert c.post("/order/confirm", json={"token": token}).json()["filled"] is True
+        assert c.post("/order/confirm", json={"token": token}).status_code == 400
+
+
+def test_confirm_token_expired_is_structured_400(monkeypatch) -> None:  # noqa: ANN001
+    import market_data.webapi as webapi_mod
+
+    with _tmp() as tmp:
+        c = _client(tmp)
+        order = {"symbol": "BTCUSDT", "side": "long", "leverage": 100.0, "price": 100.0}
+        # A negative TTL stamps the pending entry as already expired, so the
+        # confirm-side sweep/expiry check must reject it.
+        monkeypatch.setattr(webapi_mod, "PENDING_TOKEN_TTL_SECONDS", -1.0)
+        expired = c.post("/order", json=order).json()["token"]
+        r = c.post("/order/confirm", json={"token": expired})
+        assert r.status_code == 400 and r.json()["detail"] == "invalid or used token"
+        assert c.get("/portfolio").json()["positions"] == {}
+
+        # A token within its TTL still confirms exactly once.
+        monkeypatch.undo()
+        valid = c.post("/order", json=order).json()["token"]
+        assert c.post("/order/confirm", json={"token": valid}).json()["filled"] is True
+        assert c.post("/order/confirm", json={"token": valid}).status_code == 400
+
+
+def test_control_enabled_flag_blocks_and_restores_order() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        order = {"symbol": "BTCUSDT", "side": "long", "leverage": 100.0, "price": 100.0}
+        off = c.put("/control", json={"enabled": False})
+        assert off.status_code == 200 and off.json()["enabled"] is False
+        assert c.post("/order", json=order).status_code == 403
+        on = c.put("/control", json={"enabled": True})
+        assert on.status_code == 200 and on.json()["enabled"] is True
+        assert c.post("/order", json=order).status_code == 200
+
+
+def test_candles_limit_bounds() -> None:
+    with _tmp() as tmp:
+        c = _client(tmp)
+        p = {"symbol": "BTCUSDT", "timeframe": "5m"}
+        assert c.get("/candles", params={**p, "limit": 10}).status_code == 200
+        for bad in (0, -1, 501, 100000):
+            r = c.get("/candles", params={**p, "limit": bad})
+            assert r.status_code == 422, f"limit={bad} -> {r.status_code}"
+        assert c.get("/candles", params=p).json()["count"] > 0  # default 500 works
+
+
+def _failing_live_client(fail_at: str):  # noqa: ANN001
+    """Build a fake McpDataClient whose start()/call_tool raises McpError."""
+    from market_data.mcp_client import McpError
+
+    class _FailingLiveClient:
+        def __init__(self, *_a, **_k) -> None:
+            pass
+
+        def start(self) -> None:
+            if fail_at == "start":
+                raise McpError("mcp start failed")
+
+        def close(self) -> None:
+            return None
+
+        def call_tool(self, name, arguments):  # noqa: ANN001
+            if fail_at == "call_tool":
+                raise McpError("mcp order failed")
+            return {"ok": True}
+
+    return _FailingLiveClient
+
+
+def _live_token(c) -> str:  # noqa: ANN001
+    c.put("/control", json={"live_enabled": True})
+    r = c.post(
+        "/order", json={"symbol": "BTCUSDT", "side": "long", "leverage": 100.0, "price": 100.0}
+    )
+    return r.json()["token"]
+
+
+def test_order_confirm_live_mcp_start_failure_is_structured_502() -> None:
+    import market_data.mcp_client as mcp_client_mod
+
+    with _tmp() as tmp:
+        c = _client(tmp)
+        token = _live_token(c)
+        orig = mcp_client_mod.McpDataClient
+        mcp_client_mod.McpDataClient = _failing_live_client("start")
+        try:
+            r = c.post("/order/confirm", json={"token": token})
+        finally:
+            mcp_client_mod.McpDataClient = orig
+        assert r.status_code == 502
+        assert "error" in r.json()
+        assert c.get("/portfolio").json()["positions"] == {}
+
+
+def test_order_confirm_live_order_failure_is_structured_502() -> None:
+    import market_data.mcp_client as mcp_client_mod
+
+    with _tmp() as tmp:
+        c = _client(tmp)
+        token = _live_token(c)
+        orig = mcp_client_mod.McpDataClient
+        mcp_client_mod.McpDataClient = _failing_live_client("call_tool")
+        try:
+            r = c.post("/order/confirm", json={"token": token})
+        finally:
+            mcp_client_mod.McpDataClient = orig
+        assert r.status_code == 502
+        assert "error" in r.json()
+        assert c.get("/portfolio").json()["positions"] == {}
 
 
 # -- 8.6 backtest job ------------------------------------------------------
@@ -379,14 +525,36 @@ def test_backtest_job() -> None:
         assert status["status"] in ("done", "running", "error")
 
 
+def test_max_jobs_evicts_oldest(monkeypatch) -> None:  # noqa: ANN001
+    import market_data.webapi as webapi_mod
+
+    assert webapi_mod.MAX_JOBS == 200
+    with _tmp() as tmp:
+        c = _client(tmp)
+        # Shrink the cap so the eviction path is exercised without 201 backtests;
+        # `_register_job` resolves MAX_JOBS at call time, so the patch applies.
+        monkeypatch.setattr(webapi_mod, "MAX_JOBS", 3)
+        body = {"symbol": "NOPE", "timeframe": "5m"}  # empty series -> fast error job
+        job_ids = [c.post("/backtest", json=body).json()["job_id"] for _ in range(4)]
+        assert c.get(f"/jobs/{job_ids[0]}").status_code == 404
+        assert c.get(f"/jobs/{job_ids[-1]}").status_code == 200
+
+
 # -- 8.6b factor-driven backtest + /dl/features ----------------------------
 def test_backtest_with_factors_and_params() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
         body = {
-            "symbol": "BTCUSDT", "timeframe": "5m",
+            "symbol": "BTCUSDT",
+            "timeframe": "5m",
             "factors": [
-                {"id": "rsi_14", "name": "RSI14", "kind": "preset", "fn": "rsi", "params": {"period": 14}},
+                {
+                    "id": "rsi_14",
+                    "name": "RSI14",
+                    "kind": "preset",
+                    "fn": "rsi",
+                    "params": {"period": 14},
+                },
                 {"id": "mom_10", "name": "Mom", "kind": "preset", "fn": "mom", "params": {"n": 10}},
             ],
             "params": {"train_ratio": 0.8, "thresh": 0.6, "fee": 0.001, "slippage": 0.001},
@@ -399,7 +567,13 @@ def test_backtest_with_factors_and_params() -> None:
             result = status["result"]
             assert "total_return" in result
             assert set(result["series"]) == {
-                "open_time", "equity", "drawdown", "signal", "proba", "benchmark"}
+                "open_time",
+                "equity",
+                "drawdown",
+                "signal",
+                "proba",
+                "benchmark",
+            }
             assert "data_meta" in result and result["data_meta"]["n_test"] == result["test_bars"]
 
 
@@ -407,7 +581,8 @@ def test_backtest_rejects_bad_expression() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
         body = {
-            "symbol": "BTCUSDT", "timeframe": "5m",
+            "symbol": "BTCUSDT",
+            "timeframe": "5m",
             "factors": [{"id": "evil", "name": "Evil", "kind": "expr", "expr": "close.__class__"}],
         }
         job = c.post("/backtest", json=body).json()
@@ -418,8 +593,12 @@ def test_backtest_rejects_bad_expression() -> None:
 def test_backtest_with_window() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        body = {"symbol": "BTCUSDT", "timeframe": "1m",
-                "start": 1_700_000_000_000, "end": 1_700_060_000_000}
+        body = {
+            "symbol": "BTCUSDT",
+            "timeframe": "1m",
+            "start": 1_700_000_000_000,
+            "end": 1_700_060_000_000,
+        }
         job = c.post("/backtest", json=body).json()
         status = c.get(f"/jobs/{job['job_id']}").json()
         assert status["status"] in ("done", "running", "error")
@@ -430,8 +609,12 @@ def test_backtest_with_window() -> None:
 def test_backtest_rejects_invalid_window() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        body = {"symbol": "BTCUSDT", "timeframe": "1m",
-                "start": 1_700_060_000_000, "end": 1_700_000_000_000}
+        body = {
+            "symbol": "BTCUSDT",
+            "timeframe": "1m",
+            "start": 1_700_060_000_000,
+            "end": 1_700_000_000_000,
+        }
         job = c.post("/backtest", json=body).json()
         status = c.get(f"/jobs/{job['job_id']}").json()
         assert status["status"] == "error" and "invalid window" in status["error"]
@@ -449,20 +632,28 @@ def test_backtest_rejects_invalid_timeframe() -> None:
 def test_backtest_rejects_invalid_model() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest", json={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "params": {"model": "svm"},
-        })
+        r = c.post(
+            "/backtest",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "params": {"model": "svm"},
+            },
+        )
         assert r.status_code == 422
 
 
 def test_backtest_accepts_model_hgb() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        job = c.post("/backtest", json={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "params": {"model": "hgb"},
-        }).json()
+        job = c.post(
+            "/backtest",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "params": {"model": "hgb"},
+            },
+        ).json()
         status = c.get(f"/jobs/{job['job_id']}").json()
         assert status["status"] in ("done", "running", "error")
         if status["status"] == "done":
@@ -473,10 +664,16 @@ def test_backtest_accepts_hyperparams_and_money() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
         body = {
-            "symbol": "BTCUSDT", "timeframe": "5m",
+            "symbol": "BTCUSDT",
+            "timeframe": "5m",
             "params": {
-                "model": "lr", "C": 0.1, "max_iter": 500, "solver": "lbfgs",
-                "scale": False, "init_cash": 100_000, "size": 0.5,
+                "model": "lr",
+                "C": 0.1,
+                "max_iter": 500,
+                "solver": "lbfgs",
+                "scale": False,
+                "init_cash": 100_000,
+                "size": 0.5,
             },
         }
         r = c.post("/backtest", json=body)
@@ -491,9 +688,14 @@ def test_backtest_accepts_hgb_hyperparams() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
         body = {
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "params": {"model": "hgb", "max_depth": 4, "learning_rate": 0.05,
-                       "min_samples_leaf": 8},
+            "symbol": "BTCUSDT",
+            "timeframe": "5m",
+            "params": {
+                "model": "hgb",
+                "max_depth": 4,
+                "learning_rate": 0.05,
+                "min_samples_leaf": 8,
+            },
         }
         r = c.post("/backtest", json=body)
         assert r.status_code == 200
@@ -504,61 +706,89 @@ def test_backtest_accepts_hgb_hyperparams() -> None:
 def test_backtest_rejects_unknown_param() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest", json={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "params": {"model": "lr", "evil": 1.0},
-        })
+        r = c.post(
+            "/backtest",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "params": {"model": "lr", "evil": 1.0},
+            },
+        )
         assert r.status_code == 422 and "unknown backtest params" in r.json()["detail"]
 
 
 def test_sweep_returns_grid() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest/sweep", json={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "thresholds": [0.5, 0.6],
-            "fees": [0.0004, 0.001],
-        })
+        r = c.post(
+            "/backtest/sweep",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "thresholds": [0.5, 0.6],
+                "fees": [0.0004, 0.001],
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         rows = body["results"]
         assert len(rows) == 4
         for row in rows:
-            assert {"threshold", "fee", "slippage", "total_return",
-                    "max_drawdown", "win_rate", "trades"} <= set(row)
+            assert {
+                "threshold",
+                "fee",
+                "slippage",
+                "total_return",
+                "max_drawdown",
+                "win_rate",
+                "trades",
+            } <= set(row)
         assert "data_meta" in body
 
 
 def test_sweep_rejects_insufficient_data() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest/sweep", json={
-            "symbol": "BTCUSDT", "timeframe": "1h",
-            "start": 1_700_000_000_000, "end": 1_700_300_000_000,
-            "thresholds": [0.55],
-        })
+        r = c.post(
+            "/backtest/sweep",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "1h",
+                "start": 1_700_000_000_000,
+                "end": 1_700_300_000_000,
+                "thresholds": [0.55],
+            },
+        )
         assert r.status_code == 422
 
 
 def test_sweep_rejects_invalid_model() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest/sweep", json={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "thresholds": [0.55],
-            "params": {"model": "xgb"},
-        })
+        r = c.post(
+            "/backtest/sweep",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "thresholds": [0.55],
+                "params": {"model": "xgb"},
+            },
+        )
         assert r.status_code == 422
 
 
 def test_sweep_with_params_ignores_singular_keys() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest/sweep", json={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "thresholds": [0.5],
-            "params": {"thresh": 0.7, "fee": 0.001, "train_ratio": 0.6},
-        })
+        r = c.post(
+            "/backtest/sweep",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "thresholds": [0.5],
+                "params": {"thresh": 0.7, "fee": 0.001, "train_ratio": 0.6},
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         assert len(body["results"]) == 1
@@ -568,49 +798,79 @@ def test_sweep_with_params_ignores_singular_keys() -> None:
 def test_walkforward_returns_folds() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest/walkforward", json={
-            "symbol": "BTCUSDT", "timeframe": "5m", "n_splits": 2,
-            "params": {"train_ratio": 0.5},
-        })
+        r = c.post(
+            "/backtest/walkforward",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "n_splits": 2,
+                "params": {"train_ratio": 0.5},
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         folds = body["folds"]
         assert len(folds) == 2
         for f in folds:
-            assert {"fold", "train_start", "train_end", "test_start", "test_end",
-                    "total_return", "max_drawdown", "win_rate", "trades",
-                    "roc_auc", "log_loss"} <= set(f)
+            assert {
+                "fold",
+                "train_start",
+                "train_end",
+                "test_start",
+                "test_end",
+                "total_return",
+                "max_drawdown",
+                "win_rate",
+                "trades",
+                "roc_auc",
+                "log_loss",
+            } <= set(f)
             assert f["train_end"] < f["test_start"]
 
 
 def test_walkforward_rejects_invalid_window() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest/walkforward", json={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "start": 1_700_060_000_000, "end": 1_700_000_000_000,
-        })
+        r = c.post(
+            "/backtest/walkforward",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "start": 1_700_060_000_000,
+                "end": 1_700_000_000_000,
+            },
+        )
         assert r.status_code == 400
 
 
 def test_walkforward_rejects_insufficient_data() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/backtest/walkforward", json={
-            "symbol": "BTCUSDT", "timeframe": "1h",
-            "start": 1_700_000_000_000, "end": 1_700_300_000_000,
-            "n_splits": 5,
-        })
+        r = c.post(
+            "/backtest/walkforward",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "1h",
+                "start": 1_700_000_000_000,
+                "end": 1_700_300_000_000,
+                "n_splits": 5,
+            },
+        )
         assert r.status_code == 422
 
 
 def test_dl_features_rejects_invalid_window() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
-        r = c.post("/dl/features", json={
-            "symbol": "BTCUSDT", "timeframe": "1m",
-            "start": 1_700_060_000_000, "end": 1_700_000_000_000,
-        })
+        r = c.post(
+            "/dl/features",
+            json={
+                "symbol": "BTCUSDT",
+                "timeframe": "1m",
+                "start": 1_700_060_000_000,
+                "end": 1_700_000_000_000,
+            },
+        )
         assert r.status_code == 400
 
 
@@ -618,9 +878,16 @@ def test_dl_features_returns_ic_and_coverage() -> None:
     with _tmp() as tmp:
         c = _client(tmp)
         body = {
-            "symbol": "BTCUSDT", "timeframe": "5m",
+            "symbol": "BTCUSDT",
+            "timeframe": "5m",
             "factors": [
-                {"id": "rsi_14", "name": "RSI14", "kind": "preset", "fn": "rsi", "params": {"period": 14}},
+                {
+                    "id": "rsi_14",
+                    "name": "RSI14",
+                    "kind": "preset",
+                    "fn": "rsi",
+                    "params": {"period": 14},
+                },
                 {"id": "sparse", "name": "Sparse", "kind": "expr", "expr": "shift(close, 100)"},
             ],
         }
@@ -644,8 +911,14 @@ def test_config_factors_roundtrip_and_default() -> None:
         cfg = c.get("/config").json()
         assert "factors" in cfg and cfg["factors"] is None
         factors = [
-            {"id": "rsi_14", "name": "RSI14", "kind": "preset", "fn": "rsi",
-             "params": {"period": 14}, "enabled": True},
+            {
+                "id": "rsi_14",
+                "name": "RSI14",
+                "kind": "preset",
+                "fn": "rsi",
+                "params": {"period": 14},
+                "enabled": True,
+            },
         ]
         cfg["factors"] = factors
         assert c.put("/config", json=cfg).status_code == 200
@@ -664,8 +937,12 @@ def test_ws_candle_subscribe() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             # first message is the candle snapshot
             msg = ws.receive_json()
             assert msg["channel"] == "candle" and msg["action"] == "snapshot"
@@ -684,13 +961,21 @@ def test_ws_candle_dynamic_symbol_subscribe_and_unsubscribe() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "XRPUSDT", "timeframe": "1h"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "XRPUSDT", "timeframe": "1h"}],
+                }
+            )
             assert ws.receive_json()["channel"] == "candle"
             assert ws.receive_json()["event"] == "subscribed"
             assert ("USDT-FUTURES", "XRPUSDT", "1h") in stream.subscribed
-            ws.send_json({"op": "unsubscribe", "args": [
-                {"channel": "candle", "symbol": "XRPUSDT", "timeframe": "1h"}]})
+            ws.send_json(
+                {
+                    "op": "unsubscribe",
+                    "args": [{"channel": "candle", "symbol": "XRPUSDT", "timeframe": "1h"}],
+                }
+            )
             assert ws.receive_json()["event"] == "unsubscribed"
             assert ("USDT-FUTURES", "XRPUSDT", "1h") in stream.unsubscribed
 
@@ -699,12 +984,22 @@ def test_ws_candle_snapshot_prioritizes_live_stream_when_parquet_empty() -> None
     """Empty parquet + live bar must still produce a last_candle frame."""
     with _tmp() as tmp:
         settings = Settings(data_dir=Path(tmp))  # no parquet seeded
-        bar = {"open_time": 1700000000000, "open": 1.0, "high": 2.0,
-               "low": 0.0, "close": 1.5, "volume": 1.0}
+        bar = {
+            "open_time": 1700000000000,
+            "open": 1.0,
+            "high": 2.0,
+            "low": 0.0,
+            "close": 1.5,
+            "volume": 1.0,
+        }
         c = TestClient(create_app(settings, stream=_FakeStream(bar=bar), market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             msg = ws.receive_json()
             assert msg["channel"] == "candle" and msg["action"] == "snapshot"
             assert "error" not in msg["data"]
@@ -719,8 +1014,12 @@ def test_ws_candle_snapshot_error_when_no_stream_and_no_parquet() -> None:
         settings = Settings(data_dir=Path(tmp))  # no parquet seeded
         c = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             msg = ws.receive_json()
             assert msg["channel"] == "candle" and msg["action"] == "snapshot"
             assert msg["data"] == {"error": "no data"}
@@ -735,15 +1034,29 @@ def test_ws_candle_event_driven_update_frame() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             assert ws.receive_json()["action"] == "snapshot"
             assert ws.receive_json()["event"] == "subscribed"
             assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.added
             # fire a live bar update through the registered listener
-            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
-                        {"open_time": 1700000000000, "open": 1, "high": 2, "low": 0,
-                         "close": 1.5, "volume": 1})
+            stream.emit(
+                "USDT-FUTURES",
+                "BTCUSDT",
+                "5m",
+                {
+                    "open_time": 1700000000000,
+                    "open": 1,
+                    "high": 2,
+                    "low": 0,
+                    "close": 1.5,
+                    "volume": 1,
+                },
+            )
             msg = ws.receive_json()
             assert msg["channel"] == "candle" and msg["action"] == "update"
             assert msg["data"]["last_candle"]["close"] == 1.5
@@ -759,12 +1072,20 @@ def test_ws_candle_unsubscribe_removes_listener() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             assert ws.receive_json()["action"] == "snapshot"
             assert ws.receive_json()["event"] == "subscribed"
-            ws.send_json({"op": "unsubscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "unsubscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             assert ws.receive_json()["event"] == "unsubscribed"
             assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.removed
             assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.unsubscribed
@@ -779,20 +1100,40 @@ def test_ws_candle_poll_snapshot_does_not_send_stale_last_candle() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             assert ws.receive_json()["action"] == "snapshot"
             assert ws.receive_json()["event"] == "subscribed"
             # event-driven live push with a NEWER bucket (open_time = B2)
-            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
-                        {"open_time": BASE + 2 * STEP, "open": 1, "high": 2, "low": 0,
-                         "close": 1.5, "volume": 1})
+            stream.emit(
+                "USDT-FUTURES",
+                "BTCUSDT",
+                "5m",
+                {
+                    "open_time": BASE + 2 * STEP,
+                    "open": 1,
+                    "high": 2,
+                    "low": 0,
+                    "close": 1.5,
+                    "volume": 1,
+                },
+            )
             upd = ws.receive_json()
             assert upd["action"] == "update"
             assert upd["data"]["last_candle"]["open_time"] == BASE + 2 * STEP
             # now the poll stream lags: latest() returns an OLDER bucket (open_time = B1)
-            stream.bar = {"open_time": BASE + 1 * STEP, "open": 1, "high": 2, "low": 0,
-                          "close": 1.1, "volume": 1}
+            stream.bar = {
+                "open_time": BASE + 1 * STEP,
+                "open": 1,
+                "high": 2,
+                "low": 0,
+                "close": 1.1,
+                "volume": 1,
+            }
             # the next 5s poll must strip the stale last_candle (set to None)
             poll = ws.receive_json()
             assert poll["action"] == "update"
@@ -806,12 +1147,22 @@ def test_ws_candle_poll_snapshot_keeps_last_candle_when_not_stale() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
         stream = _FakeStream(None)
-        stream.bar = {"open_time": BASE + 1 * STEP, "open": 1, "high": 2, "low": 0,
-                      "close": 1.2, "volume": 1}
+        stream.bar = {
+            "open_time": BASE + 1 * STEP,
+            "open": 1,
+            "high": 2,
+            "low": 0,
+            "close": 1.2,
+            "volume": 1,
+        }
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             assert ws.receive_json()["action"] == "snapshot"
             assert ws.receive_json()["event"] == "subscribed"
             poll = ws.receive_json()
@@ -826,8 +1177,12 @@ def test_ws_candle_disconnect_removes_listener() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             assert ws.receive_json()["action"] == "snapshot"
             assert ws.receive_json()["event"] == "subscribed"
         assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.removed
@@ -842,10 +1197,15 @@ def test_ws_candle_multi_period_routing() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"},
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"},
-            ]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [
+                        {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"},
+                        {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"},
+                    ],
+                }
+            )
             # two snapshots then two acks (order follows the args list)
             snap1 = ws.receive_json()
             assert snap1["channel"] == "candle" and snap1["action"] == "snapshot"
@@ -863,17 +1223,31 @@ def test_ws_candle_multi_period_routing() -> None:
             assert ("USDT-FUTURES", "BTCUSDT", "5m") in stream.subscribed
             assert ("USDT-FUTURES", "BTCUSDT", "1h") in stream.subscribed
             # event-driven update frames carry the full identity
-            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
-                        {"open_time": 1700000000000, "open": 1, "high": 2, "low": 0,
-                         "close": 1.5, "volume": 1})
+            stream.emit(
+                "USDT-FUTURES",
+                "BTCUSDT",
+                "5m",
+                {
+                    "open_time": 1700000000000,
+                    "open": 1,
+                    "high": 2,
+                    "low": 0,
+                    "close": 1.5,
+                    "volume": 1,
+                },
+            )
             upd = ws.receive_json()
             assert upd["channel"] == "candle" and upd["action"] == "update"
             assert upd["timeframe"] == "5m"
             assert upd["symbol"] == "BTCUSDT"
             assert upd["category"] == "USDT-FUTURES"
             # unsubscribe only 1h: 5m listener must survive
-            ws.send_json({"op": "unsubscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"}]})
+            ws.send_json(
+                {
+                    "op": "unsubscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"}],
+                }
+            )
             assert ws.receive_json()["event"] == "unsubscribed"
             assert ("USDT-FUTURES", "BTCUSDT", "1h") in stream.unsubscribed
             assert ("USDT-FUTURES", "BTCUSDT", "1h") in stream.removed
@@ -888,16 +1262,31 @@ def test_ws_candle_multi_period_update_frames_do_not_cross() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"},
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"},
-            ]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [
+                        {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"},
+                        {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "1h"},
+                    ],
+                }
+            )
             for _ in range(4):
                 ws.receive_json()
             # 5m bar arrives: the 1h series must not see it
-            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
-                        {"open_time": 1700000000000, "open": 1, "high": 2, "low": 0,
-                         "close": 1.5, "volume": 1})
+            stream.emit(
+                "USDT-FUTURES",
+                "BTCUSDT",
+                "5m",
+                {
+                    "open_time": 1700000000000,
+                    "open": 1,
+                    "high": 2,
+                    "low": 0,
+                    "close": 1.5,
+                    "volume": 1,
+                },
+            )
             upd = ws.receive_json()
             assert upd["timeframe"] == "5m"
             assert upd["data"]["last_candle"]["open_time"] == 1700000000000
@@ -913,31 +1302,75 @@ def test_ws_candle_update_throttled_to_one_per_second() -> None:
         stream = _FakeStream(None)
         c = TestClient(create_app(settings, stream=stream, market=_FakeMarket()))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             assert ws.receive_json()["action"] == "snapshot"
             assert ws.receive_json()["event"] == "subscribed"
             t0 = _time.monotonic()
             # first bar: sent immediately
-            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
-                        {"open_time": 1700000000000, "open": 1, "high": 2, "low": 0,
-                         "close": 1.5, "volume": 1})
+            stream.emit(
+                "USDT-FUTURES",
+                "BTCUSDT",
+                "5m",
+                {
+                    "open_time": 1700000000000,
+                    "open": 1,
+                    "high": 2,
+                    "low": 0,
+                    "close": 1.5,
+                    "volume": 1,
+                },
+            )
             m1 = ws.receive_json()
             assert m1["data"]["last_candle"]["close"] == 1.5
             # burst: two more bars within the throttle window coalesce into one
-            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
-                        {"open_time": 1700000000000, "open": 1, "high": 3, "low": 0,
-                         "close": 2.5, "volume": 1})
-            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
-                        {"open_time": 1700000000000, "open": 1, "high": 4, "low": 0,
-                         "close": 3.5, "volume": 1})
+            stream.emit(
+                "USDT-FUTURES",
+                "BTCUSDT",
+                "5m",
+                {
+                    "open_time": 1700000000000,
+                    "open": 1,
+                    "high": 3,
+                    "low": 0,
+                    "close": 2.5,
+                    "volume": 1,
+                },
+            )
+            stream.emit(
+                "USDT-FUTURES",
+                "BTCUSDT",
+                "5m",
+                {
+                    "open_time": 1700000000000,
+                    "open": 1,
+                    "high": 4,
+                    "low": 0,
+                    "close": 3.5,
+                    "volume": 1,
+                },
+            )
             m2 = ws.receive_json()  # blocks until the ~1s coalesced flush fires
             assert m2["data"]["last_candle"]["close"] == 3.5
             assert _time.monotonic() - t0 >= 1.0
             # after the flush the throttle resets: the next bar sends at once
-            stream.emit("USDT-FUTURES", "BTCUSDT", "5m",
-                        {"open_time": 1700000000000, "open": 1, "high": 5, "low": 0,
-                         "close": 4.5, "volume": 1})
+            stream.emit(
+                "USDT-FUTURES",
+                "BTCUSDT",
+                "5m",
+                {
+                    "open_time": 1700000000000,
+                    "open": 1,
+                    "high": 5,
+                    "low": 0,
+                    "close": 4.5,
+                    "volume": 1,
+                },
+            )
             m3 = ws.receive_json()
             assert m3["data"]["last_candle"]["close"] == 4.5
 
@@ -982,16 +1415,16 @@ def test_ws_ticker_wildcard_receives_periodic_update() -> None:
         market = _FakeMarket()
         c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "ticker", "symbol": "default"}]})
+            ws.send_json({"op": "subscribe", "args": [{"channel": "ticker", "symbol": "default"}]})
             snap = ws.receive_json()
             assert snap["channel"] == "ticker" and snap["action"] == "snapshot"
             assert snap["symbol"] == "default"
             ack = ws.receive_json()
             assert ack["event"] == "subscribed"
             # market hub emits a full-market ticker update -> forwarded to ws
-            market.emit("USDT-FUTURES", "ticker", "*", "update",
-                        [{"instId": "BTCUSDT", "lastPr": "64000"}])
+            market.emit(
+                "USDT-FUTURES", "ticker", "*", "update", [{"instId": "BTCUSDT", "lastPr": "64000"}]
+            )
             upd = ws.receive_json()
             assert upd["channel"] == "ticker" and upd["action"] == "update"
             assert upd["symbol"] == "*"
@@ -1008,15 +1441,20 @@ def test_ws_ticker_category_wildcard_receives_any_category() -> None:
         market = _FakeMarket()
         c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "ticker", "symbol": "default", "category": "*"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "ticker", "symbol": "default", "category": "*"}],
+                }
+            )
             snap = ws.receive_json()
             assert snap["channel"] == "ticker" and snap["action"] == "snapshot"
             assert snap["symbol"] == "default"
             assert ws.receive_json()["event"] == "subscribed"
             # SPOT category update arrives despite subscribing with category="*"
-            market.emit("SPOT", "ticker", "*", "update",
-                        [{"instId": "XAUUSDT", "lastPr": "2400.0"}])
+            market.emit(
+                "SPOT", "ticker", "*", "update", [{"instId": "XAUUSDT", "lastPr": "2400.0"}]
+            )
             upd = ws.receive_json()
             assert upd["channel"] == "ticker" and upd["action"] == "update"
             assert upd["category"] == "SPOT"
@@ -1035,8 +1473,12 @@ def test_ws_disconnect_releases_subscriptions() -> None:
         assert ("books", "BTCUSDT", "USDT-FUTURES") in market.unsubscribed
         # server survives: a fresh connection still works
         with c.websocket_connect("/ws") as ws2:
-            ws2.send_json({"op": "subscribe", "args": [{"channel": "candle",
-                                                        "symbol": "BTCUSDT", "timeframe": "5m"}]})
+            ws2.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "candle", "symbol": "BTCUSDT", "timeframe": "5m"}],
+                }
+            )
             assert ws2.receive_json()["channel"] == "candle"
 
 
@@ -1080,8 +1522,12 @@ def test_ws_subscribe_with_category() -> None:
         market = _FakeMarket()
         c = TestClient(create_app(settings, stream=_FakeStream(None), market=market))
         with c.websocket_connect("/ws") as ws:
-            ws.send_json({"op": "subscribe", "args": [
-                {"channel": "books", "symbol": "BTCUSDT", "category": "SPOT"}]})
+            ws.send_json(
+                {
+                    "op": "subscribe",
+                    "args": [{"channel": "books", "symbol": "BTCUSDT", "category": "SPOT"}],
+                }
+            )
             snap = ws.receive_json()
             assert snap["channel"] == "books" and snap["action"] == "snapshot"
             assert snap.get("category") == "SPOT"
@@ -1109,7 +1555,9 @@ def test_books_empty_when_not_subscribed() -> None:
             def orderbook(self, symbol: str, category: str = "USDT-FUTURES") -> dict | None:  # noqa: ARG001
                 return None
 
-            def trades(self, symbol: str, limit: int | None = None, category: str = "USDT-FUTURES") -> list:  # noqa: ARG001
+            def trades(
+                self, symbol: str, limit: int | None = None, category: str = "USDT-FUTURES"
+            ) -> list:  # noqa: ARG001
                 return []
 
         c = TestClient(create_app(settings, stream=_FakeStream(None), market=_Empty()))
@@ -1122,8 +1570,22 @@ def test_candles_recent_returns_stream_batch() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
         bars = [
-            {"open_time": 1700000000000, "open": 1.0, "high": 2.0, "low": 0.0, "close": 1.5, "volume": 1.0},
-            {"open_time": 1700000300000, "open": 1.5, "high": 3.0, "low": 1.0, "close": 2.5, "volume": 2.0},
+            {
+                "open_time": 1700000000000,
+                "open": 1.0,
+                "high": 2.0,
+                "low": 0.0,
+                "close": 1.5,
+                "volume": 1.0,
+            },
+            {
+                "open_time": 1700000300000,
+                "open": 1.5,
+                "high": 3.0,
+                "low": 1.0,
+                "close": 2.5,
+                "volume": 2.0,
+            },
         ]
         app = create_app(settings, stream=_FakeStream(bars=bars))
         c = TestClient(app)
@@ -1220,10 +1682,23 @@ def test_journal_endpoint() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
         journal = TradeJournal(settings.data_dir / "memory" / "trades.jsonl")
-        journal.append(TradeRecord(
-            id="x1", symbol="BTCUSDT", timeframe="5m", side="long",
-            entry_price=100.0, exit_price=101.0, notional=5000.0, margin=50.0,
-            leverage=100.0, pnl=50.0, opened_at=1, closed_at=2, reflection="win"))
+        journal.append(
+            TradeRecord(
+                id="x1",
+                symbol="BTCUSDT",
+                timeframe="5m",
+                side="long",
+                entry_price=100.0,
+                exit_price=101.0,
+                notional=5000.0,
+                margin=50.0,
+                leverage=100.0,
+                pnl=50.0,
+                opened_at=1,
+                closed_at=2,
+                reflection="win",
+            )
+        )
         c = TestClient(create_app(settings))
         trades = c.get("/journal").json()["trades"]
         assert any(t["id"] == "x1" and t["pnl"] == 50.0 for t in trades)
@@ -1232,13 +1707,15 @@ def test_journal_endpoint() -> None:
 class _FakeMcpClient:
     """Context-manager stand-in for McpDataClient: serves canned candle pages."""
 
-    def __init__(self, pages: list, fail_rate_limits: int = 0, rate_msg: str = "rate limit exceeded") -> None:
+    def __init__(
+        self, pages: list, fail_rate_limits: int = 0, rate_msg: str = "rate limit exceeded"
+    ) -> None:
         self.pages = list(pages)
         self.fail_rate_limits = fail_rate_limits
         self.rate_msg = rate_msg
         self.calls: list[dict] = []
 
-    def __enter__(self) -> "_FakeMcpClient":
+    def __enter__(self) -> _FakeMcpClient:
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -1262,21 +1739,36 @@ def test_backfill_appends_older_history_and_candles_continue() -> None:
         settings.candle_page_limit = 3
         older = [[BASE - (i + 1) * STEP, 1.0, 2.0, 0.5, 1.5, 1.0] for i in range(5)]
         fake = _FakeMcpClient([older])
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
-                                  backfill_rest_fetcher=_raise_rest))
-        r = c.post("/candles/backfill", json={
-            "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
-            "before": BASE, "max_pages": 3,
-        })
+        c = TestClient(
+            create_app(
+                settings, backfill_client_factory=lambda: fake, backfill_rest_fetcher=_raise_rest
+            )
+        )
+        r = c.post(
+            "/candles/backfill",
+            json={
+                "category": "USDT-FUTURES",
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "before": BASE,
+                "max_pages": 3,
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         assert body["appended"] == 5
         assert body["earliest_reached"] is True  # page shorter than page limit
 
-        rows = c.get("/candles", params={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "start": BASE - 6 * STEP, "end": BASE + 2 * STEP, "limit": 500,
-        }).json()["candles"]
+        rows = c.get(
+            "/candles",
+            params={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "start": BASE - 6 * STEP,
+                "end": BASE + 2 * STEP,
+                "limit": 500,
+            },
+        ).json()["candles"]
         assert rows[0]["open_time"] == BASE - 5 * STEP
         assert any(row["open_time"] == BASE for row in rows)  # contiguous with seeded range
 
@@ -1285,12 +1777,20 @@ def test_backfill_terminates_when_exchange_has_nothing_older() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
         fake = _FakeMcpClient([])
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
-                                  backfill_rest_fetcher=_raise_rest))
-        body = c.post("/candles/backfill", json={
-            "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
-            "before": BASE,
-        }).json()
+        c = TestClient(
+            create_app(
+                settings, backfill_client_factory=lambda: fake, backfill_rest_fetcher=_raise_rest
+            )
+        )
+        body = c.post(
+            "/candles/backfill",
+            json={
+                "category": "USDT-FUTURES",
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "before": BASE,
+            },
+        ).json()
         assert body["appended"] == 0
         assert body["earliest_reached"] is True
 
@@ -1304,17 +1804,26 @@ def test_backfill_rate_limit_retry_keeps_progress() -> None:
         page1 = [[BASE - 2 * STEP, 1, 2, 0, 1, 1], [BASE - 3 * STEP, 1, 2, 0, 1, 1]]
         page2 = [[BASE - 5 * STEP, 1, 2, 0, 1, 1]]
         fake = _FakeMcpClient([page1, page2], fail_rate_limits=1)
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
-                                  backfill_rest_fetcher=_raise_rest))
+        c = TestClient(
+            create_app(
+                settings, backfill_client_factory=lambda: fake, backfill_rest_fetcher=_raise_rest
+            )
+        )
 
         original_sleep = ingestion_mod.time.sleep
         sleeps: list[float] = []
         ingestion_mod.time.sleep = lambda s: sleeps.append(s)
         try:
-            r = c.post("/candles/backfill", json={
-                "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
-                "before": BASE, "max_pages": 5,
-            })
+            r = c.post(
+                "/candles/backfill",
+                json={
+                    "category": "USDT-FUTURES",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "5m",
+                    "before": BASE,
+                    "max_pages": 5,
+                },
+            )
         finally:
             ingestion_mod.time.sleep = original_sleep
 
@@ -1325,24 +1834,44 @@ def test_backfill_rate_limit_retry_keeps_progress() -> None:
         assert len(sleeps) == 1  # one backoff pause
         assert len(fake.calls) == 3  # failed attempt + 2 successful pages
 
-        rows = c.get("/candles", params={
-            "symbol": "BTCUSDT", "timeframe": "5m",
-            "start": BASE - 6 * STEP, "end": BASE, "limit": 500,
-        }).json()["candles"]
-        assert [row["open_time"] for row in rows] == [BASE - 5 * STEP, BASE - 3 * STEP, BASE - 2 * STEP, BASE]
+        rows = c.get(
+            "/candles",
+            params={
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "start": BASE - 6 * STEP,
+                "end": BASE,
+                "limit": 500,
+            },
+        ).json()["candles"]
+        assert [row["open_time"] for row in rows] == [
+            BASE - 5 * STEP,
+            BASE - 3 * STEP,
+            BASE - 2 * STEP,
+            BASE,
+        ]
 
 
 def test_backfill_rejects_invalid_max_pages() -> None:
     with _tmp() as tmp:
         settings = _seed(tmp)
         fake = _FakeMcpClient([])
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
-                                  backfill_rest_fetcher=_raise_rest))
+        c = TestClient(
+            create_app(
+                settings, backfill_client_factory=lambda: fake, backfill_rest_fetcher=_raise_rest
+            )
+        )
         for bad in (0, 21):
-            r = c.post("/candles/backfill", json={
-                "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
-                "before": BASE, "max_pages": bad,
-            })
+            r = c.post(
+                "/candles/backfill",
+                json={
+                    "category": "USDT-FUTURES",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "5m",
+                    "before": BASE,
+                    "max_pages": bad,
+                },
+            )
             assert r.status_code == 422
         assert fake.calls == []  # never hit the upstream
 
@@ -1357,10 +1886,16 @@ def test_backfill_rest_path_appends_when_rest_fetcher_succeeds() -> None:
             return [[BASE - (i + 1) * STEP, 1.0, 2.0, 0.5, 1.5, 1.0] for i in range(5)]
 
         c = TestClient(create_app(settings, backfill_rest_fetcher=rest_fetcher))
-        r = c.post("/candles/backfill", json={
-            "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
-            "before": BASE, "max_pages": 3,
-        })
+        r = c.post(
+            "/candles/backfill",
+            json={
+                "category": "USDT-FUTURES",
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "before": BASE,
+                "max_pages": 3,
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         assert body["appended"] == 5
@@ -1374,12 +1909,21 @@ def test_backfill_falls_back_to_mcp_when_rest_fails() -> None:
         settings.candle_page_limit = 3
         older = [[BASE - (i + 1) * STEP, 1.0, 2.0, 0.5, 1.5, 1.0] for i in range(5)]
         fake = _FakeMcpClient([older])
-        c = TestClient(create_app(settings, backfill_client_factory=lambda: fake,
-                                  backfill_rest_fetcher=_raise_rest))
-        r = c.post("/candles/backfill", json={
-            "category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m",
-            "before": BASE, "max_pages": 3,
-        })
+        c = TestClient(
+            create_app(
+                settings, backfill_client_factory=lambda: fake, backfill_rest_fetcher=_raise_rest
+            )
+        )
+        r = c.post(
+            "/candles/backfill",
+            json={
+                "category": "USDT-FUTURES",
+                "symbol": "BTCUSDT",
+                "timeframe": "5m",
+                "before": BASE,
+                "max_pages": 3,
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         assert body["appended"] == 5
@@ -1412,7 +1956,12 @@ def test_alerts_crud_and_persistence() -> None:
         assert r.json()["alert"]["triggered"] is True
 
         # rejects invalid condition
-        assert c.post("/alerts", json={"symbol": "BTC", "condition": "sideways", "threshold": 1}).status_code == 400
+        assert (
+            c.post(
+                "/alerts", json={"symbol": "BTC", "condition": "sideways", "threshold": 1}
+            ).status_code
+            == 400
+        )
 
         # delete
         assert c.delete(f"/alerts/{alert_id}").json() == {"ok": True}
@@ -1496,6 +2045,27 @@ def _news_item(news_id: str, category: str, ts: int) -> dict:
     }
 
 
+def test_agent_endpoints_with_news_items() -> None:
+    now = int(time.time())
+    items = [_news_item("em_crypto", "crypto", now)]
+    with _tmp() as tmp:
+        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+            body = {"category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m"}
+            d = c.post("/agent/decide", json=body)
+            assert d.status_code == 200
+            assert d.json()["action"] in ("open", "close", "hold")
+            r = c.post("/agent/cycle", json=body)
+            assert r.status_code == 200 and "status" in r.json()
+
+
+def test_agent_endpoints_without_news_items() -> None:
+    with _tmp() as tmp:
+        with _client(tmp, _FakeNewsBroker()) as c:
+            body = {"category": "USDT-FUTURES", "symbol": "BTCUSDT", "timeframe": "5m"}
+            assert c.post("/agent/decide", json=body).status_code == 200
+            assert c.post("/agent/cycle", json=body).status_code == 200
+
+
 def test_news_context_filters() -> None:
     now = int(time.time())
     items = [
@@ -1528,7 +2098,7 @@ def test_news_stream_sse() -> None:
                 assert events[0] == "event: snapshot"
                 assert events.count("event: item") == 2
                 data_lines = [ln for ln in lines if ln.startswith("data: ")]
-                snap = json.loads(data_lines[0][len("data: "):])
+                snap = json.loads(data_lines[0][len("data: ") :])
                 assert len(snap["items"]) == 2
                 assert snap["total"] == 2
                 assert "sources" in snap
@@ -1541,7 +2111,7 @@ def test_news_stream_snapshot_capped_newest_first() -> None:
         with _client(tmp, _FakeNewsBroker(items=items)) as c:
             with c.stream("GET", "/news/stream") as r:
                 lines = [ln for ln in r.iter_lines() if ln]
-                snap = json.loads(lines[1][len("data: "):])
+                snap = json.loads(lines[1][len("data: ") :])
                 assert len(snap["items"]) == 100
                 assert snap["total"] == 120
                 ids = [i["id"] for i in snap["items"]]
@@ -1561,7 +2131,11 @@ def test_news_history_paging_and_filters() -> None:
             # newest-first full page
             r = c.get("/news/history").json()
             assert [i["id"] for i in r["items"]] == [
-                "em_crypto_0", "em_macro_0", "em_crypto_1", "em_macro_1"]
+                "em_crypto_0",
+                "em_macro_0",
+                "em_crypto_1",
+                "em_macro_1",
+            ]
             assert r["total"] == 4
 
             # offset/limit pagination
@@ -1580,6 +2154,53 @@ def test_news_history_paging_and_filters() -> None:
 
             # limit clamped
             assert c.get("/news/history", params={"limit": 999}).status_code == 200
+
+
+# -- wire-orchestration-runtime: lifespan scheduler wiring -----------------
+def _lifespan_ids(tmp, agent_schedule_enabled: bool, interval: int = 300) -> set[str]:  # noqa: ANN001
+    settings = _seed(tmp)
+    settings.schedule_interval_seconds = interval
+    settings.agent_schedule_enabled = agent_schedule_enabled
+    app = create_app(
+        settings,
+        stream=_FakeStream(None),
+        market=_FakeMarket(),
+        news_broker=_FakeNewsBroker(),
+    )
+    with TestClient(app) as c:
+        orchestrator = c.app.state.orchestrator
+        assert orchestrator is not None
+        return {j.id for j in orchestrator.get_jobs()}
+
+
+def test_lifespan_registers_only_circuit_breaker_by_default() -> None:
+    with _tmp() as tmp:
+        ids = _lifespan_ids(tmp, agent_schedule_enabled=False)
+        assert "circuit_breaker" in ids
+        assert "agent_cycle" not in ids and "retrain" not in ids
+        assert "data_pull" not in ids
+
+
+def test_lifespan_registers_agent_and_retrain_when_enabled() -> None:
+    with _tmp() as tmp:
+        ids = _lifespan_ids(tmp, agent_schedule_enabled=True)
+        assert {"circuit_breaker", "agent_cycle", "retrain"} <= ids
+        assert "data_pull" not in ids
+
+
+def test_lifespan_skips_both_schedulers_when_interval_disabled() -> None:
+    with _tmp() as tmp:
+        settings = _seed(tmp)
+        settings.schedule_interval_seconds = 0
+        app = create_app(
+            settings,
+            stream=_FakeStream(None),
+            market=_FakeMarket(),
+            news_broker=_FakeNewsBroker(),
+        )
+        with TestClient(app) as c:
+            assert c.app.state.ingest_scheduler is None
+            assert c.app.state.orchestrator is None
 
 
 def _run_all() -> None:

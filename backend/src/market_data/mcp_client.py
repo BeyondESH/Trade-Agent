@@ -18,8 +18,9 @@ import logging
 import shutil
 import subprocess
 import threading
+from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -69,9 +70,7 @@ def check_node_version(minimum_major: int = MIN_NODE_MAJOR) -> None:
 
     major = int(raw.lstrip("v").split(".", 1)[0])
     if major < minimum_major:
-        raise McpError(
-            f"Node.js >= {minimum_major} required, found {raw}. Please upgrade Node.js."
-        )
+        raise McpError(f"Node.js >= {minimum_major} required, found {raw}. Please upgrade Node.js.")
     logger.info("Node.js %s detected (>= %d required).", raw, minimum_major)
 
 
@@ -169,7 +168,7 @@ class McpDataClient:
                 self._loop = self._thread = self._queue = self._runner = None
                 self._ready.clear()
 
-    def __enter__(self) -> "McpDataClient":
+    def __enter__(self) -> McpDataClient:
         self.start()
         return self
 

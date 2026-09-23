@@ -18,7 +18,9 @@ _HEADER = [*OHLCV_COLUMNS, "open_time_iso"]
 def _with_iso(frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
     # Excel cannot store tz-aware datetimes; keep tz-naive UTC.
-    out["open_time_iso"] = pd.to_datetime(out["open_time"], unit="ms", utc=True).dt.tz_localize(None)
+    out["open_time_iso"] = pd.to_datetime(out["open_time"], unit="ms", utc=True).dt.tz_localize(
+        None
+    )
     return out[_HEADER]
 
 
@@ -56,7 +58,7 @@ class ExcelAppender:
         self._ws = None
         self._wb: Workbook | None = None
 
-    def __enter__(self) -> "ExcelAppender":
+    def __enter__(self) -> ExcelAppender:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         if self._path.exists():
             self._wb = load_workbook(self._path)

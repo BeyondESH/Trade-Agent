@@ -9,8 +9,9 @@ by an exchange-style terminal across all Bitget product categories:
 - ``mark-price``  mark price mirror
 - ``funding-time`` funding rate mirror
 
-Each channel keeps an in-memory mirror per category (SPOT / USDT-FUTURES) that the REST snapshot endpoints
-read from, and emits incremental events to WebSocket subscribers. Subscriptions
+Each channel keeps an in-memory mirror per category (SPOT / USDT-FUTURES) that
+the REST snapshot endpoints read from, and emits incremental events to WebSocket
+subscribers. Subscriptions
 are refcounted: the first external subscriber triggers a Bitget subscribe, the
 last unsubscribe releases the channel.
 
@@ -26,7 +27,8 @@ import json
 import logging
 import threading
 from collections import deque
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from websockets.asyncio.client import ClientConnection, connect
 
@@ -327,7 +329,9 @@ class MarketStream:
             self._drop_channel(category, channel, symbol)
 
     def _request(self, op: str, category: str, channel: str, symbol: str) -> None:
-        payload = json.dumps({"op": op, "args": [{"instType": category, "channel": channel, "instId": symbol}]})
+        payload = json.dumps(
+            {"op": op, "args": [{"instType": category, "channel": channel, "instId": symbol}]}
+        )
         ws = self._ws.get(category)
         if ws is not None and not getattr(ws, "closed", False):
             loop = asyncio.get_running_loop()
@@ -366,10 +370,7 @@ class MarketStream:
         keys = [k for k in self._refs.keys() if k[0] == category]
         if not keys:
             return
-        args = [
-            {"instType": cat, "channel": ch, "instId": sym}
-            for cat, ch, sym in keys
-        ]
+        args = [{"instType": cat, "channel": ch, "instId": sym} for cat, ch, sym in keys]
         await self._send_chunked(ws, {"op": "subscribe", "args": args})
         logger.info("MarketStream[%s] subscribed %d channels.", category, len(args))
 
@@ -390,7 +391,7 @@ class MarketStream:
         while True:
             try:
                 raw = await asyncio.wait_for(ws.recv(), timeout=self._heartbeat)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 silent += 1
                 if silent >= 2:
                     logger.warning("MarketStream[%s] silent; forcing reconnect.", category)
@@ -458,13 +459,19 @@ class MarketStream:
                 self._emit(category, "funding-time", inst_id, action, rows)
             elif channel == "books":
                 for row in rows:
-                    book = self._books[category].setdefault(inst_id, OrderBookMerger(self._max_depth))
+                    book = self._books[category].setdefault(
+                        inst_id, OrderBookMerger(self._max_depth)
+                    )
                     if action == "snapshot":
-                        book.apply_snapshot(row.get("asks", []), row.get("bids", []), row.get("seq"))
+                        book.apply_snapshot(
+                            row.get("asks", []), row.get("bids", []), row.get("seq")
+                        )
                     elif not book.apply_update(
                         row.get("asks", []), row.get("bids", []), row.get("seq"), row.get("pseq")
                     ):
-                        logger.warning("MarketStream[%s] books gap for %s; re-subscribing.", category, inst_id)
+                        logger.warning(
+                            "MarketStream[%s] books gap for %s; re-subscribing.", category, inst_id
+                        )
                         book.reset()
                         self._request("subscribe", category, "books", inst_id)
                     self._emit(category, "books", inst_id, action, book.levels())
@@ -519,7 +526,9 @@ class MarketStream:
                 return None
             return book.levels()
 
-    def trades(self, symbol: str, limit: int | None = None, category: str = "USDT-FUTURES") -> list[dict]:
+    def trades(
+        self, symbol: str, limit: int | None = None, category: str = "USDT-FUTURES"
+    ) -> list[dict]:
         with self._lock:
             buf = self._trades.get(category, {}).get(symbol)
             if not buf:

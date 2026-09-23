@@ -14,14 +14,14 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 import vectorbt as vbt
-from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss, roc_auc_score, roc_curve
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from market_data.factors import FEATURE_COLUMNS, compute_factors
+from market_data.factors import compute_factors
 
 
 # -- 1. features -----------------------------------------------------------
@@ -46,7 +46,7 @@ def build_features(
 
 # -- 2. model --------------------------------------------------------------
 class Model(Protocol):
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "Model": ...
+    def fit(self, X: np.ndarray, y: np.ndarray) -> Model: ...
     def predict_proba(self, X: np.ndarray) -> np.ndarray: ...
 
 
@@ -71,9 +71,7 @@ class SklearnModel:
         if kind == "lr":
             estimator = LogisticRegression(random_state=random_state, **kwargs)
         elif kind == "hgb":
-            estimator = HistGradientBoostingClassifier(
-                random_state=random_state, **kwargs
-            )
+            estimator = HistGradientBoostingClassifier(random_state=random_state, **kwargs)
         else:
             raise ValueError(f"unknown model kind: {kind!r}")
         self.kind = kind
@@ -85,7 +83,7 @@ class SklearnModel:
             else [("scaler", StandardScaler()), ("clf", estimator)]
         )
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "SklearnModel":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> SklearnModel:
         Xa = np.asarray(X, dtype="float64")
         ya = np.asarray(y, dtype="float64")
         self._pipeline.fit(Xa, ya)
@@ -222,10 +220,20 @@ def signals_from_proba(proba: np.ndarray, thresh: float = 0.55) -> np.ndarray:
 def _timeframe_freq(timeframe: str) -> str | None:
     """Map an internal timeframe token to a pandas offset for vectorbt freq."""
     mapping = {
-        "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min",
-        "30m": "30min", "1h": "1h", "2h": "2h", "4h": "4h",
-        "6h": "6h", "12h": "12h", "1d": "1D", "3d": "3D",
-        "1w": "1W", "1mo": "1ME",
+        "1m": "1min",
+        "3m": "3min",
+        "5m": "5min",
+        "15m": "15min",
+        "30m": "30min",
+        "1h": "1h",
+        "2h": "2h",
+        "4h": "4h",
+        "6h": "6h",
+        "12h": "12h",
+        "1d": "1D",
+        "3d": "3D",
+        "1w": "1W",
+        "1mo": "1ME",
     }
     return mapping.get(timeframe)
 
@@ -241,16 +249,18 @@ def _trade_records(pf, times: pd.Series) -> list[dict]:
         ep = float(row["entry_price"])
         xp = float(row["exit_price"])
         gross = (xp - ep) / ep if side == "long" else (ep - xp) / ep
-        out.append({
-            "side": side,
-            "entry_time": int(times.iloc[int(row["entry_idx"])]),
-            "entry_price": round(ep, 8),
-            "exit_time": int(times.iloc[int(row["exit_idx"])]),
-            "exit_price": round(xp, 8),
-            "bars": int(row["exit_idx"]) - int(row["entry_idx"]) + 1,
-            "gross_return": round(gross, 8),
-            "net_return": round(float(row["return"]), 8),
-        })
+        out.append(
+            {
+                "side": side,
+                "entry_time": int(times.iloc[int(row["entry_idx"])]),
+                "entry_price": round(ep, 8),
+                "exit_time": int(times.iloc[int(row["exit_idx"])]),
+                "exit_price": round(xp, 8),
+                "bars": int(row["exit_idx"]) - int(row["entry_idx"]) + 1,
+                "gross_return": round(gross, 8),
+                "net_return": round(float(row["return"]), 8),
+            }
+        )
     return out
 
 
@@ -333,10 +343,9 @@ def backtest(
         "signal": [round(float(v), 8) for v in sig.tolist()],
         "proba": [round(float(p), 8) for p in proba] if proba is not None else [],
         # buy & hold benchmark normalized to 1.0 at the first bar.
-        "benchmark": [
-            round(float(v), 8)
-            for v in (close_raw / close_raw.iloc[0]).tolist()
-        ] if len(close_raw) and close_raw.iloc[0] != 0 else [1.0] * len(close_raw),
+        "benchmark": [round(float(v), 8) for v in (close_raw / close_raw.iloc[0]).tolist()]
+        if len(close_raw) and close_raw.iloc[0] != 0
+        else [1.0] * len(close_raw),
     }
     metrics["trade_list"] = _trade_records(pf, times)
     stats_dict = {}
@@ -370,8 +379,9 @@ def run_pipeline(
     signals = signals_from_proba(proba, thresh)
     # Map test signals back onto the test slice of the original frame.
     test_df = df.loc[X.index[te]].reset_index(drop=True)
-    result = backtest(test_df, signals, fee, slippage, proba, timeframe,
-                      init_cash=init_cash, size=size)
+    result = backtest(
+        test_df, signals, fee, slippage, proba, timeframe, init_cash=init_cash, size=size
+    )
     result["test_bars"] = int(len(te))
     result["data_meta"] = {
         "n_train": int(len(X) - len(te)),
@@ -419,15 +429,17 @@ def sweep_params(
             for slip in slippages:
                 signals = signals_from_proba(proba, thresh)
                 r = backtest(test_df, signals, fee, slip, proba, timeframe)
-                rows.append({
-                    "threshold": thresh,
-                    "fee": fee,
-                    "slippage": slip,
-                    "total_return": r["total_return"],
-                    "max_drawdown": r["max_drawdown"],
-                    "win_rate": r["win_rate"],
-                    "trades": r["trades"],
-                })
+                rows.append(
+                    {
+                        "threshold": thresh,
+                        "fee": fee,
+                        "slippage": slip,
+                        "total_return": r["total_return"],
+                        "max_drawdown": r["max_drawdown"],
+                        "win_rate": r["win_rate"],
+                        "trades": r["trades"],
+                    }
+                )
     return {
         "results": rows,
         "data_meta": {
@@ -500,19 +512,21 @@ def walk_forward_run(
         signals = signals_from_proba(proba, thresh)
         r = backtest(test_df, signals, fee, slippage, proba, timeframe)
         mm = model_metrics(y.iloc[te].to_numpy(), proba)
-        folds.append({
-            "fold": len(folds),
-            "train_start": int(df.loc[X.index[tr]]["open_time"].iloc[0]),
-            "train_end": int(df.loc[X.index[tr]]["open_time"].iloc[-1]),
-            "test_start": int(test_df["open_time"].iloc[0]),
-            "test_end": int(test_df["open_time"].iloc[-1]),
-            "total_return": r["total_return"],
-            "max_drawdown": r["max_drawdown"],
-            "win_rate": r["win_rate"],
-            "trades": r["trades"],
-            "roc_auc": mm["roc_auc"],
-            "log_loss": mm["log_loss"],
-        })
+        folds.append(
+            {
+                "fold": len(folds),
+                "train_start": int(df.loc[X.index[tr]]["open_time"].iloc[0]),
+                "train_end": int(df.loc[X.index[tr]]["open_time"].iloc[-1]),
+                "test_start": int(test_df["open_time"].iloc[0]),
+                "test_end": int(test_df["open_time"].iloc[-1]),
+                "total_return": r["total_return"],
+                "max_drawdown": r["max_drawdown"],
+                "win_rate": r["win_rate"],
+                "trades": r["trades"],
+                "roc_auc": mm["roc_auc"],
+                "log_loss": mm["log_loss"],
+            }
+        )
     return {
         "folds": folds,
         "data_meta": {
@@ -531,10 +545,15 @@ def warmup() -> None:
     on JIT compilation. Best-effort: never raises.
     """
     closes = 100.0 + np.arange(20, dtype="float64") * 0.5
-    df = pd.DataFrame({
-        "open_time": [1_700_000_000_000 + i * 60_000 for i in range(len(closes))],
-        "open": closes, "high": closes + 1.0, "low": closes - 1.0,
-        "close": closes, "volume": [1.0] * len(closes),
-    })
+    df = pd.DataFrame(
+        {
+            "open_time": [1_700_000_000_000 + i * 60_000 for i in range(len(closes))],
+            "open": closes,
+            "high": closes + 1.0,
+            "low": closes - 1.0,
+            "close": closes,
+            "volume": [1.0] * len(closes),
+        }
+    )
     signals = np.array([1.0 if i % 2 == 0 else -1.0 for i in range(len(closes))])
     backtest(df, signals, fee=0.0004, slippage=0.0005, timeframe="1h")

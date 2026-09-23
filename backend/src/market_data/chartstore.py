@@ -68,9 +68,7 @@ def _validate_state(state: dict) -> dict:
     if not isinstance(drawings, list):
         raise ValueError("drawings must be a list")
     if len(drawings) > MAX_DRAWINGS_PER_SERIES:
-        raise ValueError(
-            f"too many drawings per series (>{MAX_DRAWINGS_PER_SERIES})"
-        )
+        raise ValueError(f"too many drawings per series (>{MAX_DRAWINGS_PER_SERIES})")
     for d in drawings:
         if not isinstance(d, dict) or not isinstance(d.get("name"), str):
             raise ValueError("each drawing must have a name")

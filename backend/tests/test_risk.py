@@ -35,8 +35,9 @@ def test_leverage_capped() -> None:
 def test_margin_reduced_by_total_cap() -> None:
     cfg = RiskConfig()  # 5% total
     pf = Portfolio(equity=1000.0)
-    pf.positions["ETHUSDT"] = Position("ETHUSDT", "long", margin=30.0, notional=3000.0,
-                                       entry_price=1.0, leverage=100)
+    pf.positions["ETHUSDT"] = Position(
+        "ETHUSDT", "long", margin=30.0, notional=3000.0, entry_price=1.0, leverage=100
+    )
     # 30 used, cap 50 -> only 20 room.
     s = size_position(1000.0, 100.0, cfg, pf, "BTCUSDT")
     assert s.margin == 20.0 and s.clamped
@@ -45,8 +46,9 @@ def test_margin_reduced_by_total_cap() -> None:
 def test_no_room_rejects() -> None:
     cfg = RiskConfig()
     pf = Portfolio(equity=1000.0)
-    pf.positions["ETHUSDT"] = Position("ETHUSDT", "long", margin=50.0, notional=5000.0,
-                                       entry_price=1.0, leverage=100)
+    pf.positions["ETHUSDT"] = Position(
+        "ETHUSDT", "long", margin=50.0, notional=5000.0, entry_price=1.0, leverage=100
+    )
     s = size_position(1000.0, 100.0, cfg, pf, "BTCUSDT")
     assert s.margin == 0.0 and "no available margin" in s.reason
 
@@ -60,16 +62,18 @@ def test_check_order_approves() -> None:
 def test_max_adds_rejects() -> None:
     cfg = RiskConfig(max_adds=2)
     pf = Portfolio(equity=1000.0)
-    pf.positions["BTCUSDT"] = Position("BTCUSDT", "long", margin=10.0, notional=1000.0,
-                                       entry_price=1.0, leverage=100, adds=2)
+    pf.positions["BTCUSDT"] = Position(
+        "BTCUSDT", "long", margin=10.0, notional=1000.0, entry_price=1.0, leverage=100, adds=2
+    )
     d = RiskEngine(cfg).check_order(pf, "BTCUSDT", 100.0)
     assert not d.approved and "adds" in d.reason
 
 
 def test_portfolio_full_rejects() -> None:
     pf = Portfolio(equity=1000.0)
-    pf.positions["ETHUSDT"] = Position("ETHUSDT", "long", margin=50.0, notional=5000.0,
-                                       entry_price=1.0, leverage=100)
+    pf.positions["ETHUSDT"] = Position(
+        "ETHUSDT", "long", margin=50.0, notional=5000.0, entry_price=1.0, leverage=100
+    )
     d = RiskEngine().check_order(pf, "BTCUSDT", 100.0)
     assert not d.approved
 
@@ -77,8 +81,9 @@ def test_portfolio_full_rejects() -> None:
 def test_check_order_reduces_when_partial_room() -> None:
     # ETH uses 30 of the 50 total cap -> BTC order approved but reduced to 20.
     pf = Portfolio(equity=1000.0)
-    pf.positions["ETHUSDT"] = Position("ETHUSDT", "long", margin=30.0, notional=3000.0,
-                                       entry_price=1.0, leverage=100)
+    pf.positions["ETHUSDT"] = Position(
+        "ETHUSDT", "long", margin=30.0, notional=3000.0, entry_price=1.0, leverage=100
+    )
     d = RiskEngine().check_order(pf, "BTCUSDT", 100.0)
     assert d.approved and d.margin == 20.0 and d.notional == 2000.0
     assert "reduced" in d.reason
@@ -102,8 +107,8 @@ def test_circuit_breaker_within_limit() -> None:
 def test_stop_earlier_than_liquidation() -> None:
     cfg = RiskConfig()  # 15%
     equity, notional = 1000.0, 5000.0
-    liq = liquidation_move_pct(notional, equity)   # ~20%
-    stop = stop_move_pct(notional, equity, cfg)     # ~3%
+    liq = liquidation_move_pct(notional, equity)  # ~20%
+    stop = stop_move_pct(notional, equity, cfg)  # ~3%
     assert stop < liq
     assert abs(stop / liq - cfg.max_drawdown_pct) < 1e-9  # ratio == max_drawdown_pct
 

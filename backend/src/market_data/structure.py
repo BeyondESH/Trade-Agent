@@ -71,9 +71,7 @@ def fit_trendlines(
         if fit is None:
             continue
         slope, intercept = fit
-        result.append(
-            Trendline(label, slope, intercept, projection=slope * last_x + intercept)
-        )
+        result.append(Trendline(label, slope, intercept, projection=slope * last_x + intercept))
     return result
 
 

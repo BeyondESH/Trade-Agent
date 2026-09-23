@@ -30,6 +30,16 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/market_data"]
 
+[dependency-groups]
+# Development-only tooling. `httpx` is required by the FastAPI TestClient
+# used in the test suite but is not a runtime dependency.
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "httpx>=0.28",
+    "ruff>=0.9",
+]
+
 [tool.uv]
 package = true
 
@@ -40,3 +50,39 @@ markers = [
     "online: tests that require external network (Bitget/BlockBeats), skipped when unreachable",
 ]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["src/market_data/_vendor"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Rules intentionally NOT ignored are enforced by CI (see .github/workflows/ci.yml).
+# Any rule disabled below MUST carry the reason + the ratchet plan to re-enable it.
+ignore = [
+    # B008 (function-call-in-default-argument) fires on FastAPI's idiomatic
+    # `Depends()` / `Body()` defaults, which are the framework's documented
+    # dependency-injection pattern. Ratchet: re-enable if we migrate to
+    # Annotated-style dependencies everywhere.
+    "B008",
+]
+
+[tool.coverage.run]
+source = ["market_data"]
+branch = false
+
+[tool.coverage.report]
+# Ratchet policy ("只升不降"): measured baseline at introduction was 81% total
+# (356 unit tests, `pytest -q -m "not integrity and not live and not online"`).
+# The gate is this baseline floored DOWN to a multiple of 5, so it can never be
+# above the measured value. Future changes MUST only raise it, never lower it.
+fail_under = 80
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

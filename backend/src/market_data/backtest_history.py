@@ -26,10 +26,29 @@ SCHEMA = "vectorbt"
 
 SERIES_LANES = ("open_time", "equity", "drawdown", "signal", "proba", "benchmark")
 SCALAR_KEYS = ("total_return", "max_drawdown", "win_rate", "trades", "bars", "test_bars")
-TRADE_KEYS = ("side", "entry_time", "entry_price", "exit_time", "exit_price",
-              "bars", "gross_return", "net_return")
-META_KEYS = ("id", "created_at", "category", "symbol", "timeframe",
-             "params", "factors", "metrics", "data_meta", "schema", "legacy")
+TRADE_KEYS = (
+    "side",
+    "entry_time",
+    "entry_price",
+    "exit_time",
+    "exit_price",
+    "bars",
+    "gross_return",
+    "net_return",
+)
+META_KEYS = (
+    "id",
+    "created_at",
+    "category",
+    "symbol",
+    "timeframe",
+    "params",
+    "factors",
+    "metrics",
+    "data_meta",
+    "schema",
+    "legacy",
+)
 DETAIL_KEYS = META_KEYS + ("stats", "model_metrics", "feature_weights", "roc_curve")
 
 
@@ -161,8 +180,9 @@ class BacktestHistoryStore:
             self._save(remaining)
             return True
 
-    def save(self, series_ref: dict, params: dict | None, factors: list | None,
-             result: dict) -> dict | None:
+    def save(
+        self, series_ref: dict, params: dict | None, factors: list | None, result: dict
+    ) -> dict | None:
         """Persist a completed backtest result. Returns the metadata, or None
         when the result is an error dict (failed pipeline) — failed runs are
         not recorded. Evicts the oldest run when full."""
@@ -170,26 +190,30 @@ class BacktestHistoryStore:
             return None
         metrics = {k: result[k] for k in SCALAR_KEYS if k in result}
         series = result.get("series") or {}
-        entry = _validate_entry({
-            "id": uuid.uuid4().hex[:12],
-            "created_at": int(time.time() * 1000),
-            "category": series_ref["category"],
-            "symbol": series_ref["symbol"],
-            "timeframe": series_ref["timeframe"],
-            "params": params or {},
-            "factors": factors or [],
-            "metrics": metrics,
-            "trade_list": result.get("trade_list") or [],
-            "series": {lane: downsample(series.get(lane, []), MAX_SERIES_POINTS)
-                       for lane in SERIES_LANES},
-            "data_meta": result.get("data_meta") or {},
-            "stats": result.get("stats") or {},
-            "model_metrics": result.get("model_metrics") or {},
-            "feature_weights": result.get("feature_weights"),
-            "roc_curve": result.get("roc_curve"),
-            "schema": SCHEMA,
-            "legacy": False,
-        })
+        entry = _validate_entry(
+            {
+                "id": uuid.uuid4().hex[:12],
+                "created_at": int(time.time() * 1000),
+                "category": series_ref["category"],
+                "symbol": series_ref["symbol"],
+                "timeframe": series_ref["timeframe"],
+                "params": params or {},
+                "factors": factors or [],
+                "metrics": metrics,
+                "trade_list": result.get("trade_list") or [],
+                "series": {
+                    lane: downsample(series.get(lane, []), MAX_SERIES_POINTS)
+                    for lane in SERIES_LANES
+                },
+                "data_meta": result.get("data_meta") or {},
+                "stats": result.get("stats") or {},
+                "model_metrics": result.get("model_metrics") or {},
+                "feature_weights": result.get("feature_weights"),
+                "roc_curve": result.get("roc_curve"),
+                "schema": SCHEMA,
+                "legacy": False,
+            }
+        )
         with self._lock:
             entries = self._load()
             entries.insert(0, entry)

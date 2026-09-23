@@ -188,7 +188,6 @@ class _RestStore:
 
 
 def test_rest_incremental_fills_gap(monkeypatch) -> None:  # noqa: ANN001
-    from market_data import scheduler as scheduler_mod
     from market_data.scheduler import run_incremental_pull_rest
 
     # series: 5m, latest bar at BASE -> should fetch rows > BASE and save them.
@@ -197,7 +196,8 @@ def test_rest_incremental_fills_gap(monkeypatch) -> None:  # noqa: ANN001
         [BASE + 2 * STEP, 100.5, 102.0, 100.0, 101.5, 11.0],
     ]
     monkeypatch.setattr(
-        KlineIngestor, "_fetch_v3_history_page",
+        KlineIngestor,
+        "_fetch_v3_history_page",
         staticmethod(lambda category, symbol, granularity, end_ms, limit: rows),
     )
     store = _RestStore(latest=BASE)
@@ -221,9 +221,7 @@ def test_rest_incremental_skips_when_up_to_date(monkeypatch) -> None:  # noqa: A
         called.append(1)
         return []
 
-    monkeypatch.setattr(
-        KlineIngestor, "_fetch_v3_history_page", staticmethod(fake_fetch)
-    )
+    monkeypatch.setattr(KlineIngestor, "_fetch_v3_history_page", staticmethod(fake_fetch))
     # latest within the current second => start_ms >= end_ms, no fetch.
     store = _RestStore(latest=int(time.time() * 1000) + 100_000)
     settings = types.SimpleNamespace(
@@ -261,8 +259,11 @@ def test_build_rest_scheduler_registers_job() -> None:  # noqa: ANN001
 
     store = _RestStore(latest=0)
     settings = types.SimpleNamespace(
-        symbols=["BTCUSDT"], timeframes=["5m"], category="USDT-FUTURES",
-        candle_page_limit=100, schedule_interval_seconds=300,
+        symbols=["BTCUSDT"],
+        timeframes=["5m"],
+        category="USDT-FUTURES",
+        candle_page_limit=100,
+        schedule_interval_seconds=300,
     )
     sched = build_rest_scheduler(store, settings)
     try:

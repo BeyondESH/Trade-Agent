@@ -16,8 +16,9 @@ import socket
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
+from typing import IO
 
 import httpx
 import pandas as pd
@@ -57,7 +58,9 @@ def seed_store(tmp_settings: Settings) -> ParquetStore:
     """
     store = ParquetStore(tmp_settings.parquet_dir)
 
-    def _frame(symbol: str, timeframe: str, n: int, step_ms: int, gap: tuple[int, int] | None = None) -> pd.DataFrame:
+    def _frame(
+        symbol: str, timeframe: str, n: int, step_ms: int, gap: tuple[int, int] | None = None
+    ) -> pd.DataFrame:
         rows = []
         idx = 0
         base = SEED_BASE
@@ -70,7 +73,10 @@ def seed_store(tmp_settings: Settings) -> ParquetStore:
         return pd.DataFrame(rows, columns=["open_time", "open", "high", "low", "close", "volume"])
 
     store.save(Series("USDT-FUTURES", "BTCUSDT", "1m"), _frame("BTCUSDT", "1m", 120, 60_000))
-    store.save(Series("USDT-FUTURES", "BTCUSDT", "1h"), _frame("BTCUSDT", "1h", 72, 3_600_000, gap=(30, 33)))
+    store.save(
+        Series("USDT-FUTURES", "BTCUSDT", "1h"),
+        _frame("BTCUSDT", "1h", 72, 3_600_000, gap=(30, 33)),
+    )
     store.save(Series("USDT-FUTURES", "ETHUSDT", "1h"), _frame("ETHUSDT", "1h", 48, 3_600_000))
     store.save(Series("USDT-FUTURES", "SOLUSDT", "1h"), _frame("SOLUSDT", "1h", 48, 3_600_000))
     return store
@@ -102,18 +108,84 @@ def blockbeats_reachable() -> bool:
     return _external_reachable("https://api.blockbeats.info/newsflash/list")
 
 
-def _spawn_live(env: dict[str, str], port: int) -> tuple[subprocess.Popen, Path]:
+def _spawn_live(env: dict[str, str], port: int) -> tuple[subprocess.Popen, Path, IO[str]]:
+    """Spawn uvicorn, redirecting output to a log file we explicitly own.
+
+    Returns (proc, log_path, log_fh); the caller must close log_fh on teardown.
+    """
     root = Path(__file__).resolve().parents[1]
     log_path = Path(env["MD_DATA_DIR"]) / "uvicorn.log"
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "market_data.webapi:create_app", "--factory",
-         "--host", "127.0.0.1", "--port", str(port)],
-        cwd=str(root),
-        env=env,
-        stdout=log_path.open("w", encoding="utf-8", errors="replace"),
-        stderr=subprocess.STDOUT,
-    )
-    return proc, log_path
+    log_fh = log_path.open("w", encoding="utf-8", errors="replace")
+    try:
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "market_data.webapi:create_app",
+                "--factory",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+            ],
+            cwd=str(root),
+            env=env,
+            stdout=log_fh,
+            stderr=subprocess.STDOUT,
+        )
+    except Exception:
+        log_fh.close()
+        raise
+    return proc, log_path, log_fh
+
+
+def _read_log_tail(log_path: Path, limit: int = 3000) -> str:
+    if not log_path.exists():
+        return "(no log)"
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return "(log unreadable)"
+    return text[-limit:]
+
+
+def _scan_log_for_bind(log_path: Path, offset: int) -> tuple[bool, int]:
+    """Scan newly appended log bytes for uvicorn's bind line (accelerator)."""
+    try:
+        with log_path.open("r", encoding="utf-8", errors="replace") as fh:
+            fh.seek(offset)
+            chunk = fh.read()
+            return ("Uvicorn running on" in chunk), fh.tell()
+    except OSError:
+        return False, offset
+
+
+def _wait_for_ready(
+    base: str, proc: subprocess.Popen, log_path: Path, timeout: float
+) -> tuple[bool, float, str]:
+    """Adaptively wait for the child, returning as soon as either channel is ready.
+
+    Channel 1 (authoritative): GET /health returns 200.
+    Channel 2 (accelerator/diagnostics): the log shows ``Uvicorn running on``.
+
+    Returns (ready, elapsed_seconds, log_tail). Fails fast when the child exits
+    before becoming ready.
+    """
+    start = time.time()
+    offset = 0
+    while True:
+        elapsed = time.time() - start
+        if _backend_reachable(base, timeout=1.0):
+            return True, elapsed, _read_log_tail(log_path)
+        if proc.poll() is not None:
+            return False, elapsed, _read_log_tail(log_path)
+        matched, offset = _scan_log_for_bind(log_path, offset)
+        if matched:
+            return True, time.time() - start, _read_log_tail(log_path)
+        if elapsed >= timeout:
+            return False, elapsed, _read_log_tail(log_path)
+        time.sleep(0.2)
 
 
 @pytest.fixture(scope="session")
@@ -152,29 +224,31 @@ def live_server(tmp_path_factory) -> Iterator[str]:
     env["MD_DATA_DIR"] = str(data_dir)
     env["MD_SCHEDULE_INTERVAL_SECONDS"] = "0"
     env["MD_LOG_LEVEL"] = "WARNING"
-    proc, log_path = _spawn_live(env, port)
+    timeout = float(os.environ.get("MD_TEST_SERVER_START_TIMEOUT", "180"))
+    proc, log_path, log_fh = _spawn_live(env, port)
     base = f"http://127.0.0.1:{port}"
     try:
-        deadline = time.time() + 45
-        ready = False
-        while time.time() < deadline:
-            if proc.poll() is not None:
-                break
-            if _backend_reachable(base, timeout=1.0):
-                ready = True
-                break
-            time.sleep(0.25)
+        ready, elapsed, tail = _wait_for_ready(base, proc, log_path, timeout)
         if not ready:
-            log_text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else "(no log)"
-            proc.kill()
-            pytest.fail(f"live server failed to start on {base}:\n{log_text[-3000:]}")
+            pytest.fail(
+                f"live server failed to start on {base} after {elapsed:.1f}s "
+                f"(timeout={timeout:.0f}s, proc.poll()={proc.poll()});\n"
+                f"--- uvicorn log tail ---\n{tail}"
+            )
+        logger.info("live server ready in %.1fs: %s", elapsed, base)
         yield base
     finally:
-        proc.terminate()
         try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+            if proc.poll() is None:
+                proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        finally:
+            if not log_fh.closed:
+                log_fh.close()
 
 
 @pytest.fixture(scope="session")
@@ -186,12 +260,22 @@ def live_backend_or_skip(live_server: str) -> str:
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:  # noqa: ANN001
-    """Auto-skip --online-marked tests when the live backend is not reachable."""
+    """Gate the opt-in subsets at collection time (no heavy fixtures instantiated)."""
     if not config.getoption("--run-online", default=False):
         for item in items:
             if "online" in item.keywords:
                 item.add_marker(
-                    pytest.mark.skipif(True, reason="--run-online not passed; online subset disabled")
+                    pytest.mark.skipif(
+                        True, reason="--run-online not passed; online subset disabled"
+                    )
+                )
+    if not config.getoption("--run-live", default=False):
+        for item in items:
+            if "live" in item.keywords:
+                item.add_marker(
+                    pytest.mark.skipif(
+                        True, reason="--run-live not passed; L2 live subset disabled"
+                    )
                 )
 
 
@@ -201,4 +285,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store_true",
         default=False,
         help="run tests marked --online (require external network / live data)",
+    )
+    parser.addoption(
+        "--run-live",
+        action="store_true",
+        default=False,
+        help="run tests marked live (L2: spawn a real uvicorn subprocess)",
     )

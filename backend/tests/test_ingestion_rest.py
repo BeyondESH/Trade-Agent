@@ -51,8 +51,14 @@ def test_rest_backfill_paginates_and_saves_gapless() -> None:
         assert calls == [(BASE, 3), (BASE - 4 * STEP, 3)]
         df = store.read(series)
         times = [int(t) for t in df["open_time"].tolist()]
-        assert times == [BASE - 6 * STEP, BASE - 5 * STEP, BASE - 4 * STEP,
-                         BASE - 3 * STEP, BASE - 2 * STEP, BASE - 1 * STEP]
+        assert times == [
+            BASE - 6 * STEP,
+            BASE - 5 * STEP,
+            BASE - 4 * STEP,
+            BASE - 3 * STEP,
+            BASE - 2 * STEP,
+            BASE - 1 * STEP,
+        ]
 
 
 def test_rest_backfill_retries_empty_page_then_saves() -> None:
@@ -69,8 +75,13 @@ def test_rest_backfill_retries_empty_page_then_saves() -> None:
 
         sleeps: list[float] = []
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, fetch_page=fake_fetch, max_pages=1,
-            backoff_base=0.25, page_delay=0.0, sleep=lambda s: sleeps.append(s),
+            series,
+            BASE,
+            fetch_page=fake_fetch,
+            max_pages=1,
+            backoff_base=0.25,
+            page_delay=0.0,
+            sleep=lambda s: sleeps.append(s),
         )
         assert appended == 2
         assert earliest is False  # retry succeeded; pagination completed normally
@@ -88,8 +99,13 @@ def test_rest_backfill_empty_after_retry_is_earliest() -> None:
 
         sleeps: list[float] = []
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, fetch_page=fake_fetch, max_pages=3,
-            backoff_base=0.1, page_delay=0.0, sleep=lambda s: sleeps.append(s),
+            series,
+            BASE,
+            fetch_page=fake_fetch,
+            max_pages=3,
+            backoff_base=0.1,
+            page_delay=0.0,
+            sleep=lambda s: sleeps.append(s),
         )
         assert appended == 0
         assert earliest is True
@@ -115,8 +131,13 @@ def test_rest_backfill_short_page_does_not_stop() -> None:
 
         sleeps: list[float] = []
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, fetch_page=fake_fetch, max_pages=4,
-            backoff_base=0.05, page_delay=0.0, sleep=lambda s: sleeps.append(s),
+            series,
+            BASE,
+            fetch_page=fake_fetch,
+            max_pages=4,
+            backoff_base=0.05,
+            page_delay=0.0,
+            sleep=lambda s: sleeps.append(s),
         )
         assert appended == 6  # walked past the short page to older data
         assert earliest is True  # stopped on an empty page after retry
@@ -138,8 +159,13 @@ def test_rest_backfill_rate_limit_retries_then_succeeds() -> None:
 
         sleeps: list[float] = []
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, fetch_page=fake_fetch, max_pages=2,
-            max_retries=2, backoff_base=0.1, page_delay=0.0,
+            series,
+            BASE,
+            fetch_page=fake_fetch,
+            max_pages=2,
+            max_retries=2,
+            backoff_base=0.1,
+            page_delay=0.0,
             sleep=lambda s: sleeps.append(s),
         )
         assert appended == 3
@@ -158,7 +184,11 @@ def test_rest_backfill_parallel_merges_and_dedupes() -> None:
             return [[end_ms - i * STEP, 1, 2, 0, 1, 1] for i in range(1, 4)]
 
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, fetch_page=fake_fetch, max_pages=3, parallel=True,
+            series,
+            BASE,
+            fetch_page=fake_fetch,
+            max_pages=3,
+            parallel=True,
         )
         assert earliest is False
         assert appended == 9  # BASE-1 .. BASE-9, contiguous
@@ -178,8 +208,12 @@ def test_rest_backfill_parallel_oldest_empty_is_earliest() -> None:
             return []
 
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, fetch_page=fake_fetch, max_pages=3,
-            backoff_base=0.05, parallel=True,
+            series,
+            BASE,
+            fetch_page=fake_fetch,
+            max_pages=3,
+            backoff_base=0.05,
+            parallel=True,
         )
         assert appended == 3
         assert earliest is True
@@ -285,7 +319,10 @@ def test_v3_fetch_page_error_code_raises(monkeypatch) -> None:  # noqa: ANN001
             return None
 
         def json(self) -> dict:
-            return {"code": "00001", "msg": "startTime and endTime interval cannot be greater than 90 day"}
+            return {
+                "code": "00001",
+                "msg": "startTime and endTime interval cannot be greater than 90 day",
+            }
 
     def fake_get(url, params=None, timeout=None):  # noqa: ANN001, ARG001
         return _Resp()
@@ -311,10 +348,18 @@ def test_backfill_rest_default_fetcher_is_v3(monkeypatch) -> None:  # noqa: ANN0
             captured["limit"] = limit
             return []
 
-        monkeypatch.setattr(ingestion_mod.KlineIngestor, "_fetch_v3_history_page", staticmethod(fake_v3))
+        monkeypatch.setattr(
+            ingestion_mod.KlineIngestor, "_fetch_v3_history_page", staticmethod(fake_v3)
+        )
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, max_pages=1, page_delay=0.0, parallel=False,
-            max_retries=1, backoff_base=0.05, sleep=lambda s: None,
+            series,
+            BASE,
+            max_pages=1,
+            page_delay=0.0,
+            parallel=False,
+            max_retries=1,
+            backoff_base=0.05,
+            sleep=lambda s: None,
         )
         assert appended == 0
         assert earliest is True  # v3 empty page (after retry) is the history end
@@ -336,7 +381,11 @@ def test_rest_backfill_parallel_v3_window_and_merges() -> None:
             return [[end_ms - i * STEP, 1, 2, 0, 1, 1] for i in range(1, 4)]
 
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, fetch_page=fake_fetch, max_pages=3, parallel=True,
+            series,
+            BASE,
+            fetch_page=fake_fetch,
+            max_pages=3,
+            parallel=True,
         )
         assert earliest is False
         assert appended == 9  # 3 pages x 3 rows, contiguous, deduped
@@ -355,8 +404,12 @@ def test_rest_backfill_parallel_v3_oldest_empty_is_earliest() -> None:
             return []
 
         appended, earliest = ing.backfill_before_rest(
-            series, BASE, fetch_page=fake_fetch, max_pages=3,
-            backoff_base=0.05, parallel=True,
+            series,
+            BASE,
+            fetch_page=fake_fetch,
+            max_pages=3,
+            backoff_base=0.05,
+            parallel=True,
         )
         assert appended == 3
         assert earliest is True

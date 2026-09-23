@@ -19,9 +19,7 @@ def ema(series: pd.Series, span: int) -> pd.Series:
     return series.ewm(span=span, adjust=False).mean()
 
 
-def macd(
-    close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
-) -> pd.DataFrame:
+def macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> pd.DataFrame:
     ind = vbt.MACD.run(
         close,
         fast_window=fast,
@@ -30,14 +28,10 @@ def macd(
         macd_ewm=True,
         signal_ewm=True,
     )
-    return pd.DataFrame(
-        {"dif": ind.macd, "dea": ind.signal, "macd_hist": ind.hist}
-    )
+    return pd.DataFrame({"dif": ind.macd, "dea": ind.signal, "macd_hist": ind.hist})
 
 
-def kdj(
-    high: pd.Series, low: pd.Series, close: pd.Series, n: int = 9
-) -> pd.DataFrame:
+def kdj(high: pd.Series, low: pd.Series, close: pd.Series, n: int = 9) -> pd.DataFrame:
     """Chinese-style KDJ (rsv -> ewm(1/3) K/D, J = 3K - 2D). No vectorbt native."""
     low_min = low.rolling(n).min()
     high_max = high.rolling(n).max()
@@ -51,9 +45,7 @@ def kdj(
 
 def bollinger(close: pd.Series, n: int = 20, mult: float = 2.0) -> pd.DataFrame:
     ind = vbt.BBANDS.run(close, window=n, alpha=mult)
-    return pd.DataFrame(
-        {"boll_mid": ind.middle, "boll_upper": ind.upper, "boll_lower": ind.lower}
-    )
+    return pd.DataFrame({"boll_mid": ind.middle, "boll_upper": ind.upper, "boll_lower": ind.lower})
 
 
 def vegas(close: pd.Series) -> pd.DataFrame:
@@ -90,9 +82,7 @@ def mom(close: pd.Series, n: int = 10) -> pd.Series:
 FIB_RATIOS = (0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0)
 
 
-def fib_levels(
-    high: pd.Series, low: pd.Series, lookback: int = 120
-) -> dict[float, float]:
+def fib_levels(high: pd.Series, low: pd.Series, lookback: int = 120) -> dict[float, float]:
     """Fibonacci retracement over the most recent `lookback` bars.
 
     Returns {ratio: price} measured from swing high down toward swing low.

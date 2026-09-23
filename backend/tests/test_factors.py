@@ -15,7 +15,6 @@ from market_data.dlquant import build_features, run_pipeline
 from market_data.factors import (
     DEFAULT_FACTORS,
     FactorDef,
-    compute_factors,
     evaluate_expr,
     resolve_factors,
 )
@@ -28,11 +27,16 @@ def _df(n: int = 200, closes=None) -> pd.DataFrame:  # noqa: ANN001
     if closes is None:
         closes = 100 + np.cumsum(np.sin(np.arange(n) / 5))
     closes = np.asarray(closes, dtype="float64")
-    return pd.DataFrame({
-        "open_time": [BASE + i * STEP for i in range(len(closes))],
-        "open": closes, "high": closes + 1.0, "low": closes - 1.0,
-        "close": closes, "volume": [1.0] * len(closes),
-    })
+    return pd.DataFrame(
+        {
+            "open_time": [BASE + i * STEP for i in range(len(closes))],
+            "open": closes,
+            "high": closes + 1.0,
+            "low": closes - 1.0,
+            "close": closes,
+            "volume": [1.0] * len(closes),
+        }
+    )
 
 
 # -- 4.1 expression evaluator ------------------------------------------------
@@ -54,8 +58,15 @@ def test_expression_deterministic() -> None:
 def test_expression_rejects_injection() -> None:
     df = _df(200)
     bad = [
-        "close.__class__", "import os", "close[0]", "close.close",
-        "open(0)", "lambda x: x", "close;pass", "x = 1", "eval('1')",
+        "close.__class__",
+        "import os",
+        "close[0]",
+        "close.close",
+        "open(0)",
+        "lambda x: x",
+        "close;pass",
+        "x = 1",
+        "eval('1')",
         "close < 1",
     ]
     for expr in bad:
@@ -132,8 +143,14 @@ def test_series_position_takes_effect_next_bar() -> None:
 
 
 def test_factor_params_roundtrip() -> None:
-    d = {"id": "rsi_21", "name": "RSI", "kind": "preset", "fn": "rsi",
-         "params": {"period": 21}, "enabled": True}
+    d = {
+        "id": "rsi_21",
+        "name": "RSI",
+        "kind": "preset",
+        "fn": "rsi",
+        "params": {"period": 21},
+        "enabled": True,
+    }
     fd = FactorDef.from_dict(d)
     assert fd.id == "rsi_21" and fd.params == {"period": 21}
     assert FactorDef.from_dict(fd.to_dict()) == fd

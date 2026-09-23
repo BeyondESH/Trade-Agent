@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 import market_data.blockbeats_cache as cache
 from market_data import blockbeats
@@ -58,7 +58,9 @@ def test_no_param_endpoints_exclude_param_bearing(tmp_settings):
 def test_path_for_names(tmp_settings):
     cache_dir = tmp_settings.blockbeats_cache_dir
     assert cache.path_for("btc_etf") == cache_dir / "btc_etf.json"
-    assert cache.path_for("top10_netflow", network="solana") == cache_dir / "top10_netflow.solana.json"
+    assert (
+        cache.path_for("top10_netflow", network="solana") == cache_dir / "top10_netflow.solana.json"
+    )
     assert cache.path_for("us10y", type="1M") == cache_dir / "us10y.1M.json"
 
 

@@ -9,14 +9,21 @@ from market_data.news_broker import NewsBroker
 
 
 def _mk(source: str, title: str) -> dict:
-    return newsfeed.build_item(source, {"title": title, "content": "", "url": None, "ts": 1_700_000_000})
+    return newsfeed.build_item(
+        source, {"title": title, "content": "", "url": None, "ts": 1_700_000_000}
+    )
 
 
 def test_categories_exposed() -> None:
     broker = NewsBroker()
     assert broker.categories == [
-        "crypto", "macro", "policy", "a-share",
-        "global-market", "industry", "company",
+        "crypto",
+        "macro",
+        "policy",
+        "a-share",
+        "global-market",
+        "industry",
+        "company",
     ]
 
 

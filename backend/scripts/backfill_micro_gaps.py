@@ -11,7 +11,7 @@ gap status per series. Run from backend/:
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -19,18 +19,18 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tests"))
 
+from data_registry import KNOWN_GAPS  # noqa: E402
+
 from market_data.ingestion import KlineIngestor  # noqa: E402
 from market_data.models import Series, timeframe_step_ms, timeframe_to_granularity  # noqa: E402
 from market_data.store import ParquetStore  # noqa: E402
-
-from data_registry import KNOWN_GAPS  # noqa: E402
 
 STORE = ParquetStore(Path("data/parquet"))
 TYPE_A_MIN_STEPS = 5
 
 
 def ms_dt(ms: int) -> str:
-    return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%d %H:%M")
+    return datetime.fromtimestamp(ms / 1000, UTC).strftime("%Y-%m-%d %H:%M")
 
 
 def classify_gaps(series: Series) -> list[tuple[int, int, int]]:
@@ -85,7 +85,9 @@ def main() -> None:
                 else:
                     print(f"    gap {ms_dt(lo_ms)} -> {ms_dt(hi_ms)}: no new rows (gap still open)")
             except Exception as exc:  # noqa: BLE001
-                print(f"    gap {ms_dt(lo_ms)} -> {ms_dt(hi_ms)}: ERROR {type(exc).__name__}: {exc}")
+                print(
+                    f"    gap {ms_dt(lo_ms)} -> {ms_dt(hi_ms)}: ERROR {type(exc).__name__}: {exc}"
+                )
 
         after = remaining_b_gaps(series)
         print(f"[{key}] after: {len(after)} micro-gaps")

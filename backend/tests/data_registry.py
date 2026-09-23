@@ -52,6 +52,7 @@ STRUCTURAL_EXEMPTIONS = {
     ],
 }
 
+
 def is_exempt(series: str, lo_ms: int, hi_ms: int, min_steps: int = 5) -> bool:
     if min_steps >= 5:
         for s, hi in STRUCTURAL_EXEMPTIONS.get(series, []):

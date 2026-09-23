@@ -68,7 +68,7 @@ def test_downsample_long_thinned() -> None:
     assert len(out) == MAX_SERIES_POINTS
     # indices are increasing and span the original range.
     assert out[0] == 0 and out[-1] == 999
-    assert all(b > a for a, b in zip(out, out[1:]))
+    assert all(b > a for a, b in zip(out, out[1:], strict=False))
 
 
 def test_save_and_get_roundtrip(tmp_path) -> None:  # noqa: ANN001
@@ -139,8 +139,12 @@ def test_load_handles_corrupt_file(tmp_path) -> None:  # noqa: ANN001
 def test_save_stats_and_model_metrics(tmp_path) -> None:  # noqa: ANN001
     store = BacktestHistoryStore(tmp_path / "history.json")
     result = _result(10)
-    result["stats"] = {"sharpe_ratio": 1.42, "sortino_ratio": 1.1,
-                       "calmar_ratio": 0.9, "profit_factor": 2.1}
+    result["stats"] = {
+        "sharpe_ratio": 1.42,
+        "sortino_ratio": 1.1,
+        "calmar_ratio": 0.9,
+        "profit_factor": 2.1,
+    }
     result["model_metrics"] = {"roc_auc": 0.72, "log_loss": 0.61}
     saved = store.save(SERIES_REF, {"model": "hgb"}, None, result)
     # List metadata excludes heavy per-run fields.
