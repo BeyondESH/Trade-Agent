@@ -1,0 +1,104 @@
+name: CI
+
+on: [push, pull_request]
+
+# Marker matrix (see `openspec/specs/ci-quality-gates`):
+#   unit      pytest -q                      -> live/online auto-deselected
+#   L1        pytest -m integrity            -> parquet data-quality gate (skips w/o data)
+#   L2        pytest -m live --run-live      -> isolated job (spawns a real uvicorn)
+#   online    pytest --run-online            -> NEVER used here; stays skipped by design
+# Playwright E2E (`npm run test:e2e`) is intentionally NOT part of CI: it needs
+# browser binaries downloaded per run and is much slower; run it locally.
+
+jobs:
+  backend:
+    name: backend (lint + unit + L1)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      # `--frozen` installs exactly `backend/uv.lock`; CI must never resolve
+      # versions that differ from the committed lockfile.
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: ruff lint
+        run: uv run ruff check .
+
+      - name: ruff format check
+        run: uv run ruff format --check .
+
+      - name: Unit regression
+        run: uv run pytest -q
+
+      - name: L1 data integrity
+        run: uv run pytest -m integrity
+
+      # Enforces `[tool.coverage.report] fail_under` from backend/pyproject.toml.
+      # Kept as its own step (rather than `addopts`) so the L1 run above is not
+      # measured against the unit-test coverage baseline.
+      - name: Coverage gate
+        run: uv run pytest -q --cov=market_data --cov-report=term-missing
+
+  backend-l2:
+    name: backend (L2 live)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      # Dedicated job: the L2 suite boots a real uvicorn subprocess, so it gets
+      # a clean process instead of sharing one with the unit regression.
+      - name: L2 live API/WS
+        run: uv run pytest -m live --run-live
+
+  frontend:
+    name: frontend (lint + typecheck + test + coverage)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: lint
+        run: npm run lint
+
+      - name: format check
+        run: npm run format:check
+
+      - name: typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Coverage gate
+        run: npm run test:coverage

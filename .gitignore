@@ -13,3 +13,17 @@ opencode.json
 .agents/skills/codemap-*/
 .agents/skills/code-index-*/
 .cursor/
+
+# Local agent workspace (never shared).
+.omo/
+
+# Build / export artifacts must not be tracked (e.g. generated AP config dumps).
+build_ap_cmh.json
+
+# Test & lint tool caches and coverage output (backend pytest-cov, frontend vitest).
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.json
+htmlcov/
+coverage/

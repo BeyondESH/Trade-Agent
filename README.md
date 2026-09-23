@@ -164,6 +164,7 @@ market-data memory
 | `MD_CATEGORY` | `USDT-FUTURES` | 默认产品线 |
 | `MD_CATEGORIES` | `SPOT,USDT-FUTURES` | 交易所行情中枢覆盖的产品线列表 |
 | `MD_SCHEDULE_INTERVAL_SECONDS` | `300` | 定时增量拉取周期 |
+| `MD_AGENT_SCHEDULE_ENABLED` | `false` | 是否启用定时 Agent 交易与 DL 重训（默认关闭；熔断执行安全任务始终运行） |
 | `MD_MCP_COMMAND` / `MD_MCP_ARGS` | `npx` / `@bitget-ai/bitget-agent-mcp` | Bitget MCP 启动命令 |
 | `MD_CANDLE_PAGE_LIMIT` | `100` | 单请求 K 线页大小 |
 | `MD_REST_CANDLE_PAGE_LIMIT` | `500` | REST v2 深回填页大小 |
@@ -174,7 +175,7 @@ market-data memory
 | `MD_WS_PUBLIC_URL` | Bitget 官方 | 公共 WebSocket 地址 |
 | `MD_WS_HEARTBEAT_SECONDS` | `30` | WS 心跳间隔 |
 | `MD_WS_RECONNECT_SECONDS` | `5` | WS 断线重连间隔 |
-| `MD_BLOCKBEATS_REFRESH_HOUR` / `MINUTE` | `12` / `0` | BlockBeats 数据缓存每日刷新时刻 |
+| `MD_BLOCKBEATS_REFRESH_HOUR` / `MD_BLOCKBEATS_REFRESH_MINUTE` | `12` / `0` | BlockBeats 数据缓存每日刷新时刻 |
 | `MD_LOG_LEVEL` | `INFO` | 日志级别 |
 
 ## 测试
@@ -184,7 +185,7 @@ market-data memory
 | 层 | 命令 | 覆盖 |
 |---|---|---|
 | L1 数据完整性 | `cd backend && python -m pytest -m integrity` | Parquet 全序列质量（单调性 / OHLC / 缺口白名单） |
-| L2 实时 API/WS | `cd backend && python -m pytest tests/test_live_api.py tests/test_live_ws.py` | 真实 uvicorn 进程的 REST + WS 全通道 |
+| L2 实时 API/WS | `cd backend && python -m pytest -m live --run-live` | 真实 uvicorn 进程的 REST + WS 全通道 |
 | L3 浏览器旅程 | `cd frontend && npm run test:e2e` | Playwright 用户旅程（自动起 vite + 后端） |
 
 单元回归：
@@ -192,6 +193,44 @@ market-data memory
 ```bash
 cd backend && python -m pytest -q
 cd frontend && npm run test && npm run typecheck
+```
+
+> 标记说明：`--run-online` 启用需外网的 `online` 用例（缺省跳过）；`--run-live`
+> 启动真实 uvicorn 进程运行 L2 子集（缺省不选中，`pytest -q` 保持快速全绿）；
+> 服务启动超时可用环境变量 `MD_TEST_SERVER_START_TIMEOUT`（默认 180s）调整。
+
+## 质量门禁
+
+CI（`.github/workflows/ci.yml`）在 push / PR 时执行：后端 ruff + 单元回归 + L1
+（+ L2 独立 job）、前端 Biome + typecheck + 单测 + 覆盖率。`online` 外网用例
+保持 skip，不在 CI 中启用；Playwright E2E 需安装浏览器，暂不纳入 CI。
+
+本地等价命令：
+
+```bash
+# 后端：静态检查 + 格式化检查 + 覆盖率
+cd backend && ruff check . && ruff format --check .
+ruff check --fix . && ruff format .          # 自动修复 / 格式化
+python -m pytest -q --cov=market_data --cov-report=term-missing
+
+# 前端：静态检查 + 格式化检查 + 覆盖率
+cd frontend && npm run lint && npm run format:check && npm run typecheck
+npm run format                               # 自动格式化
+npm run test:coverage
+```
+
+覆盖率采取**只升不降**的棘轮策略：初次启用时的实测基线，阈值取不超过基线的值，
+后续变更只允许上调。
+
+| 端 | 工具 | 初始基线 | 门禁阈值 |
+|---|---|---|---|
+| 后端 | `pytest-cov`（`--cov=market_data`） | 81% | `fail_under = 80` |
+| 前端 | `@vitest/coverage-v8`（`src/**`） | 55.69% lines / statements | `lines = 55`、`statements = 55` |
+
+提交前可用 [pre-commit](https://pre-commit.com/) 在本地复现同一套检查：
+
+```bash
+pip install pre-commit && pre-commit install && pre-commit run --all-files
 ```
 
 ## 项目结构
@@ -222,7 +261,6 @@ cd frontend && npm run test && npm run typecheck
 │       ├── hooks/ types/ utils/ data/
 │       └── vendor/klinecharts-pro
 ├── openspec/                    # OpenSpec 规格驱动的开发文档（specs + 归档）
-├── docs/                        # 文档（待补充）
 ├── agent_hub-main/              # 参考项目（MIT，非本仓库主体）
 ├── LICENSE                      # GNU GPL v3
 └── README.md

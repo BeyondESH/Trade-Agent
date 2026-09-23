@@ -1,0 +1,22 @@
+# Pre-commit gate mirroring CI (see .github/workflows/ci.yml):
+#   backend  -> ruff lint + ruff format  (same tool/version as CI)
+#   frontend -> Biome check (lint + format, same tool/version as CI)
+# Install once:  pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Keep in sync with the `ruff` version pinned in backend/uv.lock.
+    rev: v0.16.8
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: https://github.com/biomejs/pre-commit
+    # Keep in sync with the `@biomejs/biome` devDependency in frontend/package.json.
+    rev: v2.5.9
+    hooks:
+      - id: biome-check
+        additional_dependencies: ["@biomejs/biome@2.5.14"]
+        files: ^frontend/
