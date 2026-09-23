@@ -8,6 +8,9 @@ dependencies = [
     "numpy>=2.4",
     "pandas>=2.2",
     "vectorbt>=1.1",
+    # vectorbt 1.1's plotly template still registers `scattermapbox`, which
+    # plotly>=7 removed from Layout.Template.Data -> import-time crash.
+    "plotly<7",
     "scikit-learn>=1.9",
     "quantstats>=0.0.64",
     "pyarrow>=16.0",
