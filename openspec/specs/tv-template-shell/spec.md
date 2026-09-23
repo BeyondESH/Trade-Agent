@@ -4,7 +4,7 @@
 TBD - created by archiving change frontend-tv-rebuild. Update Purpose after archive.
 ## Requirements
 ### Requirement: UI 外壳基于 tradingview-pro 模板
-系统 SHALL 以 `frontend/vendor/tradingview-pro` 模板为唯一 UI 来源搭建前端外壳,包括桌面标题栏、全局导航栏、顶部图表工具栏、绘图工具栏、多图表网格、右侧停靠栏、底部停靠栏、时间栏、6 个全视图与约 10 个弹窗;模板依赖(React 19、Vite 6、Tailwind 4)SHALL 升格进 `frontend/` 根,旧前端 UI 组件全部删除。
+系统 SHALL 以 `frontend/vendor/tradingview-pro` 模板为唯一 UI 来源搭建前端外壳,包括桌面标题栏、全局导航栏、顶部图表工具栏、绘图工具栏、**单一中心图表区**、右侧停靠栏、底部停靠栏、时间栏、6 个全视图与约 10 个弹窗;模板依赖(React 19、Vite 6、Tailwind 4)SHALL 升格进 `frontend/` 根,旧前端 UI 组件全部删除。外壳 MUST NOT 包含多图表网格视图。
 
 #### Scenario: 加载模板外壳
 - **WHEN** 用户打开应用
@@ -13,6 +13,10 @@ TBD - created by archiving change frontend-tv-rebuild. Update Purpose after arch
 #### Scenario: 模板依赖升格
 - **WHEN** 在 `frontend/` 根执行安装与构建
 - **THEN** SHALL 使用模板的 React 19 / Vite 6 / Tailwind 4 依赖,并保留 vitest 测试与 `/api`、`/ws` 后端代理
+
+#### Scenario: 无多图表网格
+- **WHEN** 查看中心工作区
+- **THEN** SHALL 呈现单个中心图表区，MUST NOT 出现多图表网格布局或网格切换入口
 
 ### Requirement: 装饰性视图保留壳
 系统 SHALL 保留模板中 Screener、Community Ideas、News 视图的 UI 外壳;无真实数据源的视图 SHALL 继续使用 mock 数据,有真实数据源的视图 SHALL 接入后端真实数据。系统 SHALL NOT 提供 Pine Studio 与 Brokers 视图——这两个纯 mock 外壳与本项目实际能力（后端 DL 量化引擎、paper broker）不符,已整体移除。
@@ -31,11 +35,15 @@ TBD - created by archiving change frontend-tv-rebuild. Update Purpose after arch
 - **AND** 视图类型 SHALL NOT 包含 `'pine'` 与 `'brokers'`,不存在可路由到这两个视图的状态
 
 ### Requirement: 非 UI 数据层保留
-系统 SHALL 保留并复用旧前端中非 UI 的数据层与图表同步层:`api/{client,bitgetWs,datafeed,types,transform}.ts`、`lib/{chartSyncBus,chartSyncActions,cellChartSetup,chartChromeBridge,drawingPersistence}.ts`、`KLineChartProView.tsx` 包装器与 `klinecharts-pro-theme.css`。
+系统 SHALL 保留并复用旧前端中非 UI 的数据层与图表控制层:`api/{client,bitgetWs,datafeed,types,transform,ws}.ts`、`lib/{chartController,chartData,alertsStore,periodsStore,signalMarks,transform}.ts`、`KLineChartProView.tsx` 包装器与 `klinecharts-pro-theme.css`。旧前端的跨格同步层 `lib/{chartSyncBus,chartSyncActions,cellChartSetup,chartChromeBridge,drawingPersistence}.ts` SHALL NOT 被恢复——单图终端不存在多格同步，这些模块已不存在于代码中。
 
 #### Scenario: 数据层复用
 - **WHEN** 构建新前端
 - **THEN** SHALL 能通过 `api/` 模块调用后端 REST 与 WS,且不依赖任何已删除的旧 UI 组件
+
+#### Scenario: 不恢复已删除的同步层
+- **WHEN** 检索前端数据/控制层模块
+- **THEN** SHALL NOT 存在 `chartSyncBus`/`chartSyncActions`/`cellChartSetup`/`chartChromeBridge`/`drawingPersistence`，MUST NOT 为它们新建文件
 
 ### Requirement: 界面顶部 + 号新增 Dashboard 标签页
 系统 SHALL 以顶栏 `+` 号作为新增标签入口:点击 `+` 号 SHALL NOT 弹出基于 `absolute` 下拉的"Open Workspace"菜单(该方案因被 `overflow-x-auto` 容器裁剪无效且引发滚动条),而是 SHALL 新增一个 `dashboard` 类型标签页并激活显示。顶栏标签栏容器保持 `overflow-x-auto`,但 SHALL NOT 因承载下拉菜单而在无溢出时产生滚动条。标签栏 SHALL 占满标题栏左侧可用宽度;当标签内容超出可视区域时,系统 SHALL 允许横向滚动且 SHALL 保证新激活的标签自动滚动进入可视区,SHALL NOT 因此限制可创建的标签数量。

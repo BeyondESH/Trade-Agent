@@ -172,3 +172,46 @@ TBD - created by archiving change global-news-feed. Update Purpose after archive
 - **WHEN** 渲染全域快讯面板
 - **THEN** 列表 SHALL 在页面滚动容器内完整展开,不产生内嵌滚动条
 
+### Requirement: 分类分页口径一致
+
+`GlobalNewsClient` 的 `loadMore(category)` 对指定分类加载历史时 SHALL 以该分类在客户端缓冲中已有的条数作为后端 `offset`，并与后端返回的该分类 `total` 比较判定 `hasMore`，不得使用全量列表长度与筛选后 `total` 对比。
+
+#### Scenario: 分类 offset 按分类计数
+
+- **WHEN** 客户端缓冲中某分类已有 N 条且用户触发该分类的加载更多
+- **THEN** SHALL 以 N 作为 `offset` 请求该分类历史
+
+#### Scenario: 分类加载不误判全部加载
+
+- **WHEN** 某分类缓冲条数小于后端该分类总数
+- **THEN** 该分类的 `hasMore` SHALL 为 true，界面不得显示「已加载全部」，加载更多 SHALL 持续放行
+
+#### Scenario: 全量视图不受分类加载影响
+
+- **WHEN** 触发某分类的加载更多
+- **THEN** 全量视图的 `hasMore` SHALL 保持自身语义，不因分类 `total` 较小而被置为 false
+
+#### Scenario: 重连重放重置分类标志
+
+- **WHEN** SSE 重连收到新一轮 `snapshot`
+- **THEN** 按分类缓存的 `hasMore` 标志 SHALL 清空，回退到基于最新 snapshot 的全局判定，直至下一次该分类的加载更早重新证明
+
+### Requirement: 流操作方法绑定安全
+
+`useGlobalNewsStream` 返回的 `flushPending` / `loadMore` SHALL 以绑定到 `GlobalNewsClient` 实例的形式提供给组件，组件解构后直接调用 SHALL 不因 `this` 丢失而抛出 `TypeError`；面板收到实时条目与滚动到底部时 SHALL 保持可用，不得白屏或无法加载。
+
+#### Scenario: 实时条目自动 flush 不崩溃
+
+- **WHEN** 面板位于顶部且收到新的 `item` 事件（`pendingCount > 0`）
+- **THEN** 自动 flush SHALL 成功执行，新条目置顶插入，组件 SHALL 不抛错、不卸载整棵组件树
+
+#### Scenario: 点击胶囊 flush 成功
+
+- **WHEN** 用户已下滚、暂存条目计数 > 0 时点击「N 条新快讯」胶囊
+- **THEN** 暂存条目 SHALL 成功置顶插入并滚动回顶部，SHALL 不抛错
+
+#### Scenario: 滚动到底部加载更早
+
+- **WHEN** 底部哨兵进入视口或点击「加载更早」按钮
+- **THEN** `loadMore` SHALL 成功追加一批旧条目并放行渲染窗口，SHALL 不抛错、不产生未处理 promise 拒绝
+

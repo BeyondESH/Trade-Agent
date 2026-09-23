@@ -84,20 +84,6 @@ TBD - created by archiving change frontend-okx-theme. Update Purpose after archi
 - **WHEN** 遍历界面可见文案
 - **THEN** 每个 key SHALL 在 zh/en 两字典均有非空翻译
 
-### Requirement: Tailwind 扫描覆盖 Vue SFC
-
-系统 SHALL 使 Tailwind content 扫描覆盖 Vue SFC 组件（`.vue` 文件），确保组件内使用的工具类进入构建产物 CSS。
-
-#### Scenario: 产物包含工具类
-
-- **WHEN** 执行生产构建
-- **THEN** 产物 CSS SHALL 包含组件使用的关键工具类（如 `.bg-panel`、`.flex`、`.h-screen`）
-
-#### Scenario: Vue SFC 样式生效
-
-- **WHEN** 在浏览器中打开应用
-- **THEN** 组件 SHALL 呈现预期的布局、高度与配色（非无样式裸布局）
-
 ### Requirement: shadcn/ui 组件 token 接入
 
 引入 shadcn/ui(及 Radix 原语)构建的组件 SHALL 以 CSS 变量继承现有 `--tv-*` 色表,支持 dark/light 双主题一键切换,布局尺寸与涨跌色不变。组件实现 SHALL 在 `components.json` 中声明 token 映射(primary=--tv-accent、up/down=涨跌色、panel/background=面板/背景),新增组件 MUST NOT 硬编码颜色值。
@@ -130,4 +116,23 @@ shadcn 组件 SHALL 遵循高密度 UI 与渐进式披露约束:icon-only 按钮
 
 - **WHEN** 渲染 QUANT LAB 中的功能图标
 - **THEN** 每个图标 SHALL 为 lucide 线性 SVG 且着色取自 token,SHALL NOT 为 emoji/ASCII 字形
+
+### Requirement: Tailwind 扫描覆盖 React TSX
+
+系统 SHALL 使 Tailwind content 扫描覆盖 React 组件源码（`frontend/src` 下的 `.ts`/`.tsx` 文件），确保组件内使用的工具类进入构建产物 CSS。本项目为 React + Vite + Tailwind v4；`frontend/src` 中 MUST NOT 存在 `.vue` 单文件组件，构建配置 MUST NOT 依赖 Vue SFC 扫描。
+
+#### Scenario: 产物包含工具类
+
+- **WHEN** 执行生产构建
+- **THEN** 产物 CSS SHALL 包含组件使用的关键工具类（如 `.bg-panel`、`.flex`、`.h-screen`）
+
+#### Scenario: TSX 组件样式生效
+
+- **WHEN** 在浏览器中打开应用
+- **THEN** 组件 SHALL 呈现预期的布局、高度与配色（非无样式裸布局）
+
+#### Scenario: 配置扫描 TSX 而非 Vue
+
+- **WHEN** 检查 Tailwind content 配置
+- **THEN** 其 glob SHALL 覆盖 `./src/**/*.{ts,tsx}`，MUST NOT 依赖 `.vue` 文件
 

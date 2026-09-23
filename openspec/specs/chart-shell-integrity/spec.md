@@ -9,7 +9,8 @@ The datafeed SHALL drive live candle updates from the Bitget public WebSocket
 client (`api/bitgetWs.ts`), not from the legacy `/ws` snapshot poll. There SHALL
 be exactly one live candle stream per distinct `category:symbol:timeframe`, shared
 across all subscribers, so identical data is never re-delivered on a fixed poll
-interval.
+interval. The terminal SHALL render exactly one chart instance consuming this
+shared stream.
 
 #### Scenario: Live updates come from the WS client
 
@@ -33,47 +34,21 @@ interval.
 #### Scenario: Replay suspends live updates
 
 - **WHEN** replay mode calls `suspendUpdates(true)`
-- **THEN** the shared datafeed stops forwarding live WS candles to cell 0
+- **THEN** the shared datafeed stops forwarding live WS candles to the chart
 - **AND** forwarding resumes when `suspendUpdates(false)` is called on exit
-
-### Requirement: Sync-wired multi-chart cells
-
-Each chart cell SHALL wire into the sync fabric (`chartSyncBus`,
-`chartSyncActions`, `cellChartSetup`) so that, when the corresponding sync flag is
-enabled, symbol / period / crosshair / visible-range / drawing changes on the
-active cell mirror to the other cells. Clicking a cell SHALL make it the active
-cell.
-
-#### Scenario: Active cell selection
-
-- **WHEN** the user clicks a chart cell in a multi-chart layout
-- **THEN** that cell becomes the active cell and top-bar actions route to it
-
-#### Scenario: Symbol/period sync across cells
-
-- **WHEN** the symbol or period changes on the active cell and the matching sync
-  flag is on
-- **THEN** the other cells update to the same symbol/period
-
-#### Scenario: Crosshair, range, and drawing sync
-
-- **WHEN** crosshair moves, the visible range changes, or a drawing is created/
-  moved/removed on the active cell with the matching sync flag on
-- **THEN** the change is mirrored to the other cells without emitting a feedback
-  loop back to the source cell
 
 ### Requirement: Single symbol-search entry point
 
 The terminal SHALL expose one working symbol-search entry point (the shell
-`SearchModal`) that queries the live instrument catalog and switches the active
-cell on selection. Selecting a result SHALL render the correct klines for the
+`SearchModal`) that queries the live instrument catalog and switches the chart's
+symbol on selection. Selecting a result SHALL render the correct klines for the
 chosen symbol.
 
 #### Scenario: Search and select a symbol
 
 - **WHEN** the user opens search and types a query
 - **THEN** matching instruments from the catalog are listed
-- **AND** selecting one switches the active cell's symbol and loads that symbol's
+- **AND** selecting one switches the chart's symbol and loads that symbol's
   klines
 
 #### Scenario: No conflicting duplicate search entry

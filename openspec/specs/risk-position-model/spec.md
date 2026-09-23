@@ -20,13 +20,20 @@ TBD - created by archiving change ai-trading-system-roadmap. Update Purpose afte
 
 ### Requirement: 最大回撤熔断
 
-系统 SHALL 支持单笔与组合层面的最大回撤阈值(默认 15%,可配)。达到阈值时 MUST 触发平仓熔断。
+系统 SHALL 支持单笔与组合层面的最大回撤阈值(默认 15%,可配)。达到阈值时 MUST 触发平仓熔断。触发熔断时系统 MUST 持久化一条可读回的熔断事件，事件至少包含触发时间、当前权益、权益峰值、回撤比例与动作(阻断新单 / 执行平仓);熔断事件日志 MUST 有界(条目上限),MUST NOT 无限增长。
 
 #### Scenario: 触发组合回撤熔断
 
 - **WHEN** 组合浮亏达到权益的回撤阈值
 - **THEN** 系统 SHALL 平掉相关仓位
 - **AND** 记录一次熔断事件
+
+#### Scenario: 熔断事件可读回
+
+- **WHEN** 熔断被触发(无论是阻断新单还是执行平仓)
+- **THEN** 系统 SHALL 持久化一条含时间/权益/回撤/动作的熔断事件
+- **AND** 该事件 SHALL 可被读回
+- **AND** 事件日志 SHALL 受条目上限约束
 
 #### Scenario: 熔断早于爆仓
 

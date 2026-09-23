@@ -60,7 +60,7 @@ TBD - created by archiving change tradingview-ui-shell. Update Purpose after arc
 
 ### Requirement: 筛选器面板
 
-系统 SHALL 在筛选器 tab 复用 MarketList 全屏能力（分类 tab、搜索、排序、虚拟滚动），并提供基于 Bitget 已有维度的"基本面"列：资金费率、标记价、24h 振幅（(high24h-low24h)/low24h 作为波动率代理）、24h 成交量/成交额，各列可排序；数据 SHALL 全部取自行情 hub 已有字段，MUST NOT 引入外部基本面数据源。选中品种 SHALL 联动图表。
+系统 SHALL 在筛选器 tab 复用 MarketList 全屏能力（分类 tab、搜索、排序、虚拟滚动），并 SHALL 消费实时行情 hub 的 ticker 数据源（`useTickerList`，`/tickers` 快照 + `/ws` `ticker/default` 增量）驱动全部行；系统 MUST NOT 渲染 `INITIAL_SCREENER_ITEMS` 等静态 mock 数组作为行情来源。筛选器 SHALL 提供基于 Bitget 已有维度的"基本面"列：资金费率、标记价、24h 振幅（(high24h-low24h)/low24h 作为波动率代理）、24h 成交量/成交额，各列可排序；数据 SHALL 全部取自行情 hub 已有字段，MUST NOT 引入外部基本面数据源。当某维度字段在 hub 缺失时，该单元格 SHALL 显示占位（如 `--`）并排到排序末尾，MUST NOT 以静态 mock 数值填充。选中品种 SHALL 联动图表。
 
 #### Scenario: 基本面列展示与排序
 
@@ -77,12 +77,43 @@ TBD - created by archiving change tradingview-ui-shell. Update Purpose after arc
 - **WHEN** 渲染基本面列
 - **THEN** 每列数值 SHALL 来自 hub 已有字段（fundingRate/markPrice/high24h/low24h/成交量额），SHALL NOT 依赖外部数据源
 
+#### Scenario: 实时驱动的行数据
+
+- **WHEN** `/ws` `ticker/default` 推送某 instId 的价格或基本面字段更新
+- **THEN** 对应行 SHALL 就地更新，且列表 MUST NOT 回退渲染静态 mock 数组
+
+#### Scenario: 缺失维度显示占位
+
+- **WHEN** 某 instId 的 hub 数据不含振幅或成交额字段
+- **THEN** 该单元格 SHALL 显示占位（如 `--`）并排到排序末尾，MUST NOT 以 mock 数值填充
+
 ### Requirement: 交易面板
 
-系统 SHALL 在交易面板 tab 展示 `GET /portfolio` 持仓/账户摘要与 `POST /order` 下单表单（沿用现有接口，不改后端）；下单结果与持仓 SHALL 刷新展示，空持仓 SHALL 显示空态。
+系统 SHALL 在交易面板 tab 展示 `GET /portfolio` 持仓/账户摘要与 `POST /order` 下单表单（沿用现有接口，不改后端）；下单结果与持仓 SHALL 刷新展示，空持仓 SHALL 显示空态。交易面板 SHALL 同时提供可用的「Trade History」子 tab，经 `GET /journal` 拉取并展示持久化交易记录（品种 / 方向 / 开仓价 / 平仓价 / 盈亏 / 平仓原因，未平仓或缺失字段以占位符显示）；进入该子 tab SHALL 触发拉取并展示加载态，记录为空时 SHALL 显示空态，请求失败时 SHALL 显示错误信息而非空白面板；该视图 MUST 为只读，MUST NOT 修改订单或持仓。
 
 #### Scenario: 持仓与下单
 
 - **WHEN** 打开交易面板并提交订单
 - **THEN** SHALL 展示账户摘要与持仓列表，下单后 SHALL 刷新持仓；无持仓时显示空态
+
+#### Scenario: 交易历史渲染
+
+- **WHEN** 用户切换到 Trade History 子 tab 且 `GET /journal` 返回交易记录
+- **THEN** SHALL 以表格渲染每条记录的品种 / 方向 / 开仓价 / 平仓价 / 盈亏 / 平仓原因
+- **AND** `exit_price`/`pnl` 等缺失字段 SHALL 以占位符显示
+
+#### Scenario: 交易历史空态
+
+- **WHEN** `GET /journal` 返回空记录集
+- **THEN** SHALL 显示「暂无交易历史」空态文案，而非空白面板
+
+#### Scenario: 交易历史加载与错误态
+
+- **WHEN** 正在拉取交易历史或拉取失败
+- **THEN** SHALL 分别显示加载态或错误信息，且交易面板其余子 tab SHALL 保持可用
+
+#### Scenario: 交易历史只读
+
+- **WHEN** 用户查看 Trade History 子 tab
+- **THEN** SHALL NOT 产生任何下单、撤单或平仓操作，MUST NOT 修改本地模拟账户与挂单
 
