@@ -1,6 +1,6 @@
-# Trade-Agent · AI Quant Trading Terminal for Crypto
+# Trade-Agent · Crypto Market Terminal
 
-> An open-source cryptocurrency research & trading terminal built on Bitget real-time market data and an AI Agent decision loop — all-in-one K-line terminal, quant backtesting, factor research, global financial news feed, and AI trading assistant.
+> An open-source cryptocurrency market research & trading terminal built on Bitget real-time market data and a global financial news feed — an all-in-one K-line terminal, markets overview, screener, heatmaps, community ideas, and news center.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-%E2%89%A53.11-3776AB?logo=python&logoColor=white)](backend/pyproject.toml)
@@ -10,7 +10,7 @@
 
 **English** · [中文](README.md)
 
-**DISCLAIMER: This project is for educational and research purposes only and does not constitute investment advice. It runs in a paper-trading environment by default; you trade live at your own risk.**
+**DISCLAIMER: This project is for educational and research purposes only and does not constitute investment advice. The current version focuses on market data and terminal display and does not provide trade execution.**
 
 ---
 
@@ -33,10 +33,14 @@
 
 ## Introduction
 
-Trade-Agent is a full-stack cryptocurrency quant research and trading terminal:
+Trade-Agent is a full-stack cryptocurrency market research and trading terminal:
 
-- **Backend** (Python / FastAPI): pulls historical K-line data through Bitget's official MCP service and persists it to Parquet; streams real-time market data over the public WebSocket. It ships with an interactive QUANT LAB workbench (backtest / parameter sweep / walk-forward / factor research), an AI trading agent (decide → execute → reflect), risk management and paper matching, plus a financial news pipeline powered by AKShare / BlockBeats.
-- **Frontend** (React 19 / Vite / TypeScript): a professional TradingView-style terminal with a market dashboard, markets overview, screener, heatmaps, community ideas, news center, and an AI Agent page (QUANT LAB quant workbench + market analysis) — fully localized in Chinese with dark/light themes.
+- **Backend** (Python / FastAPI): pulls historical K-line data through Bitget's official MCP service and persists it to Parquet; streams real-time market data over the public WebSocket; provides indicator / structure / support-resistance analysis and a financial news pipeline powered by AKShare / BlockBeats.
+- **Frontend** (React 19 / Vite / TypeScript): a professional TradingView-style terminal with a market dashboard, markets overview, screener, heatmaps, community ideas, and a news center — fully localized in Chinese with dark/light themes.
+
+> **About the AI Agent**: this project previously shipped a self-authored AI trading agent and a QUANT LAB quant workbench; both have been removed entirely. They are being rebuilt on **LangChain / LangGraph / Deep Agents**, under a hard boundary: **the LLM only performs front-loaded "deep market research & strategy generation"; order execution and hard risk control are taken over by a zero-LLM, deterministic LangGraph state graph.**
+>
+> **Currently Phase 1 (paper loop)**: research and execution run autonomously on a schedule inside a **separate worker process**; execution uses a **paper broker** and **does not touch live trading**; human-in-the-loop approval, a Postgres checkpointer and cross-process resume are deferred to Phase 2. Enabling the research tier requires model credentials (`MD_AGENT_MODEL` + the provider API key); without them the worker no-ops without placing orders or erroring.
 
 The project is developed spec-first with [OpenSpec](https://github.com/Fission-AI/OpenSpec); every feature has corresponding specs and design docs in `openspec/`.
 
@@ -44,9 +48,7 @@ The project is developed spec-first with [OpenSpec](https://github.com/Fission-A
 
 - **Professional K-line terminal**: rendered by `klinecharts-pro`, with multi-timeframe / multi-chart sync, technical indicators, SMC structure analysis, support/resistance, drawing tools, and price alert lines.
 - **Real-time market data**: Bitget public WebSocket pushing K-line / order book / ticker, with a frontend WS subscription protocol (candle / books / ticker).
-- **AI trading agent**: an LLM-driven decision loop (analyze → decide → execute → reflect), memory injection and a trade journal; the workbench includes a decision panel, positions, and run controls.
-- **Quant backtesting & factor research (QUANT LAB)**: sklearn + vectorbt backtest engine, model hyperparameter sliders (lr / hgb) with 4 preset templates, parameter sweep, multi-fold walk-forward training, signal K-line (buy/sell overlay), model diagnostics (ROC / AUC · feature weights), factor IC time series & table, and backtest history archiving with visualization (equity vs benchmark · monthly return heatmap · per-trade PnL · return histogram · drawdown).
-- **Paper trading & risk management**: paper matching, position sizing, stop-loss / circuit breakers, Kill Switch (one-click halt), and two-step order confirmation.
+- **Markets overview & analysis**: markets overview, screener, heatmaps, community ideas; REST analysis endpoints for indicators / structure / support-resistance.
 - **Global financial news**: 7x24 flashes aggregated from East Money / Sina / THS / CLS via AKShare, pushed in real time over SSE, auto topic classification, waterfall UI, and paged history.
 - **BlockBeats news/data**: crypto news flash and data cache.
 - **Price alerts**: local + server-persisted alerts.
@@ -57,7 +59,7 @@ The project is developed spec-first with [OpenSpec](https://github.com/Fission-A
 
 | Layer | Technology |
 |---|---|
-| Backend | Python >= 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · scikit-learn · vectorbt · quantstats · pydantic-settings · akshare |
+| Backend | Python >= 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · vectorbt (indicator computation) · pydantic-settings · akshare |
 | Data access | Bitget Agent MCP (stdio) · Bitget public WebSocket · REST v2/v3 |
 | Frontend | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Recharts · Radix UI · motion · lucide-react · self-hosted Google Sans Flex / Noto Sans SC |
 | Testing | pytest (three-layer suite) · Vitest + Testing Library · Playwright (E2E) |
@@ -68,13 +70,12 @@ The project is developed spec-first with [OpenSpec](https://github.com/Fission-A
 ```
 ┌────────────────────── Browser · React 19 + Vite ──────────────────────┐
 │  SuperCharts │ Markets │ Screener │ Heatmaps │ Community │ News       │
-│  AI Agent (QUANT LAB + market analysis) · klinecharts-pro · Recharts │
-│  i18n(zh-CN) · Tailwind v4 · dark/light                              │
+│  klinecharts-pro · Recharts · i18n(zh-CN) · Tailwind v4 · dark/light │
 └───────────────────────┬─────────────────────────┬──────────────────┘
                         │ /api (vite proxy)       │ /ws
 ┌───────────────────────▼─────────────────────────▼──────────────────┐
 │                     FastAPI · uvicorn (:8000)                      │
-│   REST: /candles /analyze /structure /backtest /sweep /agent /news  │
+│   REST: /candles /analyze /structure /levels /tickers /news ...    │
 │   WS: candle / ticker / books / trade / mark-price / funding-time  │
 │   SSE: /news/stream (global news live stream)                      │
 ├────────────────────────────────────────────────────────────────────┤
@@ -142,12 +143,6 @@ market-data incremental --symbol BTCUSDT --timeframe 5m --start 2024-01-01 --end
 market-data gaps --symbol BTCUSDT --timeframe 5m
 # Indicators + support/resistance analysis
 market-data analyze --symbol BTCUSDT --timeframe 1h
-# Run a quant backtest
-market-data backtest --symbol BTCUSDT --timeframe 1h
-# Run one memory-augmented AI agent cycle (paper)
-market-data orchestrate
-# Show trade memory / distilled rules
-market-data memory
 ```
 
 ## Environment Variables
@@ -205,24 +200,21 @@ cd frontend && npm run test && npm run typecheck
 │       ├── ingestion.py         # MCP / REST historical ingest & backfill
 │       ├── mcp_client.py        # Bitget Agent MCP client
 │       ├── store.py / scheduler.py        # Parquet store / incremental-persistence scheduler
-│       ├── dlquant.py / factors.py / indicators.py  # Quant engine (vectorbt) / factors / indicators
-│       ├── smc.py / structure.py / levels.py   # Structure & support/resistance
-│       ├── agent.py / llm.py / memory.py / orchestration.py  # AI trading agent
-│       ├── execution.py / risk.py              # Execution & risk management
-│       ├── newsfeed.py / news_broker.py        # Global news (AKShare → SSE)
+│       ├── indicators.py / levels.py      # Technical indicators / support-resistance
+│       ├── smc.py / structure.py          # Market structure & liquidity levels
+│       ├── newsfeed.py / news_broker.py   # Global news (AKShare → SSE)
 │       ├── blockbeats.py / blockbeats_cache.py # BlockBeats news/data + daily local cache
-│       ├── backtest_history.py / chartstore.py / alertstore.py  # History / chart / alert stores
+│       ├── chartstore.py / alertstore.py  # Chart-config / alert stores
 │       └── cli.py               # market-data CLI
 ├── frontend/
 │   └── src/
-│       ├── components/views/    # Page views (SuperCharts/Markets/News/Agent...)
-│       │   └── agent/           # QUANT LAB + AI Agent analysis (QuantLabPanel/ModelPanel/...)
+│       ├── components/views/    # Page views (SuperCharts/Markets/Screener/Heatmaps/Community/News...)
+│       ├── components/bottom/   # Bottom dock (screener / text notes)
 │       ├── lib/                 # Data layer & utilities (globalNews/useMasonry...)
 │       ├── api/client.ts        # REST client
 │       ├── hooks/ types/ utils/ data/
 │       └── vendor/klinecharts-pro
 ├── openspec/                    # OpenSpec spec-first development docs (specs + archive)
-├── docs/                        # Documentation (work in progress)
 ├── agent_hub-main/              # Reference project (MIT, not part of this repo's codebase)
 ├── LICENSE                      # GNU GPL v3
 └── README.md
@@ -236,15 +228,6 @@ cd frontend && npm run test && npm run typecheck
 - `GET /tickers`, `GET /books/{symbol}`, `GET /books/{category}/{symbol}`, `GET /trades/{symbol}`, `GET /trades/{category}/{symbol}`, `GET /funding`, `GET /mark-price`, `GET /instruments`
 - `WS /ws`: `candle` / `ticker` / `books` / `trade` / `mark-price` / `funding-time` subscription push
 
-### Quant
-- `POST /backtest`, `GET /jobs/{id}`, `POST /dl/features`
-- `POST /backtest/sweep` (parameter sweep), `POST /backtest/walkforward` (walk-forward)
-- `GET /backtest/history`, `GET /backtest/history/{id}`, `DELETE /backtest/history/{id}`
-
-### AI agent
-- `POST /agent/decide`, `POST /agent/cycle`, `GET /portfolio`, `GET /journal`
-- `POST /order`, `POST /order/confirm`, `PUT /control` (Kill Switch)
-
 ### News
 - `GET /news/categories`, `GET /news/history?offset=&limit=&category=`
 - `GET /news/stream` (SSE: snapshot → live items → heartbeat)
@@ -252,7 +235,7 @@ cd frontend && npm run test && npm run typecheck
 - `GET /blockbeats/newsflash/{type}`, `GET /blockbeats/data/{endpoint}`, `POST /blockbeats/data/refresh`
 
 ### Other
-- `GET/PUT /config`, `GET/PUT /chart-config`, `GET/POST/PUT/DELETE /alerts`
+- `GET/PUT /chart-config`, `GET/POST/PUT/DELETE /alerts`
 
 ## Data & News Sources
 
@@ -279,4 +262,4 @@ This project is open-sourced under the **GNU General Public License v3.0** (GPL-
 
 ---
 
-*For educational and research purposes only. Cryptocurrency trading carries extreme risk. This project does not constitute investment advice; you trade live at your own risk.*
+*For educational and research purposes only. Cryptocurrency markets carry extreme risk. This project does not constitute investment advice.*

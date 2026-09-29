@@ -21,8 +21,6 @@ describe("i18n dictionary", () => {
       "Heatmaps",
       "Community",
       "News",
-      "Pine Studio",
-      "Brokers",
       "Watchlist",
       "Alerts",
       "Data Window",
@@ -38,12 +36,6 @@ describe("i18n dictionary", () => {
     const sweep: Record<string, string> = {
       "No news": "暂无新闻",
       "Spread:": "价差:",
-      Positions: "持仓",
-      "Working Orders": "挂单",
-      "Broker Summary": "券商概览",
-      "Market Close": "市价平仓",
-      Cancel: "取消",
-      "100x Cross Margin": "100x 全仓保证金",
       "Quick search...": "快速搜索...",
       "Mark all read": "全部标为已读",
       "UTC+0 (Live)": "UTC+0 (实时)",
@@ -63,6 +55,34 @@ describe("i18n dictionary", () => {
         "发现全球顶级交易员发布的交易策略、谐波形态与价格行为洞见。",
     };
     for (const [k, v] of Object.entries(sweep)) {
+      expect(t(k)).toBe(v);
+      expect(t(k)).not.toBe(k);
+    }
+  });
+
+  it("covers the research / execution view labels", () => {
+    const research: Record<string, string> = {
+      Research: "研报",
+      "New Research Tab": "新建研报标签",
+      "Research Reports": "研报",
+      "Read-only": "只读",
+      Refresh: "刷新",
+      Retry: "重试",
+      Confidence: "置信度",
+      Entry: "入场",
+      "Stop Loss": "止损",
+      "Take Profit": "止盈",
+      Horizon: "持有周期",
+      Rationale: "理由",
+      Evidence: "证据来源",
+      Provenance: "溯源",
+      "Execution Timeline": "执行时间线",
+      "Fail-closed": "熔断保护 (fail-closed)",
+      "Unknown reason": "原因未知",
+      "No proposals": "暂无研报",
+      "Select a proposal to view details": "选择一条研报查看详情",
+    };
+    for (const [k, v] of Object.entries(research)) {
       expect(t(k)).toBe(v);
       expect(t(k)).not.toBe(k);
     }

@@ -1,26 +1,19 @@
 import type { GlobalNewsItem } from "../types/trading";
 import type {
-  AgentDecision,
   AlertRecord,
   AnalyzeResponse,
-  AppConfig,
   BackfillResponse,
-  BacktestHistoryDetail,
-  BacktestHistoryMeta,
-  BacktestJobResult,
-  BacktestParams,
   Candle,
   ChartConfig,
-  DlFeaturesResponse,
-  FactorDef,
+  ExecutionRun,
   Instrument,
   Level,
-  Portfolio,
+  ProposalMeta,
+  ResearchStreamEvent,
   SeriesRef,
+  StrategyProposal,
   StructureResponse,
-  SweepResult,
   Ticker,
-  WalkForwardResult,
 } from "./types";
 
 const BASE = "/api";
@@ -59,6 +52,37 @@ function qs(params: Record<string, string | number | undefined>): string {
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
     .join("&");
   return s ? `?${s}` : "";
+}
+
+// -- Research SSE consumer ------------------------------------------------
+// Mirrors the established global-news EventSource pattern (see
+// `lib/globalNews.ts`): the backend may tag frames either with a named SSE
+// `event:` line or leave them on the default channel, so we listen on every
+// known name plus `message` and dispatch by the JSON `type` field.
+
+/** Named SSE channels the research stream endpoint may use. */
+const RESEARCH_STREAM_EVENT_NAMES = ["node", "text", "done", "error"] as const;
+
+export interface ResearchStreamHandlers {
+  /** Called for every parsed stream frame. */
+  onEvent: (event: ResearchStreamEvent) => void;
+  /** Called once the underlying EventSource opens. */
+  onOpen?: () => void;
+  /**
+   * Called on a transport error (the browser will auto-reconnect). Not called
+   * after a terminal `done`/`error` frame has closed the stream.
+   */
+  onError?: () => void;
+}
+
+export interface ResearchStreamHandle {
+  /** Close the EventSource and stop dispatching frames. */
+  close: () => void;
+}
+
+/** URL of the research/execution SSE stream for a LangGraph `thread_id`. */
+function researchStreamUrl(threadId: string): string {
+  return `${BASE}/research/${encodeURIComponent(threadId)}/stream`;
 }
 
 export const api = {
@@ -108,120 +132,6 @@ export const api = {
   levels: (s: SeriesRef, top = 8) => request<{ levels: Level[] }>(`/levels${qs({ ...s, top })}`),
 
   structure: (s: SeriesRef) => request<StructureResponse>(`/structure${qs({ ...s })}`),
-
-  backtest: (
-    s: SeriesRef,
-    opts?: {
-      factors?: FactorDef[];
-      params?: BacktestParams;
-      start?: number;
-      end?: number;
-    },
-  ) =>
-    request<{ job_id: string }>("/backtest", {
-      method: "POST",
-      body: JSON.stringify({ ...s, ...opts }),
-    }),
-
-  job: (id: string) =>
-    request<{
-      status: "running" | "done" | "error";
-      result?: BacktestJobResult;
-      error?: string;
-    }>(`/jobs/${id}`),
-
-  backtestHistory: () => request<{ runs: BacktestHistoryMeta[] }>("/backtest/history"),
-  backtestHistoryDetail: (id: string) =>
-    request<BacktestHistoryDetail>(`/backtest/history/${encodeURIComponent(id)}`),
-  backtestHistoryDelete: (id: string) =>
-    request<{ deleted: boolean }>(`/backtest/history/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    }),
-
-  dlFeatures: (s: SeriesRef, factors?: FactorDef[], start?: number, end?: number) =>
-    request<DlFeaturesResponse>("/dl/features", {
-      method: "POST",
-      body: JSON.stringify({ ...s, factors, start, end }),
-    }),
-
-  sweep: (
-    s: SeriesRef,
-    opts: {
-      thresholds: number[];
-      factors?: FactorDef[];
-      params?: BacktestParams;
-      start?: number;
-      end?: number;
-      fees?: number[];
-      slippages?: number[];
-    },
-  ) =>
-    request<SweepResult>("/backtest/sweep", {
-      method: "POST",
-      body: JSON.stringify({ ...s, ...opts }),
-    }),
-
-  walkforward: (
-    s: SeriesRef,
-    opts: {
-      n_splits?: number;
-      factors?: FactorDef[];
-      params?: BacktestParams;
-      start?: number;
-      end?: number;
-    },
-  ) =>
-    request<WalkForwardResult>("/backtest/walkforward", {
-      method: "POST",
-      body: JSON.stringify({ ...s, ...opts }),
-    }),
-
-  agentDecide: (s: SeriesRef) =>
-    request<AgentDecision>("/agent/decide", {
-      method: "POST",
-      body: JSON.stringify(s),
-    }),
-
-  agentCycle: (s: SeriesRef) =>
-    request<Record<string, unknown>>("/agent/cycle", {
-      method: "POST",
-      body: JSON.stringify(s),
-    }),
-
-  getConfig: () => request<AppConfig>("/config"),
-
-  putConfig: (cfg: AppConfig) =>
-    request<AppConfig>("/config", { method: "PUT", body: JSON.stringify(cfg) }),
-
-  portfolio: () => request<Portfolio>("/portfolio"),
-
-  journal: () => request<{ trades: Record<string, unknown>[] }>("/journal"),
-
-  control: (body: { kill_switch?: boolean; live_enabled?: boolean }) =>
-    request<{ kill_switch: boolean; live_enabled: boolean }>("/control", {
-      method: "PUT",
-      body: JSON.stringify(body),
-    }),
-
-  order: (body: {
-    category: string;
-    symbol: string;
-    side: string;
-    leverage: number;
-    price: number;
-  }) =>
-    request<{ token: string; preview: Record<string, number> }>("/order", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-
-  orderConfirm: (token: string) =>
-    request<{
-      approved: boolean;
-      filled: boolean;
-      reason: string;
-      live: boolean;
-    }>("/order/confirm", { method: "POST", body: JSON.stringify({ token }) }),
 
   chartConfig: (s: SeriesRef) => request<ChartConfig>(`/chart-config${qs({ ...s })}`),
 
@@ -280,4 +190,62 @@ export const api = {
     request<{ items: GlobalNewsItem[]; total: number }>(
       `/news/history${qs({ offset, limit, category })}`,
     ),
+
+  // -- Research / execution (read-only projection; no mutation endpoints) --
+  researchProposals: (opts?: { symbol?: string; limit?: number }) =>
+    request<{ proposals: ProposalMeta[] }>(
+      `/research/proposals${qs({ symbol: opts?.symbol, limit: opts?.limit })}`,
+    ),
+
+  researchProposal: (id: string) =>
+    request<StrategyProposal>(`/research/proposals/${encodeURIComponent(id)}`),
+
+  executionRun: (runId: string) =>
+    request<ExecutionRun>(`/executions/${encodeURIComponent(runId)}`),
+
+  /**
+   * Consume `GET /research/{thread_id}/stream` (text/event-stream). Returns a
+   * handle whose `close()` tears the connection down; parsing tolerates the
+   * event name living either in the SSE `event:` field or the JSON `type`.
+   */
+  openResearchStream: (
+    threadId: string,
+    handlers: ResearchStreamHandlers,
+  ): ResearchStreamHandle => {
+    const es = new EventSource(researchStreamUrl(threadId));
+    let done = false;
+
+    const dispatch = (e: Event) => {
+      if (done) return;
+      let event: ResearchStreamEvent;
+      try {
+        event = JSON.parse((e as MessageEvent<string>).data) as ResearchStreamEvent;
+      } catch {
+        return; // ignore malformed frames
+      }
+      if (!event || typeof event.type !== "string") return;
+      handlers.onEvent(event);
+      // Terminal frames end the run; close so the browser does not reconnect.
+      if (event.type === "done" || event.type === "error") {
+        done = true;
+        es.close();
+      }
+    };
+
+    for (const name of RESEARCH_STREAM_EVENT_NAMES) es.addEventListener(name, dispatch);
+    es.addEventListener("message", dispatch);
+    es.onopen = () => {
+      if (!done) handlers.onOpen?.();
+    };
+    es.onerror = () => {
+      if (!done) handlers.onError?.();
+    };
+
+    return {
+      close: () => {
+        done = true;
+        es.close();
+      },
+    };
+  },
 };

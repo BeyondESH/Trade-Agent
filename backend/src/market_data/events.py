@@ -1,11 +1,11 @@
 """Bounded append-only JSONL event log (circuit-breaker events).
 
-One JSON object per line, following the ``TradeJournal`` append-only JSONL
-convention. Each event carries ``id``/``ts``/``kind``/``payload``. The log is
-bounded by ``max_events``: appending past the cap rewrites the file keeping only
-the newest entries, so the log itself cannot become a new unbounded growth
-source. Reads are best-effort (malformed lines are skipped) and the store is
-thread-safe via a lock, mirroring AlertStore/BacktestHistoryStore.
+One JSON object per line, following an append-only JSONL convention. Each event
+carries ``id``/``ts``/``kind``/``payload``. The log is bounded by ``max_events``:
+appending past the cap rewrites the file keeping only the newest entries, so the
+log itself cannot become a new unbounded growth source. Reads are best-effort
+(malformed lines are skipped) and the store is thread-safe via a lock, mirroring
+AlertStore.
 """
 
 from __future__ import annotations

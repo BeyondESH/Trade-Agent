@@ -8,17 +8,13 @@ import { type BookLevel, useOrderBook } from "./hooks/useOrderBook";
 import { useRealSymbols } from "./hooks/useRealSymbols";
 import { useTrades } from "./hooks/useTrades";
 import type {
-  AccountState,
   AlertItem,
-  BacktestResult,
   Candle,
   DesktopTab,
   DesktopViewMode,
   EconomicEvent,
   IndicatorConfig,
-  Order,
   OrderBookEntry,
-  Position,
   SymbolInfo,
   ThemeMode,
 } from "./types/trading";
@@ -54,17 +50,16 @@ import { CommandPaletteModal } from "./components/modals/CommandPaletteModal";
 import { CreateAlertModal } from "./components/modals/CreateAlertModal";
 import { DesktopSettingsModal } from "./components/modals/DesktopSettingsModal";
 import { KeyboardShortcutsModal } from "./components/modals/KeyboardShortcutsModal";
-import { OrderModal } from "./components/modals/OrderModal";
 import { RightDock } from "./components/sidebar/RightDock";
 import { ToastHost } from "./components/ToastHost";
 import { BottomTimebar } from "./components/timebar/BottomTimebar";
-import { AgentView } from "./components/views/AgentView";
 import { CommunityIdeasView } from "./components/views/CommunityIdeasView";
 // Dedicated Desktop Full Views
 import { DashboardView } from "./components/views/DashboardView";
 import { HeatmapsView } from "./components/views/HeatmapsView";
 import { MarketsView } from "./components/views/MarketsView";
 import { NewsCalendarView } from "./components/views/NewsCalendarView";
+import { ResearchView } from "./components/views/ResearchView";
 import { ScreenerView } from "./components/views/ScreenerView";
 import {
   isNotifyEnabled,
@@ -333,124 +328,7 @@ export default function App() {
     if (next) void requestNotifyPermission();
   }, [notifyEnabled]);
 
-  // 8. Simulated Paper Trading State
-  const [account, setAccount] = useState<AccountState>({
-    balance: 50000,
-    equity: 51240.5,
-    unrealizedPnl: 1240.5,
-    realizedPnl: 3820.0,
-    usedMargin: 4820.0,
-    freeMargin: 46420.5,
-  });
-
-  const [positions, setPositions] = useState<Position[]>([
-    {
-      id: "pos-1",
-      symbol: "BTCUSDT.P",
-      side: "LONG",
-      amount: 0.5,
-      entryPrice: 95200.0,
-      currentPrice: 96482.5,
-      unrealizedPnl: 641.25,
-      unrealizedPnlPercent: 1.35,
-      margin: 4760.0,
-      leverage: 10,
-      tp: 98500.0,
-      sl: 94000.0,
-      timestamp: Date.now() - 3600000,
-    },
-    {
-      id: "pos-2",
-      symbol: "NVDA",
-      side: "LONG",
-      amount: 50,
-      entryPrice: 135.2,
-      currentPrice: 138.65,
-      unrealizedPnl: 172.5,
-      unrealizedPnlPercent: 2.55,
-      margin: 676.0,
-      leverage: 10,
-      timestamp: Date.now() - 1800000,
-    },
-  ]);
-
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: "ord-1",
-      symbol: "SOLUSDT",
-      side: "BUY",
-      type: "LIMIT",
-      price: 188.0,
-      amount: 10,
-      filled: 0,
-      status: "WORKING",
-      leverage: 10,
-      timestamp: Date.now() - 600000,
-    },
-  ]);
-
-  // 9. Strategy Backtest Result
-  const [backtestResult, setBacktestResult] = useState<BacktestResult>({
-    strategyName: "SuperTrend Dynamic Strategy v5",
-    netProfit: 14820.5,
-    netProfitPercent: 29.64,
-    totalTrades: 84,
-    winningTrades: 54,
-    losingTrades: 30,
-    winRate: 64.28,
-    profitFactor: 2.14,
-    maxDrawdown: 1840.0,
-    maxDrawdownPercent: 3.68,
-    sharpeRatio: 1.88,
-    trades: [
-      {
-        id: "t1",
-        type: "LONG",
-        entryTime: "2025-02-10 14:00",
-        exitTime: "2025-02-11 09:30",
-        entryPrice: 94200,
-        exitPrice: 96100,
-        pnl: 950,
-        pnlPercent: 2.01,
-        size: 0.5,
-        reason: "Take Profit",
-      },
-      {
-        id: "t2",
-        type: "SHORT",
-        entryTime: "2025-02-12 16:00",
-        exitTime: "2025-02-13 11:15",
-        entryPrice: 96400,
-        exitPrice: 95300,
-        pnl: 550,
-        pnlPercent: 1.14,
-        size: 0.5,
-        reason: "SuperTrend Reversal",
-      },
-      {
-        id: "t3",
-        type: "LONG",
-        entryTime: "2025-02-14 08:00",
-        exitTime: "2025-02-14 15:45",
-        entryPrice: 95100,
-        exitPrice: 94800,
-        pnl: -150,
-        pnlPercent: -0.31,
-        size: 0.5,
-        reason: "Trailing Stop",
-      },
-    ],
-    equityCurve: [
-      { time: "Day 1", equity: 100000 },
-      { time: "Day 5", equity: 102400 },
-      { time: "Day 10", equity: 101800 },
-      { time: "Day 15", equity: 106500 },
-      { time: "Day 20", equity: 109200 },
-      { time: "Day 25", equity: 114820 },
-    ],
-  });
-
-  // 10. Modals State
+  // 9. Modals State
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   // Price prefilled into the create-alert modal by the chart right-click menu.
   const [alertPrefillPrice, setAlertPrefillPrice] = useState<number | null>(null);
@@ -461,14 +339,6 @@ export default function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isDesktopSettingsOpen, setIsDesktopSettingsOpen] = useState(false);
-
-  const [orderModal, setOrderModal] = useState<{
-    isOpen: boolean;
-    side: "BUY" | "SELL";
-  }>({
-    isOpen: false,
-    side: "BUY",
-  });
 
   // Tab Management Handlers
   const handleSelectTab = (id: string) => {
@@ -498,7 +368,7 @@ export default function App() {
     else if (type === "heatmaps") title = "Heatmaps";
     else if (type === "community") title = "Community";
     else if (type === "news") title = "News";
-    else if (type === "agent") title = "AI Agent";
+    else if (type === "research") title = "Research";
     else if (type === "dashboard") title = "Dashboard";
 
     const newTab: DesktopTab = {
@@ -534,9 +404,7 @@ export default function App() {
                         ? "Heatmaps"
                         : type === "community"
                           ? "Community"
-                          : type === "agent"
-                            ? "AI Agent"
-                            : "News",
+                          : "News",
               symbol: type === "chart" ? t.symbol || activeSymbol.ticker : undefined,
             }
           : t,
@@ -712,107 +580,6 @@ export default function App() {
     setTimeframe(periodToTimeframe(p));
   }, []);
 
-  const handleClosePosition = (id: string) => {
-    const pos = positions.find((p) => p.id === id);
-    if (!pos) return;
-    setAccount((prev) => ({
-      ...prev,
-      balance: prev.balance + pos.unrealizedPnl,
-      realizedPnl: prev.realizedPnl + pos.unrealizedPnl,
-      usedMargin: Math.max(0, prev.usedMargin - pos.margin),
-      freeMargin: prev.freeMargin + pos.margin + pos.unrealizedPnl,
-    }));
-    setPositions((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const handleCancelOrder = (id: string) => {
-    setOrders((prev) => prev.filter((o) => o.id !== id));
-  };
-
-  const handlePlaceOrder = (orderData: {
-    symbol: string;
-    side: "BUY" | "SELL";
-    type: "MARKET" | "LIMIT";
-    price: number;
-    amount: number;
-    leverage: number;
-    tp?: number;
-    sl?: number;
-  }) => {
-    const symbol = activeSymbol.id || orderData.symbol;
-    const side = orderData.side === "BUY" ? "long" : "short";
-    const orderCost = (orderData.price * orderData.amount) / orderData.leverage;
-
-    // Two-phase order flow through the backend risk gate (paper broker).
-    api
-      .order({
-        category: "USDT-FUTURES",
-        symbol,
-        side,
-        leverage: orderData.leverage,
-        price: orderData.price,
-      })
-      .then(({ token }) => api.orderConfirm(token))
-      .then((res) => {
-        if (!res.approved) return;
-        if (orderData.type === "MARKET") {
-          const newPos: Position = {
-            id: `pos-${Date.now()}`,
-            symbol,
-            side: orderData.side === "BUY" ? "LONG" : "SHORT",
-            amount: orderData.amount,
-            entryPrice: orderData.price,
-            currentPrice: orderData.price,
-            unrealizedPnl: 0,
-            unrealizedPnlPercent: 0,
-            margin: orderCost,
-            leverage: orderData.leverage,
-            tp: orderData.tp,
-            sl: orderData.sl,
-            timestamp: Date.now(),
-          };
-          setPositions((prev) => [newPos, ...prev]);
-          setAccount((prev) => ({
-            ...prev,
-            usedMargin: prev.usedMargin + orderCost,
-            freeMargin: Math.max(0, prev.freeMargin - orderCost),
-          }));
-        } else {
-          const newOrd: Order = {
-            id: `ord-${Date.now()}`,
-            symbol,
-            side: orderData.side,
-            type: "LIMIT",
-            price: orderData.price,
-            amount: orderData.amount,
-            filled: 0,
-            status: "WORKING",
-            leverage: orderData.leverage,
-            timestamp: Date.now(),
-          };
-          setOrders((prev) => [newOrd, ...prev]);
-        }
-      })
-      .catch(() => {
-        /* order rejected by risk gate or backend offline; keep UI unchanged */
-      });
-  };
-
-  // Resets the simulated paper account to its initial state. Wired to the
-  // Reset Funds button in the bottom-dock TradingPanel (wire-kill-switch-and-reset).
-  const handleResetPaperAccount = () => {
-    setAccount({
-      balance: 50000,
-      equity: 50000,
-      unrealizedPnl: 0,
-      realizedPnl: 0,
-      usedMargin: 0,
-      freeMargin: 50000,
-    });
-    setPositions([]);
-    setOrders([]);
-  };
-
   const activeCandle = candles[candles.length - 1] || null;
 
   // Bottom dock open state — when open, the chart workspace becomes a vertical
@@ -866,7 +633,6 @@ export default function App() {
           onOpenShortcuts={() => setIsShortcutsOpen(true)}
           onOpenSettings={() => setIsDesktopSettingsOpen(true)}
           onOpenAlertModal={() => setIsAlertOpen(true)}
-          onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
         />
 
         {/* Dynamic Workspace Router */}
@@ -937,19 +703,11 @@ export default function App() {
                 />
               </div>
 
-              {/* Bottom Dock (Pine Editor, Strategy Tester, Paper Trading Terminal, Screener, Text Notes) */}
+              {/* Bottom Dock (Screener, Text Notes) */}
               <BottomDock
                 symbol={activeSymbol}
                 symbols={symbols}
                 onSelectSymbol={handleSelectSymbol}
-                account={account}
-                positions={positions}
-                orders={orders}
-                onClosePosition={handleClosePosition}
-                onCancelOrder={handleCancelOrder}
-                onOpenOrderModal={(side) => setOrderModal({ isOpen: true, side })}
-                onResetAccount={handleResetPaperAccount}
-                backtestResult={backtestResult}
                 onOpenChange={setBottomOpen}
                 theme={theme}
               />
@@ -978,7 +736,7 @@ export default function App() {
             <NewsCalendarView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
           )}
 
-          {activeView === "agent" && <AgentView symbols={symbols} theme={theme} />}
+          {activeView === "research" && <ResearchView theme={theme} />}
         </main>
       </div>
 
@@ -1036,15 +794,6 @@ export default function App() {
           theme={theme}
         />
       )}
-
-      <OrderModal
-        isOpen={orderModal.isOpen}
-        onClose={() => setOrderModal({ ...orderModal, isOpen: false })}
-        symbol={activeSymbol}
-        initialSide={orderModal.side}
-        onSubmitOrder={handlePlaceOrder}
-        theme={theme}
-      />
     </div>
   );
 }

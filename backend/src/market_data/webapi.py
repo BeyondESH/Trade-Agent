@@ -1,8 +1,7 @@
 """FastAPI web API layer (#9a): thin HTTP/WS wrapper over market_data.
 
 Bound to 127.0.0.1 for local self-use. Business logic stays in the existing
-(tested) modules. Long tasks (backtest/pull) run in the background. Live orders
-use a two-step confirm-token flow and always pass the #3/#4 risk gates.
+(tested) modules.
 """
 
 from __future__ import annotations
@@ -11,8 +10,6 @@ import asyncio
 import json
 import logging
 import threading
-import time
-import uuid
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -20,48 +17,20 @@ from datetime import UTC, datetime
 from typing import Any
 
 import httpx
-import numpy as np
-from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from market_data import blockbeats, blockbeats_cache, dlquant, indicators, levels
-from market_data.agent import (
-    NEWS_DIGEST_CATEGORIES,
-    NEWS_DIGEST_HOURS,
-    build_agent_context,
-    format_news_digest,
-)
+from market_data import blockbeats, blockbeats_cache, indicators, levels
+from market_data.agent.store import ProjectionStore, proposal_meta
 from market_data.alertstore import AlertStore
-from market_data.appconfig import ConfigStore
-from market_data.backtest_history import BacktestHistoryStore
 from market_data.chartstore import ChartStore
 from market_data.config import Settings, get_settings
-from market_data.events import EventLog
-from market_data.execution import BrokerError, ExecutionEngine, LiveBroker, OrderRequest
-from market_data.factors import compute_factors
 from market_data.ingestion import KlineIngestor
-from market_data.llm import (
-    LLMTextProvider,
-    ProviderConfig,
-    RuleBasedProvider,
-    build_ollama_complete,
-    build_openai_complete,
-    make_complete,
-)
 from market_data.mcp_client import McpError
-from market_data.memory import (
-    MemoryStore,
-    Reflector,
-    TradeJournal,
-    augment_context,
-    features_from_context,
-)
 from market_data.models import Series
 from market_data.news_broker import HEARTBEAT_SECONDS, NewsBroker, sse_frame
-from market_data.orchestration import AgentCycle, RunControl, build_orchestrator
 from market_data.realtime import BitgetWsStream
-from market_data.risk import Portfolio, RiskEngine
 from market_data.smc import SmcEngine
 from market_data.store import ParquetStore
 from market_data.streamhub import MarketStream
@@ -69,75 +38,11 @@ from market_data.structure import StructureEngine
 
 logger = logging.getLogger(__name__)
 
-# Bounded in-memory retention for background jobs (oldest-first eviction).
-MAX_JOBS = 200
-# Bounded lifetime of a live-order confirm token (lazy-swept; token stays one-shot).
-PENDING_TOKEN_TTL_SECONDS = 300
 # Upper bound on `GET /candles` limit (matches `/candles/recent`'s 500 contract).
 MAX_CANDLE_LIMIT = 500
 
 
 # -- request bodies --------------------------------------------------------
-class ControlBody(BaseModel):
-    kill_switch: bool | None = None
-    live_enabled: bool | None = None
-    enabled: bool | None = None
-
-
-class OrderBody(BaseModel):
-    category: str = "USDT-FUTURES"
-    symbol: str
-    side: str  # long | short
-    leverage: float = 100.0
-    price: float
-
-
-class ConfirmBody(BaseModel):
-    token: str
-
-
-class SeriesBody(BaseModel):
-    category: str = "USDT-FUTURES"
-    symbol: str
-    timeframe: str
-
-
-class WindowBody(BaseModel):
-    """Optional time-window (UTC ms) for candle reads; absent → full range."""
-
-    start: int | None = None
-    end: int | None = None
-
-
-class BacktestBody(SeriesBody, WindowBody):
-    """Optional factor set + training params; absent → defaults (backward compat)."""
-
-    factors: list[dict] | None = None
-    params: dict | None = None
-
-
-class SweepBody(SeriesBody, WindowBody):
-    """Parameter grid scan over thresholds (and optional fees/slippages)."""
-
-    factors: list[dict] | None = None
-    params: dict | None = None
-    thresholds: list[float]
-    fees: list[float] | None = None
-    slippages: list[float] | None = None
-
-
-class WalkForwardBody(SeriesBody, WindowBody):
-    """Multi-fold walk-forward: TimeSeriesSplit folds, each backtested."""
-
-    factors: list[dict] | None = None
-    params: dict | None = None
-    n_splits: int | None = None
-
-
-class FeaturesBody(SeriesBody, WindowBody):
-    factors: list[dict] | None = None
-
-
 class BackfillBody(BaseModel):
     category: str = "USDT-FUTURES"
     symbol: str
@@ -175,13 +80,6 @@ class AlertPatchBody(BaseModel):
 
 
 # -- helpers ---------------------------------------------------------------
-def _build_provider(cfg: ProviderConfig, system_prompt: str | None):
-    if cfg.kind == "rule":
-        return RuleBasedProvider(cfg)
-    complete = build_ollama_complete(cfg) if cfg.kind == "ollama" else build_openai_complete(cfg)
-    return LLMTextProvider(complete, cfg, system_prompt=system_prompt)
-
-
 def _levels_json(lst) -> list[dict]:  # noqa: ANN001
     return [
         {
@@ -201,6 +99,7 @@ def create_app(
     backfill_client_factory: Callable[[], Any] | None = None,
     backfill_rest_fetcher: Callable[[str, str, str, int, int], list] | None = None,
     news_broker: NewsBroker | None = None,
+    projection_store: ProjectionStore | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     stream = stream or BitgetWsStream(
@@ -255,40 +154,14 @@ def create_app(
         from market_data.scheduler import build_rest_scheduler
 
         ingest_scheduler: BackgroundScheduler | None = None
-        orchestrator: BackgroundScheduler | None = None
-        # interval 0 disables background scheduling (tests / isolated runs): in
-        # that case NEITHER the ingest nor the orchestration scheduler starts.
+        # interval 0 disables background scheduling (tests / isolated runs).
         if settings.schedule_interval_seconds > 0:
             try:
                 ingest_scheduler = build_rest_scheduler(store, settings)
                 ingest_scheduler.start()
             except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
                 logger.warning("Incremental persistence scheduler start failed: %s", exc)
-            # Orchestration: the circuit-breaker safety job always runs; Agent
-            # trading / DL retrain are only registered when explicitly enabled.
-            # `data_pull=None` avoids double-pulling (the ingest scheduler owns
-            # incremental persistence). Reuses engine / journal / run_control.
-            try:
-                cycle = AgentCycle(
-                    engine=engine,
-                    journal=journal,
-                    memory_store=MemoryStore(journal),
-                    run_control=run_control,
-                    news_provider=_news_digest,
-                    complete=make_complete(config_store.provider_config()),
-                )
-                orchestrator = build_orchestrator(
-                    cycle,
-                    None,
-                    store=store,
-                    settings=settings,
-                    run_control=run_control,
-                )
-                orchestrator.start()
-            except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
-                logger.warning("Orchestration scheduler start failed: %s", exc)
         _app.state.ingest_scheduler = ingest_scheduler
-        _app.state.orchestrator = orchestrator
         try:
             stream.start()
         except Exception as exc:  # noqa: BLE001 - stream is best-effort
@@ -297,12 +170,6 @@ def create_app(
             market.start()
         except Exception as exc:  # noqa: BLE001 - market stream is best-effort
             logger.warning("Market stream start failed: %s", exc)
-        # Warm up the vectorbt/Numba hot path on startup so the first backtest
-        # job doesn't pay the JIT compile cost (best-effort, thread-safe).
-        try:
-            dlquant.warmup()
-        except Exception as exc:  # noqa: BLE001 - warm-up is best-effort
-            logger.warning("vectorbt warm-up failed: %s", exc)
         try:
             news_broker.start()
         except Exception as exc:  # noqa: BLE001 - news poller is best-effort
@@ -316,49 +183,18 @@ def create_app(
             cache_scheduler.shutdown(wait=False)
             if ingest_scheduler is not None:
                 ingest_scheduler.shutdown(wait=False)
-            if orchestrator is not None:
-                orchestrator.shutdown(wait=False)
 
     app = FastAPI(title="AI Trading API", version="0.1.0", lifespan=_lifespan)
 
     store = ParquetStore(settings.parquet_dir)
-    config_store = ConfigStore(settings.data_dir / "config" / "app.json")
     chart_store = ChartStore(settings.chart_config_path)
     alert_store = AlertStore(settings.data_dir / "alerts" / "alerts.json")
-    history_store = BacktestHistoryStore(settings.data_dir / "backtest_history" / "history.json")
-    journal = TradeJournal(settings.data_dir / "memory" / "trades.jsonl")
-    event_log = EventLog(settings.data_dir / "events" / "circuit_breaker.jsonl")
-    engine = ExecutionEngine(portfolio=Portfolio(equity=1000.0), event_log=event_log)
-    run_control = RunControl()
-    jobs: dict[str, dict] = {}
-    pending: dict[str, tuple[OrderBody, float]] = {}
-
-    def _register_job(job_id: str, state: dict) -> None:
-        """Write a job state, evicting the oldest job once MAX_JOBS is reached."""
-        if job_id not in jobs and len(jobs) >= MAX_JOBS:
-            jobs.pop(next(iter(jobs)))  # dict preserves insertion order (oldest first)
-        jobs[job_id] = state
-
-    def _sweep_pending() -> None:
-        """Drop expired confirm tokens (lazy cleanup, no background thread)."""
-        now = time.monotonic()
-        for token in [t for t, (_body, expires_at) in pending.items() if expires_at <= now]:
-            pending.pop(token, None)
+    # Agent projections are written by the standalone worker; FastAPI only reads.
+    projection_store = projection_store or ProjectionStore(settings.agent_dir)
 
     # Global news pipeline: dedicated polling thread + SSE hub. Tests inject a
     # fake broker so no real AKShare network traffic happens in offline runs.
     news_broker = news_broker or NewsBroker()
-
-    def _news_digest() -> str:
-        """Filtered, truncated news digest for Agent-context injection.
-
-        Reads the in-process ring buffer; an empty/mismatched buffer yields `""`
-        so the decision context stays valid without news.
-        """
-        items = news_broker.recent(
-            hours=NEWS_DIGEST_HOURS, categories=",".join(NEWS_DIGEST_CATEGORIES)
-        )
-        return format_news_digest(items)
 
     # Backfill throttling: per-series serialization + a small cross-series
     # concurrency cap (the MCP bridge is the bottleneck and Bitget rate
@@ -427,21 +263,16 @@ def create_app(
     async def _value_error(_req, exc: ValueError):  # noqa: ANN001
         return JSONResponse(status_code=400, content={"error": str(exc)})
 
-    @app.exception_handler(BrokerError)
     @app.exception_handler(McpError)
-    async def _broker_error(_req, exc: Exception):  # noqa: ANN001
-        # Upstream broker/MCP failures are a dependency outage (502), not an
+    async def _mcp_error(_req, exc: Exception):  # noqa: ANN001
+        # Upstream MCP failures are a dependency outage (502), not an
         # unhandled 500; always surface a structured JSON body.
         return JSONResponse(status_code=502, content={"error": str(exc)})
 
     # -- core --------------------------------------------------------------
     @app.get("/health")
     def health() -> dict:
-        return {
-            "status": "ok",
-            "kill_switch": run_control.kill_switch,
-            "live_enabled": run_control.paper_only is False,
-        }
+        return {"status": "ok"}
 
     # -- market ------------------------------------------------------------
     @app.get("/candles")
@@ -742,263 +573,52 @@ def create_app(
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
-    # -- background jobs (backtest / pull) --------------------------------
-    _BACKTEST_PARAM_KEYS = ("train_ratio", "thresh", "fee", "slippage")
-    _SWEEP_PARAM_KEYS = ("train_ratio",)
-    _WALKFORWARD_PARAM_KEYS = ("thresh", "fee", "slippage")
-    _VALID_MODELS = ("lr", "hgb")
-    # sklearn hyperparameters forwarded to SklearnModel (lr / hgb respective).
-    _MODEL_PARAM_KEYS = (
-        "C",
-        "max_iter",
-        "solver",
-        "max_depth",
-        "learning_rate",
-        "min_samples_leaf",
-    )
-    # vbt.Portfolio.from_signals money/size knobs.
-    _BACKTEST_MONEY_KEYS = ("init_cash", "size")
-    _BACKTEST_ALLOWED_KEYS = frozenset(
-        {*_BACKTEST_PARAM_KEYS, "model", "scale", *_MODEL_PARAM_KEYS, *_BACKTEST_MONEY_KEYS}
-    )
+    # -- agent research / execution projections (READ-ONLY, no LLM here) ---
+    @app.get("/research/proposals")
+    def research_proposals(symbol: str | None = None, limit: int = 50) -> dict:
+        bounded = min(200, max(1, limit))
+        items = projection_store.list_proposals(symbol=symbol, limit=bounded)
+        return {"proposals": [proposal_meta(item) for item in items]}
 
-    def _validate_window(start: int | None, end: int | None) -> None:
-        if start is not None and end is not None and start >= end:
-            raise ValueError(f"invalid window: start({start}) >= end({end})")
+    @app.get("/research/proposals/{proposal_id}")
+    def research_proposal(proposal_id: str) -> dict:
+        record = projection_store.get_proposal(proposal_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="proposal not found")
+        return record
 
-    def _validate_model(model: str | None) -> None:
-        if model is not None and model not in _VALID_MODELS:
-            raise ValueError(f"invalid model: {model!r} (expected one of {_VALID_MODELS})")
+    @app.get("/executions/{run_id}")
+    def execution_run(run_id: str) -> dict:
+        record = projection_store.get_run(run_id)
+        if record is None or record.get("kind") != "execution":
+            raise HTTPException(status_code=404, detail="execution run not found")
+        return record
 
-    def _validate_backtest_params(params: dict | None) -> None:
-        """Reject unknown backtest params (hyperparameters/money keys included)."""
-        if not params:
-            return
-        unknown = set(params) - _BACKTEST_ALLOWED_KEYS
-        if unknown:
-            raise ValueError(f"unknown backtest params: {sorted(unknown)}")
+    @app.get("/research/{thread_id}/stream")
+    async def research_stream(thread_id: str) -> StreamingResponse:
+        if not projection_store.stream_path(thread_id).exists():
+            raise HTTPException(status_code=404, detail="stream not found")
 
-    def _model_from_params(params: dict | None) -> dlquant.SklearnModel | None:
-        if params and params.get("model"):
-            kwargs = {}
-            for key in (*_MODEL_PARAM_KEYS, "scale"):
-                if key in params:
-                    kwargs[key] = params[key]
-            return dlquant.SklearnModel(kind=params["model"], **kwargs)
-        return None
+        async def _event_gen():
+            offset = 0
+            idle = 0.0
+            while True:
+                events, offset = projection_store.read_stream(thread_id, offset)
+                for event in events:
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    if event.get("type") in ("done", "error"):
+                        return
+                await asyncio.sleep(0.2)
+                idle += 0.2
+                if idle >= 15.0:
+                    idle = 0.0
+                    yield ": ping\n\n"
 
-    def _run_backtest(
-        job_id: str,
-        category: str,
-        symbol: str,
-        timeframe: str,
-        factors: list[dict] | None = None,
-        params: dict | None = None,
-        start: int | None = None,
-        end: int | None = None,
-    ) -> None:
-        try:
-            from market_data.models import validate_timeframe
-
-            validate_timeframe(timeframe)
-            _validate_window(start, end)
-            _validate_model(params.get("model") if params else None)
-            _validate_backtest_params(params)
-            df = _read(category, symbol, timeframe, start, end)
-            if df.empty:
-                raise ValueError("no data in the requested window (run /candles/backfill first)")
-            kwargs: dict = {"timeframe": timeframe}
-            if factors is not None:
-                kwargs["factor_defs"] = factors
-            model = _model_from_params(params)
-            if model is not None:
-                kwargs["model"] = model
-            if params:
-                for key in (*_BACKTEST_PARAM_KEYS, *_BACKTEST_MONEY_KEYS):
-                    if key in params:
-                        kwargs[key] = params[key]
-            result = dlquant.run_pipeline(df, **kwargs)
-            _register_job(job_id, {"status": "done", "result": result})
-            try:
-                history_store.save(
-                    {"category": category, "symbol": symbol, "timeframe": timeframe},
-                    params,
-                    factors,
-                    result,
-                )
-            except Exception:  # noqa: BLE001
-                logger.exception("failed to persist backtest history")
-        except Exception as exc:  # noqa: BLE001
-            _register_job(job_id, {"status": "error", "error": str(exc)})
-
-    @app.post("/backtest")
-    def backtest(body: BacktestBody, bg: BackgroundTasks) -> dict:
-        if body.params and body.params.get("model") not in (None, *_VALID_MODELS):
-            raise HTTPException(status_code=422, detail=f"invalid model: {body.params['model']!r}")
-        try:
-            _validate_backtest_params(body.params)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        job_id = uuid.uuid4().hex[:12]
-        _register_job(job_id, {"status": "running"})
-        bg.add_task(
-            _run_backtest,
-            job_id,
-            body.category,
-            body.symbol,
-            body.timeframe,
-            body.factors,
-            body.params,
-            body.start,
-            body.end,
+        return StreamingResponse(
+            _event_gen(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
-        return {"job_id": job_id}
-
-    @app.get("/jobs/{job_id}")
-    def job_status(job_id: str) -> dict:
-        if job_id not in jobs:
-            raise HTTPException(status_code=404, detail="job not found")
-        return {"job_id": job_id, **jobs[job_id]}
-
-    # -- parameter sweep + walk-forward (synchronous) ----------------------
-    def _read_quant_window(body: SeriesBody) -> Any:
-        from market_data.models import validate_timeframe
-
-        validate_timeframe(body.timeframe)
-        _validate_window(body.start, body.end)
-        df = _read(body.category, body.symbol, body.timeframe, body.start, body.end)
-        if df.empty:
-            raise HTTPException(
-                status_code=422,
-                detail="no data in the requested window (run /candles/backfill first)",
-            )
-        return df
-
-    @app.post("/backtest/sweep")
-    def backtest_sweep(body: SweepBody) -> dict:
-        if body.params and body.params.get("model") not in (None, *_VALID_MODELS):
-            raise HTTPException(status_code=422, detail=f"invalid model: {body.params['model']!r}")
-        df = _read_quant_window(body)
-        kwargs: dict = {"timeframe": body.timeframe}
-        if body.factors is not None:
-            kwargs["factor_defs"] = body.factors
-        model = _model_from_params(body.params)
-        if model is not None:
-            kwargs["model"] = model
-        if body.params:
-            for key in _SWEEP_PARAM_KEYS:
-                if key in body.params:
-                    kwargs[key] = body.params[key]
-        kwargs["thresholds"] = body.thresholds
-        if body.fees is not None:
-            kwargs["fees"] = body.fees
-        if body.slippages is not None:
-            kwargs["slippages"] = body.slippages
-        result = dlquant.sweep_params(df, **kwargs)
-        if "error" in result:
-            raise HTTPException(status_code=422, detail=result["error"])
-        return result
-
-    @app.post("/backtest/walkforward")
-    def backtest_walkforward(body: WalkForwardBody) -> dict:
-        if body.params and body.params.get("model") not in (None, *_VALID_MODELS):
-            raise HTTPException(status_code=422, detail=f"invalid model: {body.params['model']!r}")
-        df = _read_quant_window(body)
-        kwargs: dict = {"timeframe": body.timeframe}
-        if body.factors is not None:
-            kwargs["factor_defs"] = body.factors
-        model = _model_from_params(body.params)
-        if model is not None:
-            kwargs["model"] = model
-        if body.params:
-            for key in _WALKFORWARD_PARAM_KEYS:
-                if key in body.params:
-                    kwargs[key] = body.params[key]
-        if body.n_splits is not None:
-            kwargs["n_splits"] = body.n_splits
-        result = dlquant.walk_forward_run(df, **kwargs)
-        if "error" in result:
-            raise HTTPException(status_code=422, detail=result["error"])
-        return result
-
-    # -- backtest history -------------------------------------------------
-    @app.get("/backtest/history")
-    def backtest_history_list() -> dict:
-        return {"runs": history_store.list()}
-
-    @app.get("/backtest/history/{run_id}")
-    def backtest_history_detail(run_id: str) -> dict:
-        entry = history_store.get(run_id)
-        if entry is None:
-            raise HTTPException(status_code=404, detail="history run not found")
-        return entry
-
-    @app.delete("/backtest/history/{run_id}")
-    def backtest_history_delete(run_id: str) -> dict:
-        if not history_store.delete(run_id):
-            raise HTTPException(status_code=404, detail="history run not found")
-        return {"deleted": True}
-
-    # -- DL factor analysis ----------------------------------------------
-    def _num_or_none(v: float) -> float | None:  # noqa: ANN001
-        try:
-            f = float(v)
-            return None if f != f else f  # NaN -> None
-        except (TypeError, ValueError):
-            return None
-
-    @app.post("/dl/features")
-    def dl_features(body: FeaturesBody) -> dict:
-        from market_data.models import validate_timeframe
-
-        validate_timeframe(body.timeframe)
-        _validate_window(body.start, body.end)
-        df = _read(body.category, body.symbol, body.timeframe, body.start, body.end)
-        if df.empty:
-            raise HTTPException(
-                status_code=422,
-                detail="no data in the requested window (run /candles/backfill first)",
-            )
-        feats = compute_factors(df, body.factors)
-        if len(feats.columns) == 0:
-            raise HTTPException(status_code=422, detail="no factors selected")
-        close = df["close"]
-        label = (close.shift(-1) > close).astype("float64")
-        label.iloc[-1] = np.nan
-        out = []
-        for col in feats.columns:
-            x = feats[col]
-            mask = x.notna() & label.notna()
-            # Spearman = Pearson correlation of ranks — computed without scipy.
-            xs = x[mask].rank()
-            ys = label[mask].rank()
-            ic = _num_or_none(xs.corr(ys, method="pearson"))
-            out.append(
-                {
-                    "id": col,
-                    "ic": ic,
-                    "ic_abs": abs(ic) if ic is not None else None,
-                    "mean": _num_or_none(x.mean()),
-                    "std": _num_or_none(x.std()),
-                    "coverage": round(float(x.notna().mean()), 6),
-                    "last_value": _num_or_none(x.iloc[-1]),
-                }
-            )
-        return {
-            "factors": out,
-            "n_rows": int(len(feats)),
-            "start": int(df["open_time"].iloc[0]),
-            "end": int(df["open_time"].iloc[-1]),
-        }
-
-    # -- config ------------------------------------------------------------
-    @app.get("/config")
-    def get_config() -> dict:
-        return config_store.load()
-
-    @app.put("/config")
-    def put_config(body: dict) -> dict:
-        return config_store.save(body)  # raises ValueError -> 400
 
     # -- chart config ------------------------------------------------------
     @app.get("/chart-config")
@@ -1033,134 +653,6 @@ def create_app(
             raise HTTPException(status_code=404, detail="alert not found")
         return {"ok": True}
 
-    # -- agent -------------------------------------------------------------
-    def _augmented_decision(df, category, symbol, timeframe, news):  # noqa: ANN001
-        cfg_data = config_store.load()
-        cfg = ProviderConfig(**cfg_data["provider"])
-        cfg.category = category
-        ctx = build_agent_context(df, symbol, timeframe, news)
-        feats = features_from_context(ctx)
-        memories = MemoryStore(journal).retrieve(feats, k=3)
-        rules = list(cfg_data.get("manual_rules", [])) + Reflector().distill_rules(journal.all())
-        aug = augment_context(ctx, memories, rules)
-        provider = _build_provider(cfg, cfg_data.get("system_prompt"))
-        return provider.propose(aug), cfg
-
-    @app.post("/agent/decide")
-    def agent_decide(body: SeriesBody) -> dict:
-        df = _read(body.category, body.symbol, body.timeframe)
-        if len(df) < 30:
-            raise HTTPException(status_code=422, detail="insufficient data")
-        decision, _cfg = _augmented_decision(
-            df, body.category, body.symbol, body.timeframe, _news_digest()
-        )
-        return asdict(decision)
-
-    @app.post("/agent/cycle")
-    def agent_cycle(body: SeriesBody) -> dict:
-        df = _read(body.category, body.symbol, body.timeframe)
-        if len(df) < 30:
-            raise HTTPException(status_code=422, detail="insufficient data")
-        cfg = config_store.provider_config()
-        cfg.category = body.category
-        cycle = AgentCycle(
-            provider=_build_provider(cfg, config_store.load().get("system_prompt")),
-            engine=engine,
-            memory_store=MemoryStore(journal),
-            journal=journal,
-            run_control=run_control,
-            cfg=cfg,
-            complete=make_complete(cfg),
-            news_provider=_news_digest,
-        )
-        price = float(df["close"].iloc[-1])
-        return cycle.step(df, body.symbol, body.timeframe, price)
-
-    @app.get("/portfolio")
-    def portfolio() -> dict:
-        p = engine.portfolio
-        return {
-            "equity": p.equity,
-            "peak_equity": p.peak_equity,
-            "positions": {s: asdict(pos) for s, pos in p.positions.items()},
-        }
-
-    @app.get("/journal")
-    def get_journal() -> dict:
-        return {"trades": [asdict(t) for t in journal.all()]}
-
-    # -- control + live order flow ----------------------------------------
-    @app.put("/control")
-    def control(body: ControlBody) -> dict:
-        if body.kill_switch is not None:
-            run_control.kill_switch = body.kill_switch
-        if body.live_enabled is not None:
-            run_control.paper_only = not body.live_enabled
-        if body.enabled is not None:
-            run_control.enabled = body.enabled
-        return {
-            "kill_switch": run_control.kill_switch,
-            "live_enabled": not run_control.paper_only,
-            "enabled": run_control.enabled,
-        }
-
-    @app.post("/order")
-    def order(body: OrderBody) -> dict:
-        if not run_control.can_trade():
-            raise HTTPException(status_code=403, detail="kill-switch active")
-        decision = RiskEngine(config_store.risk_config()).check_order(
-            engine.portfolio, body.symbol, body.leverage
-        )
-        if not decision.approved:
-            raise HTTPException(status_code=400, detail=f"risk rejected: {decision.reason}")
-        token = uuid.uuid4().hex
-        _sweep_pending()
-        pending[token] = (body, time.monotonic() + PENDING_TOKEN_TTL_SECONDS)
-        return {
-            "token": token,
-            "preview": {
-                "margin": decision.margin,
-                "notional": decision.notional,
-                "leverage": decision.leverage,
-            },
-        }
-
-    @app.post("/order/confirm")
-    def order_confirm(body: ConfirmBody) -> dict:
-        if not run_control.can_trade():
-            raise HTTPException(status_code=403, detail="kill-switch active")
-        _sweep_pending()
-        entry = pending.pop(body.token, None)
-        if entry is None:
-            raise HTTPException(status_code=400, detail="invalid or used token")
-        ob, expires_at = entry
-        if expires_at <= time.monotonic():
-            raise HTTPException(status_code=400, detail="invalid or used token")
-        req = OrderRequest(ob.category, ob.symbol, ob.side, ob.leverage, ob.price)
-        if not run_control.paper_only:  # live
-            from market_data.mcp_client import McpDataClient
-
-            client = McpDataClient(settings.mcp_command, settings.mcp_args)
-            client.start()
-            try:
-                broker = LiveBroker(client, ob.category, enabled=True, confirm=lambda: True)
-                live = ExecutionEngine(
-                    risk_engine=RiskEngine(config_store.risk_config()),
-                    broker=broker,
-                    portfolio=engine.portfolio,
-                )
-                res = live.place(req, ob.price)
-            finally:
-                client.close()
-        else:
-            res = engine.place(req, ob.price)
-        return {
-            "approved": res.approved,
-            "filled": res.filled,
-            "reason": res.reason,
-            "live": not run_control.paper_only,
-        }
-
     # -- websocket subscription protocol -----------------------------------
     def _snapshot(category: str, symbol: str, timeframe: str) -> dict:
         # Live stream is the primary source for the current bar; the parquet
@@ -1173,23 +665,10 @@ def create_app(
             df = _read(category, symbol, timeframe)
             if len(df) < 1:
                 return {"error": "no data"}
-            return {
-                "price": float(df["close"].iloc[-1]),
-                "portfolio": {
-                    "equity": engine.portfolio.equity,
-                    "positions": list(engine.portfolio.positions.keys()),
-                },
-            }
+            return {"price": float(df["close"].iloc[-1])}
         df = _read(category, symbol, timeframe)
         price = float(bar["close"])
-        snap = {
-            "price": price,
-            "portfolio": {
-                "equity": engine.portfolio.equity,
-                "positions": list(engine.portfolio.positions.keys()),
-            },
-            "last_candle": bar,
-        }
+        snap = {"price": price, "last_candle": bar}
         if len(df) >= 30:
             snap["levels"] = _levels_json(levels.build_levels(df, top_n=5))
             ind = indicators.compute(df).iloc[-1]

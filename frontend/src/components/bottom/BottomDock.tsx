@@ -1,61 +1,28 @@
-import {
-  BookOpen,
-  ChevronDown,
-  ChevronUp,
-  DollarSign,
-  Filter,
-  LineChart,
-  Maximize2,
-  Minimize2,
-} from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Filter, Maximize2, Minimize2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import type {
-  AccountState,
-  BacktestResult,
-  Order,
-  Position,
-  SymbolInfo,
-} from "../../types/trading";
+import type { SymbolInfo } from "../../types/trading";
 import { NotesPanel } from "./NotesPanel";
 import { ScreenerPanel } from "./ScreenerPanel";
-import { StrategyTester } from "./StrategyTester";
-import { TradingPanel } from "./TradingPanel";
 
 interface Props {
   symbol: SymbolInfo;
   symbols: SymbolInfo[];
   onSelectSymbol: (symbol: SymbolInfo) => void;
-  account: AccountState;
-  positions: Position[];
-  orders: Order[];
-  onClosePosition: (id: string) => void;
-  onCancelOrder: (id: string) => void;
-  onOpenOrderModal: (side: "BUY" | "SELL") => void;
-  onResetAccount: () => void;
-  backtestResult: BacktestResult;
   onOpenChange?: (open: boolean) => void;
   theme: "dark" | "light";
 }
 
-type BottomTab = "screener" | "strategy" | "trading" | "notes";
+type BottomTab = "screener" | "notes";
 
 export const BottomDock: React.FC<Props> = ({
   symbol,
   symbols,
   onSelectSymbol,
-  account,
-  positions,
-  orders,
-  onClosePosition,
-  onCancelOrder,
-  onOpenOrderModal,
-  onResetAccount,
-  backtestResult,
   onOpenChange,
   theme,
 }) => {
-  const [activeTab, setActiveTab] = useState<BottomTab>("trading");
+  const [activeTab, setActiveTab] = useState<BottomTab>("screener");
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const isDark = theme === "dark";
@@ -79,12 +46,6 @@ export const BottomDock: React.FC<Props> = ({
       id: "screener" as BottomTab,
       label: "Stock / Crypto Screener",
       icon: Filter,
-    },
-    { id: "strategy" as BottomTab, label: "Strategy Tester", icon: LineChart },
-    {
-      id: "trading" as BottomTab,
-      label: `Trading Panel (${positions.length})`,
-      icon: DollarSign,
     },
     { id: "notes" as BottomTab, label: "Text Notes", icon: BookOpen },
   ];
@@ -158,21 +119,6 @@ export const BottomDock: React.FC<Props> = ({
           target height for short content. No inner clipping. */}
       {isOpen && (
         <div className={`w-full transition-all ${isMaximized ? "min-h-[420px]" : "min-h-[230px]"}`}>
-          {activeTab === "strategy" && <StrategyTester result={backtestResult} theme={theme} />}
-
-          {activeTab === "trading" && (
-            <TradingPanel
-              account={account}
-              positions={positions}
-              orders={orders}
-              onClosePosition={onClosePosition}
-              onCancelOrder={onCancelOrder}
-              onOpenOrderModal={onOpenOrderModal}
-              onResetAccount={onResetAccount}
-              theme={theme}
-            />
-          )}
-
           {activeTab === "screener" && (
             <ScreenerPanel symbols={symbols} onSelectSymbol={onSelectSymbol} theme={theme} />
           )}

@@ -41,227 +41,6 @@ export interface StructureResponse {
   bos_choch: unknown[];
 }
 
-export interface ProviderConfig {
-  kind: string;
-  model: string;
-  base_url: string;
-  api_key: string;
-  near_pct: number;
-  min_strength: number;
-  leverage: number;
-  category: string;
-}
-
-export interface RiskConfig {
-  margin_pct: number;
-  max_drawdown_pct: number;
-  max_leverage: number;
-  max_adds: number;
-  max_symbol_margin_pct: number;
-}
-
-export interface AppConfig {
-  provider: ProviderConfig;
-  risk: RiskConfig;
-  system_prompt: string | null;
-  manual_rules: string[];
-  /** Custom factor set for the DL workbench; null/absent → engine defaults. */
-  factors?: FactorDef[] | null;
-}
-
-export interface FactorDef {
-  id: string;
-  name: string;
-  kind: "preset" | "expr";
-  fn?: string;
-  params?: Record<string, number | string>;
-  expr?: string;
-  enabled?: boolean;
-}
-
-export interface BacktestParams {
-  train_ratio?: number;
-  thresh?: number;
-  fee?: number;
-  slippage?: number;
-  /** Model kind: "lr" (default LogisticRegression) or "hgb" (gradient boosting). */
-  model?: "lr" | "hgb";
-  /** StandardScaler on/off (default true). */
-  scale?: boolean;
-  /** lr hyperparameters. */
-  C?: number;
-  max_iter?: number;
-  solver?: string;
-  /** hgb hyperparameters. */
-  max_depth?: number;
-  learning_rate?: number;
-  min_samples_leaf?: number;
-  /** vbt.Portfolio execution knobs (absent → vectorbt defaults). */
-  init_cash?: number;
-  size?: number;
-}
-
-export interface BacktestSeries {
-  open_time: number[];
-  equity: number[];
-  drawdown: number[];
-  signal: number[];
-  proba: number[];
-  /** buy & hold benchmark normalized to 1.0 at the first bar (absent for old runs). */
-  benchmark?: number[];
-}
-
-export interface BacktestDataMeta {
-  n_train: number;
-  n_test: number;
-  start: number;
-  end: number;
-}
-
-export interface BacktestJobResult {
-  total_return?: number;
-  max_drawdown?: number;
-  win_rate?: number;
-  trades?: number;
-  bars?: number;
-  test_bars?: number;
-  series?: BacktestSeries;
-  data_meta?: BacktestDataMeta;
-  /** Per-trade records; absent for pre-change backends / failed runs. */
-  trade_list?: BacktestTrade[];
-  /** vectorbt/QuantStats-derived risk/performance summary. */
-  stats?: Record<string, number>;
-  /** Model-level evaluation on the test set (sklearn). */
-  model_metrics?: { roc_auc?: number | null; log_loss?: number | null };
-  /** Feature contribution weights (lr coef / hgb importances), optional. */
-  feature_weights?: {
-    kind: "coef" | "importance";
-    features: string[];
-    values: number[];
-  };
-  /** ROC curve FPR/TPR arrays, optional (omitted when test set is degenerate). */
-  roc_curve?: { fpr: number[]; tpr: number[] };
-  error?: string;
-}
-
-export interface BacktestTrade {
-  side: "long" | "short";
-  entry_time: number;
-  entry_price: number;
-  exit_time: number;
-  exit_price: number;
-  bars: number;
-  gross_return: number;
-  net_return: number;
-}
-
-export interface BacktestHistoryMeta {
-  id: string;
-  created_at: number;
-  category: string;
-  symbol: string;
-  timeframe: string;
-  params: BacktestParams;
-  factors: FactorDef[];
-  metrics: {
-    total_return?: number;
-    max_drawdown?: number;
-    win_rate?: number;
-    trades?: number;
-    bars?: number;
-    test_bars?: number;
-  };
-  data_meta: BacktestDataMeta;
-  /** vectorbt schema marker; records persisted by the old engine are legacy. */
-  schema?: string;
-  legacy?: boolean;
-}
-
-export interface BacktestHistoryDetail extends BacktestHistoryMeta {
-  trade_list: BacktestTrade[];
-  series: BacktestSeries;
-  /** vectorbt/QuantStats risk summary persisted for current-schema records. */
-  stats?: Record<string, number>;
-  /** sklearn model evaluation persisted for current-schema records. */
-  model_metrics?: { roc_auc?: number | null; log_loss?: number | null };
-  /** Feature contribution weights persisted for current-schema records. */
-  feature_weights?: {
-    kind: "coef" | "importance";
-    features: string[];
-    values: number[];
-  };
-  /** ROC curve FPR/TPR arrays persisted for current-schema records. */
-  roc_curve?: { fpr: number[]; tpr: number[] };
-}
-
-export interface FactorIc {
-  id: string;
-  ic: number | null;
-  ic_abs: number | null;
-  mean: number | null;
-  std: number | null;
-  coverage: number;
-  last_value: number | null;
-}
-
-export interface DlFeaturesResponse {
-  factors: FactorIc[];
-  n_rows: number;
-  start: number;
-  end: number;
-}
-
-/** One parameter-grid row returned by POST /backtest/sweep. */
-export interface SweepRow {
-  threshold: number;
-  fee: number;
-  slippage: number;
-  total_return: number;
-  max_drawdown: number;
-  win_rate: number;
-  trades: number;
-}
-
-export interface SweepResult {
-  results: SweepRow[];
-  data_meta: { n_train: number; n_test: number; start: number; end: number };
-}
-
-/** One walk-forward fold returned by POST /backtest/walkforward. */
-export interface WalkForwardFold {
-  fold: number;
-  train_start: number;
-  train_end: number;
-  test_start: number;
-  test_end: number;
-  total_return: number;
-  max_drawdown: number;
-  win_rate: number;
-  trades: number;
-  roc_auc: number | null;
-  log_loss: number | null;
-}
-
-export interface WalkForwardResult {
-  folds: WalkForwardFold[];
-  data_meta: { n_train: number; n_test: number; start: number; end: number };
-}
-
-export interface AgentDecision {
-  action: "open" | "close" | "hold";
-  symbol: string;
-  side: string | null;
-  reference_price: number | null;
-  reason: string;
-  confidence: number;
-}
-
-export interface Portfolio {
-  equity: number;
-  peak_equity: number;
-  positions: Record<string, unknown>;
-}
-
 export interface Snapshot {
   price?: number;
   portfolio?: { equity: number; positions: string[] };
@@ -306,12 +85,6 @@ export interface SeriesRef {
   category: string;
   symbol: string;
   timeframe: string;
-}
-
-/** Optional UTC-ms window for quant data reads; absent → full range. */
-export interface DataWindow {
-  start?: number;
-  end?: number;
 }
 
 export interface AlertRecord {
@@ -402,3 +175,82 @@ export interface ChartConfig {
   }[];
   layers: { sr: boolean; structure: boolean; smc: boolean };
 }
+
+// ---------------------------------------------------------------------------
+// Research / strategy-proposal layer (read-only projection of the agent worker)
+// Mirrors the backend `StrategyProposal` contract; the frontend never mutates it.
+// ---------------------------------------------------------------------------
+
+export type ProposalAction = "open_long" | "open_short" | "close" | "flat";
+
+export type ProposalEntryKind = "market" | "limit";
+
+export interface ProposalEntry {
+  kind: ProposalEntryKind;
+  price?: number;
+}
+
+export interface ProposalProvenance {
+  model: string;
+  prompt_ver: string;
+  research_thread_id: string;
+}
+
+/**
+ * Compact list projection (`GET /research/proposals`). The detail endpoint
+ * returns the full {@link StrategyProposal}.
+ */
+export interface ProposalMeta {
+  proposal_id: string;
+  /** ISO-8601 string or epoch seconds. */
+  produced_at: string | number;
+  /** ISO-8601 string or epoch seconds. */
+  expires_at: string | number;
+  symbol: string;
+  category: string;
+  timeframe: string;
+  action: ProposalAction;
+  confidence: number;
+}
+
+export interface StrategyProposal extends ProposalMeta {
+  entry: ProposalEntry;
+  stop_loss?: number;
+  take_profit?: number;
+  horizon: string;
+  rationale: string;
+  evidence: string[];
+  provenance: ProposalProvenance;
+}
+
+export type ExecutionStatus = "pending" | "running" | "succeeded" | "failed" | "fail_closed";
+
+export interface ExecutionNodeEvent {
+  node: string;
+  status?: string;
+  detail?: string;
+  ts?: string | number;
+}
+
+/** Execution run status object (`GET /executions/{run_id}`). */
+export interface ExecutionRun {
+  run_id: string;
+  proposal_id: string;
+  symbol?: string;
+  status: ExecutionStatus;
+  /** Present when the run terminated fail-closed / failed. */
+  reason?: string | null;
+  nodes: ExecutionNodeEvent[];
+  started_at?: string | number;
+  finished_at?: string | number | null;
+}
+
+/**
+ * One frame of `GET /research/{thread_id}/stream` (text/event-stream). The
+ * backend tags every frame with `type`; the remaining keys are event-specific.
+ */
+export type ResearchStreamEvent =
+  | { type: "node"; node: string; detail?: string; status?: string }
+  | { type: "text"; text: string }
+  | { type: "done"; status?: string; reason?: string }
+  | { type: "error"; message?: string; reason?: string };

@@ -5,6 +5,7 @@ import {
   Cloud,
   CloudCheck,
   ExternalLink,
+  FileText,
   Filter,
   Flame,
   HelpCircle,
@@ -90,6 +91,8 @@ export const DesktopTitleBar: React.FC<Props> = ({
         return <Users className="w-3.5 h-3.5 text-[#9c27b0]" />;
       case "news":
         return <Newspaper className="w-3.5 h-3.5 text-[#4caf50]" />;
+      case "research":
+        return <FileText className="w-3.5 h-3.5 text-[#2962ff]" />;
       case "dashboard":
         return <Layout className="w-3.5 h-3.5 text-[#2962ff]" />;
       default:
@@ -146,6 +149,20 @@ export const DesktopTitleBar: React.FC<Props> = ({
               >
                 <span>{t("New Chart Tab")}</span>
                 <span className="text-[10px] text-gray-400 font-mono">⌘T</span>
+              </button>
+
+              <button
+                data-testid="menu-new-research-tab"
+                onClick={() => {
+                  onNewTab("research");
+                  setIsMenuOpen(false);
+                }}
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between ${
+                  isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
+                }`}
+              >
+                <span>{t("New Research Tab")}</span>
+                <FileText className="w-3 h-3 text-[#2962ff]" />
               </button>
 
               <button

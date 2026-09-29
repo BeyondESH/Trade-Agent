@@ -1,10 +1,8 @@
 import {
-  ArrowUpRight,
   Bell,
-  Bot,
+  FileText,
   Filter,
   Flame,
-  HelpCircle,
   Keyboard,
   Monitor,
   Moon,
@@ -28,7 +26,6 @@ interface Props {
   onOpenShortcuts: () => void;
   onOpenSettings: () => void;
   onOpenAlertModal?: () => void;
-  onOpenOrderModal?: (side: "BUY" | "SELL") => void;
 }
 
 export const GlobalNavRail: React.FC<Props> = ({
@@ -40,7 +37,6 @@ export const GlobalNavRail: React.FC<Props> = ({
   onOpenShortcuts,
   onOpenSettings,
   onOpenAlertModal,
-  onOpenOrderModal,
 }) => {
   const isDark = theme === "dark";
 
@@ -82,9 +78,9 @@ export const GlobalNavRail: React.FC<Props> = ({
       icon: <Newspaper className="w-4 h-4" />,
     },
     {
-      id: "agent",
-      label: t("AI Agent"),
-      icon: <Bot className="w-4 h-4" />,
+      id: "research",
+      label: t("Research"),
+      icon: <FileText className="w-4 h-4" />,
     },
   ];
 
@@ -141,19 +137,6 @@ export const GlobalNavRail: React.FC<Props> = ({
             title={t("Create Alert")}
           >
             <Bell className="w-3.5 h-3.5 text-[#ff9800]" />
-          </button>
-        )}
-
-        {onOpenOrderModal && (
-          <button
-            data-testid="nav-open-order"
-            onClick={() => onOpenOrderModal("BUY")}
-            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
-              isDark ? "hover:bg-[#1e222d] hover:text-white" : "hover:bg-white hover:text-black"
-            }`}
-            title={t("Buy / Long")}
-          >
-            <ArrowUpRight className="w-3.5 h-3.5 text-[#089981]" />
           </button>
         )}
 

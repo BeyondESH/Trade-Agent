@@ -18,20 +18,6 @@ TBD - created by archiving change quant-engine-vectorbt-rewrite. Update Purpose 
 - **WHEN** 数据长度不足以计算某指标
 - **THEN** 系统 SHALL 返回 NaN 而非抛错
 
-### Requirement: 因子目录适配
-
-系统 SHALL 保持 `factors.py` 预设因子目录与白名单表达式 DSL 的对外行为,底层指标函数适配到 vectorbt 输出。
-
-#### Scenario: 预设因子结构不变
-
-- **WHEN** 使用默认 7 因子配置调用特征构造
-- **THEN** 特征列名与顺序 SHALL 与迁移前一致,数值按 vectorbt 标准口径(指标数学以 vectorbt 为准)
-
-#### Scenario: 表达式因子
-
-- **WHEN** 求值白名单表达式(如 `log(close / sma(close, 20))`)
-- **THEN** 结果 SHALL 与迁移前一致
-
 ### Requirement: 指标无前视与确定性
 
 迁移后的指标 SHALL 仅使用截至当前 bar 的数据,且对相同输入产出相同结果。

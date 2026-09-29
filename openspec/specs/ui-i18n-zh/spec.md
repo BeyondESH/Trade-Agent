@@ -5,7 +5,7 @@ TBD - created by archiving change fix-realtime-data-i18n. Update Purpose after a
 ## Requirements
 ### Requirement: 全界面中文文案
 
-系统 SHALL 通过统一 i18n 字典(`frontend/src/lib/i18n.ts`,提供 `t(key)` 中文文案)将模板 UI 外壳全部可见文案汉化,覆盖:桌面标题栏、全局导航栏、顶部图表工具栏、绘图工具栏、多图表网格水印、右侧停靠栏各面板(自选股/提醒/新闻/数据窗口/热榜/财经日历/订单簿/社区)、底部停靠栏各面板、8 个全视图与全部弹窗;不再存在硬编码英文 UI 文案。所有用户可见文案 MUST 经 `t()` 查阅字典,复用既有键优先,仅当字典缺失时按"英文键 → 中文值"追加新键(`t()` 未命中时回退原键)。审计确认残留文案的组件(新闻日历/新闻面板/订单簿/交易面板/自选股面板/桌面标题栏/热力图/社区观点/底部时间栏)MUST 完成替换。`components/views/agent/**` 子树的硬编码中文 SHALL 视为已符合中文目标语种并排除本次扫除;若引入多语言需求,该子树 MUST 单独立项处理。
+系统 SHALL 通过统一 i18n 字典(`frontend/src/lib/i18n.ts`,提供 `t(key)` 中文文案)将模板 UI 外壳全部可见文案汉化,覆盖:桌面标题栏、全局导航栏、顶部图表工具栏、绘图工具栏、多图表网格水印、右侧停靠栏各面板(自选股/提醒/新闻/数据窗口/热榜/财经日历/订单簿/社区)、底部停靠栏各面板、全视图与全部弹窗;不再存在硬编码英文 UI 文案。所有用户可见文案 MUST 经 `t()` 查阅字典,复用既有键优先,仅当字典缺失时按"英文键 → 中文值"追加新键(`t()` 未命中时回退原键)。审计确认残留文案的组件(新闻日历/新闻面板/订单簿/自选股面板/桌面标题栏/热力图/社区观点/底部时间栏)MUST 完成替换。原 `components/views/agent/**` 子树已随 AI Agent 与量化层整体删除,不再纳入范围。
 
 #### Scenario: 中文文案展示
 
@@ -30,7 +30,7 @@ TBD - created by archiving change fix-realtime-data-i18n. Update Purpose after a
 #### Scenario: agent 子树边界
 
 - **WHEN** 执行本次文案扫除
-- **THEN** `components/views/agent/**` 的硬编码中文 SHALL NOT 被要求改写,且该排除 SHALL 有明确理由记录
+- **THEN** `components/views/agent/**` 已随自定义 AI Agent 与量化层整体删除,SHALL NOT 再存在于代码库中,故该子树不再需要任何文案处理或排除声明
 
 ### Requirement: 统一中文字体栈
 系统 SHALL 在 `frontend/src/index.css` 定义全局中文字体栈(优先 `PingFang SC`/`Microsoft YaHei`/`Noto Sans CJK SC`,西文回退 `Inter`/`Segoe UI`,数字保留等宽特性)并应用到 `html/body`;各组件不再各自声明冲突字体,价格/数字类文本保留 `font-variant-numeric: tabular-nums` 等宽对齐。

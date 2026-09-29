@@ -30,23 +30,7 @@ def _series_qs(symbol: str = "BTCUSDT", timeframe: str = "1m") -> str:
 def test_health(client: httpx.Client) -> None:
     r = client.get("/health")
     assert r.status_code == 200
-    body = r.json()
-    assert body["status"] == "ok"
-    assert "kill_switch" in body and "live_enabled" in body
-
-
-def test_portfolio_empty(client: httpx.Client) -> None:
-    r = client.get("/portfolio")
-    assert r.status_code == 200
-    body = r.json()
-    assert body["equity"] == 1000.0
-    assert body["positions"] == {}
-
-
-def test_journal_empty(client: httpx.Client) -> None:
-    r = client.get("/journal")
-    assert r.status_code == 200
-    assert r.json()["trades"] == []
+    assert r.json()["status"] == "ok"
 
 
 def test_candles_seeded(client: httpx.Client) -> None:
@@ -86,61 +70,6 @@ def test_structure(client: httpx.Client) -> None:
     assert r.status_code == 200
     body = r.json()
     assert "swings" in body and "order_blocks" in body
-
-
-def test_backtest_and_job(client: httpx.Client) -> None:
-    r = client.post("/backtest", json={"category": CAT, "symbol": "BTCUSDT", "timeframe": "1m"})
-    assert r.status_code == 200
-    job_id = r.json()["job_id"]
-    jr = client.get(f"/jobs/{job_id}")
-    assert jr.status_code == 200
-    assert jr.json()["job_id"] == job_id
-
-
-def test_backtest_sweep_live(client: httpx.Client) -> None:
-    r = client.post(
-        "/backtest/sweep",
-        json={
-            "category": CAT,
-            "symbol": "BTCUSDT",
-            "timeframe": "1m",
-            "thresholds": [0.5, 0.6],
-        },
-    )
-    assert r.status_code == 200
-    body = r.json()
-    assert len(body["results"]) >= 2
-    assert {
-        "threshold",
-        "fee",
-        "slippage",
-        "total_return",
-        "max_drawdown",
-        "win_rate",
-        "trades",
-    } <= set(body["results"][0])
-
-
-def test_backtest_walkforward_live(client: httpx.Client) -> None:
-    r = client.post(
-        "/backtest/walkforward",
-        json={
-            "category": CAT,
-            "symbol": "BTCUSDT",
-            "timeframe": "1m",
-            "n_splits": 2,
-        },
-    )
-    assert r.status_code == 200
-    body = r.json()
-    assert len(body["folds"]) == 2
-    for f in body["folds"]:
-        assert f["train_end"] < f["test_start"]
-
-
-def test_job_not_found(client: httpx.Client) -> None:
-    r = client.get("/jobs/does-not-exist")
-    assert r.status_code == 404
 
 
 # -- market channels (offline: empty but structured) ---------------------
@@ -185,26 +114,6 @@ def test_instruments_offline_structured(client: httpx.Client) -> None:
 
 
 # -- config / chart-config ----------------------------------------------
-
-
-def test_config_roundtrip(client: httpx.Client) -> None:
-    r = client.get("/config")
-    assert r.status_code == 200
-    cfg = r.json()
-    assert cfg["provider"]["kind"] == "rule"
-
-    cfg["provider"]["near_pct"] = 0.007
-    r = client.put("/config", json=cfg)
-    assert r.status_code == 200
-    assert r.json()["provider"]["near_pct"] == 0.007
-
-    r = client.get("/config")
-    assert r.json()["provider"]["near_pct"] == 0.007
-
-
-def test_config_invalid_rejected(client: httpx.Client) -> None:
-    r = client.put("/config", json={"risk": {"max_leverage": 0}})
-    assert r.status_code == 400
 
 
 def test_chart_config_roundtrip(client: httpx.Client) -> None:
@@ -258,94 +167,6 @@ def test_alerts_delete_missing(client: httpx.Client) -> None:
     assert r.status_code in (404, 405)  # route vs business layer ordering
 
 
-# -- order flow ---------------------------------------------------------
-
-
-def test_order_confirm_token_flow(client: httpx.Client) -> None:
-    # The session-scoped live server shares portfolio state across tests;
-    # skip the fill assertions if an earlier agent test consumed the margin
-    # so this test never depends on a specific execution order.
-    r = client.get("/portfolio")
-    positions = r.json()["positions"]
-    if positions:
-        pytest.skip(f"portfolio already holds {list(positions)}; skip order-fill assertions")
-
-    r = client.post(
-        "/order",
-        json={"category": CAT, "symbol": "SOLUSDT", "side": "long", "leverage": 10, "price": 100.0},
-    )
-    assert r.status_code == 200, f"order failed: {r.status_code} {r.text}"
-    body = r.json()
-    assert "token" in body and "preview" in body
-
-    r = client.post("/order/confirm", json={"token": body["token"]})
-    assert r.status_code == 200
-    confirm = r.json()
-    assert confirm["approved"] is True
-    assert confirm["filled"] is True
-    assert confirm["live"] is False  # paper-only default
-
-    # portfolio now reflects the position
-    r = client.get("/portfolio")
-    assert "SOLUSDT" in r.json()["positions"]
-
-
-def test_order_confirm_unknown_token(client: httpx.Client) -> None:
-    r = client.post("/order/confirm", json={"token": "not-a-real-token"})
-    assert r.status_code == 400
-
-
-def test_order_kill_switch_blocked(client: httpx.Client) -> None:
-    client.put("/control", json={"kill_switch": True})
-    try:
-        r = client.post(
-            "/order",
-            json={
-                "category": CAT,
-                "symbol": "BTCUSDT",
-                "side": "long",
-                "leverage": 10,
-                "price": 100.0,
-            },
-        )
-        assert r.status_code == 403
-    finally:
-        client.put("/control", json={"kill_switch": False})
-
-
-# -- agent / portfolio / journal / control ------------------------------
-
-
-def test_agent_decide_rule_based(client: httpx.Client) -> None:
-    r = client.post("/agent/decide", json={"category": CAT, "symbol": "BTCUSDT", "timeframe": "1h"})
-    assert r.status_code == 200
-    body = r.json()
-    assert body["action"] in ("open", "close", "hold")
-    assert "symbol" in body and "reason" in body
-
-
-def test_agent_cycle(client: httpx.Client) -> None:
-    r = client.post("/agent/cycle", json={"category": CAT, "symbol": "ETHUSDT", "timeframe": "1h"})
-    assert r.status_code == 200
-    body = r.json()
-    assert isinstance(body, dict) and "decision" in body
-
-
-def test_agent_insufficient_data(client: httpx.Client) -> None:
-    r = client.post("/agent/decide", json={"category": CAT, "symbol": "SOLUSDT", "timeframe": "1h"})
-    # seed only has 48 bars -> should be >= 30, so 200; use a fresh symbol to force < 30
-    r = client.post("/agent/decide", json={"category": CAT, "symbol": "NEWSYM", "timeframe": "1h"})
-    assert r.status_code == 422
-
-
-def test_control_roundtrip(client: httpx.Client) -> None:
-    r = client.put("/control", json={"kill_switch": True})
-    assert r.status_code == 200
-    assert r.json()["kill_switch"] is True
-    r = client.put("/control", json={"kill_switch": False})
-    assert r.json()["kill_switch"] is False
-
-
 # -- error paths --------------------------------------------------------
 
 
@@ -373,77 +194,6 @@ def test_unknown_symbol_empty(client: httpx.Client) -> None:
     assert r.json()["count"] == 0
 
 
-# -- backtest history ----------------------------------------------------
-
-
-def _run_backtest_done(client: httpx.Client, **extra: object) -> dict:
-    """Submit a /backtest and poll /jobs until it finishes."""
-    import time
-
-    body = {"category": CAT, "symbol": "BTCUSDT", "timeframe": "1m", **extra}
-    r = client.post("/backtest", json=body)
-    assert r.status_code == 200
-    job_id = r.json()["job_id"]
-    for _ in range(120):
-        jr = client.get(f"/jobs/{job_id}")
-        assert jr.status_code == 200
-        if jr.json()["status"] != "running":
-            return jr.json()
-        time.sleep(0.25)
-    raise AssertionError("backtest job did not finish in time")
-
-
-def test_backtest_history_auto_saved(client: httpx.Client) -> None:
-    done = _run_backtest_done(client)
-    assert done["status"] == "done"
-
-    runs = client.get("/backtest/history")
-    assert runs.status_code == 200
-    metas = runs.json()["runs"]
-    assert isinstance(metas, list) and len(metas) >= 1
-    run_id = None
-    for m in metas:
-        assert {
-            "id",
-            "created_at",
-            "category",
-            "symbol",
-            "timeframe",
-            "metrics",
-            "data_meta",
-        } <= set(m)
-        assert "trade_list" not in m and "series" not in m  # list stays light
-        if m["symbol"] == "BTCUSDT" and m["timeframe"] == "1m":
-            run_id = m["id"]
-    assert run_id is not None
-
-    detail = client.get(f"/backtest/history/{run_id}")
-    assert detail.status_code == 200
-    entry = detail.json()
-    assert isinstance(entry["trade_list"], list)
-    assert "equity" in entry["series"]
-    assert entry["metrics"]["bars"] >= 1
-
-
-def test_backtest_history_detail_missing(client: httpx.Client) -> None:
-    r = client.get("/backtest/history/does-not-exist")
-    assert r.status_code == 404
-
-
-def test_backtest_history_delete(client: httpx.Client) -> None:
-    done = _run_backtest_done(client, params={"thresh": 0.8})
-    assert done["status"] == "done"
-    runs = client.get("/backtest/history")
-    run_id = runs.json()["runs"][0]["id"]
-
-    assert client.get(f"/backtest/history/{run_id}").status_code == 200
-    r = client.delete(f"/backtest/history/{run_id}")
-    assert r.status_code == 200 and r.json()["deleted"] is True
-    assert client.get(f"/backtest/history/{run_id}").status_code == 404
-    # deleting again → 404
-    assert client.delete(f"/backtest/history/{run_id}").status_code == 404
-
-
 # -- blockbeats (online: real upstream; offline: local cache) -----------
 
 
@@ -459,6 +209,54 @@ def test_blockbeats_news_online(client: httpx.Client) -> None:
     r = client.get("/blockbeats/newsflash/important")
     assert r.status_code == 200
     assert isinstance(r.json().get("data"), list)
+
+
+# -- agent research / execution projections (read-only) -----------------
+
+
+def test_research_proposals_list(client: httpx.Client) -> None:
+    r = client.get("/research/proposals")
+    assert r.status_code == 200
+    proposals = r.json()["proposals"]
+    assert isinstance(proposals, list)
+    seeded = next(p for p in proposals if p["proposal_id"] == "seed-p1")
+    assert seeded["symbol"] == "BTCUSDT"
+    assert "rationale" not in seeded  # list view is trimmed to meta
+
+
+def test_research_proposals_symbol_filter(client: httpx.Client) -> None:
+    r = client.get("/research/proposals", params={"symbol": "BTCUSDT"})
+    assert r.status_code == 200
+    assert all(p["symbol"] == "BTCUSDT" for p in r.json()["proposals"])
+
+
+def test_research_proposal_detail_and_404(client: httpx.Client) -> None:
+    r = client.get("/research/proposals/seed-p1")
+    assert r.status_code == 200
+    assert r.json()["proposal_id"] == "seed-p1"
+
+    missing = client.get("/research/proposals/nope")
+    assert missing.status_code == 404
+
+
+def test_execution_run_detail_and_404(client: httpx.Client) -> None:
+    r = client.get("/executions/exec:seed-p1")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ok"
+
+    missing = client.get("/executions/nope")
+    assert missing.status_code == 404
+
+
+def test_research_stream_sse_and_404(client: httpx.Client) -> None:
+    with client.stream("GET", "/research/research:seed/stream") as r:
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/event-stream")
+        lines = [line for line in r.iter_lines() if line]
+    assert any("done" in line for line in lines)
+
+    missing = client.get("/research/missing:thread/stream")
+    assert missing.status_code == 404
 
 
 # -- live backfill (online: real Bitget v3) -----------------------------

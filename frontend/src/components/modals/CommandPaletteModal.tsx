@@ -1,5 +1,6 @@
 import {
   ChevronRight,
+  FileText,
   Filter,
   Flame,
   Keyboard,
@@ -93,6 +94,13 @@ export const CommandPaletteModal: React.FC<Props> = ({
       type: "view" as const,
       view: "news" as DesktopViewMode,
       icon: <Newspaper className="w-4 h-4 text-[#4caf50]" />,
+    },
+    {
+      id: "view-research",
+      label: "Open Research Reports",
+      type: "view" as const,
+      view: "research" as DesktopViewMode,
+      icon: <FileText className="w-4 h-4 text-[#2962ff]" />,
     },
     {
       id: "act-theme",

@@ -33,7 +33,7 @@ export type DesktopViewMode =
   | "markets"
   | "community"
   | "news"
-  | "agent";
+  | "research";
 
 export interface DesktopTab {
   id: string;
@@ -151,73 +151,6 @@ export interface IndicatorConfig {
   color3?: string;
   params: Record<string, number | string | boolean>;
   values?: number[] | { [key: string]: number[] };
-}
-
-export interface Order {
-  id: string;
-  symbol: string;
-  side: "BUY" | "SELL";
-  type: "MARKET" | "LIMIT" | "STOP_LIMIT";
-  price: number;
-  amount: number;
-  filled: number;
-  status: "FILLED" | "WORKING" | "CANCELLED";
-  tp?: number;
-  sl?: number;
-  leverage: number;
-  timestamp: number;
-}
-
-export interface Position {
-  id: string;
-  symbol: string;
-  side: "LONG" | "SHORT";
-  entryPrice: number;
-  currentPrice: number;
-  amount: number;
-  margin: number;
-  leverage: number;
-  unrealizedPnl: number;
-  unrealizedPnlPercent: number;
-  tp?: number;
-  sl?: number;
-  timestamp: number;
-}
-
-export interface AccountState {
-  balance: number;
-  equity: number;
-  usedMargin: number;
-  freeMargin: number;
-  realizedPnl: number;
-  unrealizedPnl: number;
-}
-
-export interface BacktestResult {
-  strategyName: string;
-  netProfit: number;
-  netProfitPercent: number;
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  winRate: number;
-  profitFactor: number;
-  maxDrawdown: number;
-  maxDrawdownPercent: number;
-  sharpeRatio: number;
-  trades: Array<{
-    id: string;
-    type: "LONG" | "SHORT";
-    entryTime: string;
-    exitTime: string;
-    entryPrice: number;
-    exitPrice: number;
-    pnl: number;
-    pnlPercent: number;
-    size: number;
-    reason: string;
-  }>;
-  equityCurve: Array<{ time: string; equity: number }>;
 }
 
 export interface AlertItem {

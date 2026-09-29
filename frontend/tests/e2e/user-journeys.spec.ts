@@ -1,8 +1,8 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 /**
- * End-to-end user journeys: tabs, order flow, alert CRUD.
- * Order/alert tests run against the real backend (paper-only trading).
+ * End-to-end user journeys: tabs and alert CRUD.
+ * Alert tests run against the real backend.
  */
 
 test.describe.configure({ mode: "serial" });
@@ -23,24 +23,6 @@ test("multi-tab navigation renders views", async ({ page }) => {
   await page.locator(`[data-testid="tab-close-${lastId}"]`).click();
   await page.waitForTimeout(400);
   expect(await page.locator(`[data-testid="tab-close-${lastId}"]`).count()).toBe(0);
-});
-
-test("paper order flow creates a position", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForTimeout(1500);
-
-  await page.locator('[data-testid="nav-open-order"]').click();
-  await expect(page.locator('[data-testid="order-submit"]')).toBeVisible();
-
-  // Default is a MARKET order (no price input); set a small size so risk
-  // approves the paper fill.
-  await page.locator('[data-testid="order-amount-input"]').fill("0.01");
-  await page.locator('[data-testid="order-submit"]').click();
-
-  // Modal closes; the order goes through the confirm flow (paper).
-  await expect(page.locator('[data-testid="order-submit"]')).toBeHidden({
-    timeout: 10_000,
-  });
 });
 
 test("alert CRUD round-trips", async ({ page }) => {
@@ -87,54 +69,6 @@ test("alert CRUD round-trips", async ({ page }) => {
   await expect(page.locator('[data-testid^="alert-item-"]')).toHaveCount(0, {
     timeout: 10_000,
   });
-});
-
-test("kill switch toggles global run control and recovers", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForTimeout(1500);
-
-  // Open the bottom dock trading panel.
-  await page.locator("#bottom-tab-trading").click();
-  await page
-    .locator('[data-testid="trading-tab-positions"]')
-    .waitFor({ state: "visible", timeout: 15_000 });
-
-  const toggle = page.locator('[data-testid="kill-switch-toggle"]');
-  await expect(toggle).toBeVisible({ timeout: 10_000 });
-
-  // Halt trading.
-  await toggle.click();
-  await expect(page.locator('[data-testid="kill-switch-state"]')).toBeVisible({
-    timeout: 10_000,
-  });
-
-  // Resume trading — ALWAYS before finishing (serial suite: later order flows depend on it).
-  await toggle.click();
-  await expect(page.locator('[data-testid="kill-switch-state"]')).toHaveCount(0, {
-    timeout: 10_000,
-  });
-});
-
-test("reset funds restores the initial paper balance", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForTimeout(1500);
-
-  await page.locator("#bottom-tab-trading").click();
-  await page
-    .locator('[data-testid="trading-tab-positions"]')
-    .waitFor({ state: "visible", timeout: 15_000 });
-
-  // Capture the displayed balance from the account header ribbon, then reset.
-  const balanceText = async () =>
-    (await page.locator('[data-testid="account-balance"]').textContent()) ?? "";
-  const initial = await balanceText();
-
-  await page.locator('[data-testid="reset-account"]').click();
-  await page.waitForTimeout(800);
-
-  // After a reset the balance must equal the pre-reset initial value
-  // (the serial suite may have run order tests earlier that changed it).
-  expect(await balanceText()).toBe(initial);
 });
 
 test("alert triggers on live price, highlights, and resets", async ({ page }) => {

@@ -45,11 +45,6 @@ class Settings(BaseSettings):
     # Scheduler.
     schedule_interval_seconds: int = 300
 
-    # Scheduled Agent trading + DL retrain are opt-in (default off). The
-    # circuit-breaker protective-close safety job always runs regardless of this
-    # flag; only automatic ordering and model retraining require it.
-    agent_schedule_enabled: bool = False
-
     # BlockBeats data cache: daily snapshots are fetched once per day and
     # served from local disk. `blockbeats_refresh_hour/minute` set the cron
     # time (default 12:00) for the daily refresh job.
@@ -95,6 +90,23 @@ class Settings(BaseSettings):
     # limits. Set to 0 to disable.
     backfill_page_delay: float = 0.05
 
+    # Agent layer (Tier 1 Deep Agents research + Tier 2 deterministic execution).
+    # `agent_model` is a `provider:model` string consumed by the research layer
+    # only; the FastAPI process never builds a model. Risk fields are the hard,
+    # fail-closed limits enforced by the deterministic execution graph. Defaults
+    # are conservative so the app boots without any agent configuration.
+    agent_model: str = "anthropic:claude-sonnet-4-6"
+    agent_loop_seconds: int = 900
+    agent_enabled: bool = True
+    agent_kill_switch: bool = False
+    agent_max_leverage: float = 3.0
+    agent_max_symbol_notional: float = 1000.0
+    agent_max_portfolio_notional: float = 3000.0
+    agent_max_drawdown: float = 0.2
+    agent_paper_equity: float = 1000.0
+    # Fraction of paper equity risked per trade; the deterministic sizing input.
+    agent_risk_fraction: float = 0.01
+
     log_level: str = "INFO"
 
     @field_validator("symbols", "timeframes", "mcp_args", "categories", mode="before")
@@ -120,6 +132,16 @@ class Settings(BaseSettings):
     @property
     def chart_config_path(self) -> Path:
         return self.data_dir / "config" / "chart.json"
+
+    @property
+    def agent_dir(self) -> Path:
+        """Projection/audit directory for the agent layer (research + execution)."""
+        return self.data_dir / "agent"
+
+    @property
+    def agent_checkpoint_path(self) -> Path:
+        """SQLite checkpointer file for both LangGraph graphs (worker is sole writer)."""
+        return self.agent_dir / "checkpoints.sqlite"
 
 
 @lru_cache

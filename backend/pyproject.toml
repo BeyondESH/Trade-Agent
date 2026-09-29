@@ -11,8 +11,6 @@ dependencies = [
     # vectorbt 1.1's plotly template still registers `scattermapbox`, which
     # plotly>=7 removed from Layout.Template.Data -> import-time crash.
     "plotly<7",
-    "scikit-learn>=1.9",
-    "quantstats>=0.0.64",
     "pyarrow>=16.0",
     "openpyxl>=3.1",
     "APScheduler>=3.10",
@@ -21,6 +19,17 @@ dependencies = [
     "uvicorn>=0.29",
     "websockets>=12",
     "akshare>=1.14.0",
+    # --- Deep Agents research layer + deterministic LangGraph execution layer ---
+    # Pinned: the removal/rebuild spike verified this exact set installs and
+    # imports on the project's CPython runtime (StateGraph + SqliteSaver +
+    # interrupt/Command(resume) + create_deep_agent). CI must use the same set.
+    "deepagents==0.7.19",
+    "langgraph==1.2.12",
+    "langchain==1.4.3",
+    "langgraph-checkpoint-sqlite==3.1.1",
+    # Explicit provider dep (deepagents pulls it transitively; we do not rely on
+    # transitive deps). Default model is `anthropic:claude-sonnet-4-6`.
+    "langchain-anthropic",
 ]
 
 [project.scripts]

@@ -9,6 +9,7 @@ Provides:
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import os
@@ -17,6 +18,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO
 
@@ -211,13 +213,58 @@ def live_server(tmp_path_factory) -> Iterator[str]:
             if gap and idx == gap[0]:
                 idx += gap[1] - gap[0]
                 continue
-            # close varies deterministically so the DL backtest pipeline has
-            # non-constant features and produces a real result.
+            # close varies deterministically so seeded series are non-constant.
             close = 101.0 + 0.5 * math.sin(idx / 4.0)
             rows.append((SEED_BASE + idx * step_ms, 100.0, 105.0, 95.0, close, 10.0))
             idx += 1
         df = pd.DataFrame(rows, columns=["open_time", "open", "high", "low", "close", "volume"])
         store.save(Series(cat, sym, tf), df)
+
+    # Agent projections: the worker is a separate process, so seed the read-only
+    # JSONL projections here to exercise the /research + /executions endpoints.
+    agent_dir = data_dir / "agent"
+    (agent_dir / "streams").mkdir(parents=True, exist_ok=True)
+    now_iso = datetime.now(UTC).isoformat()
+    (agent_dir / "proposals.jsonl").write_text(
+        json.dumps(
+            {
+                "proposal_id": "seed-p1",
+                "produced_at": now_iso,
+                "expires_at": now_iso,
+                "symbol": "BTCUSDT",
+                "category": "USDT-FUTURES",
+                "timeframe": "1h",
+                "action": "open_long",
+                "entry": {"kind": "market"},
+                "confidence": 0.5,
+                "horizon": "1d",
+                "rationale": "seeded for L2",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (agent_dir / "runs.jsonl").write_text(
+        json.dumps(
+            {
+                "run_id": "exec:seed-p1",
+                "kind": "execution",
+                "thread_id": "exec:seed-p1",
+                "proposal_id": "seed-p1",
+                "status": "ok",
+                "reason": "",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (agent_dir / "streams" / "research_seed.jsonl").write_text(
+        json.dumps({"type": "event", "seq": 1, "method": "values", "data": {}})
+        + "\n"
+        + json.dumps({"type": "done", "seq": 2})
+        + "\n",
+        encoding="utf-8",
+    )
 
     port = _free_port()
     env = dict(os.environ)
