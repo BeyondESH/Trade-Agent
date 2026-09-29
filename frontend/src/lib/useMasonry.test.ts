@@ -99,6 +99,26 @@ describe("useMasonry", () => {
     expect(after[0]).toEqual(["a"]);
   });
 
+  it("does not re-migrate when a card re-reports the same height (oscillation guard)", () => {
+    const items = [mk("a", 3, 3), mk("b", 2, 3), mk("c", 1, 3)];
+    const { result } = renderHook(() => useMasonry(items, estimate));
+
+    // c's real height is 200 -> migrates from col0 to the shortest column.
+    act(() => {
+      result.current.measure("c", 200);
+    });
+    const once = result.current.columns.map((c) => c.map((i) => i.id));
+    expect(once[1]).toContain("c");
+
+    // A remount after migration re-reports the SAME height; it must be a no-op,
+    // otherwise the card bounces between columns forever (update-depth loop).
+    act(() => {
+      result.current.measure("c", 200);
+    });
+    const twice = result.current.columns.map((c) => c.map((i) => i.id));
+    expect(twice).toEqual(once);
+  });
+
   it("does not migrate below the threshold", () => {
     const items = [
       mk("a", 3, 3), // est 30

@@ -133,6 +133,15 @@ export function useMasonry<T extends { id: string; ts: number }>(
       const item = s.cols[colIdx].find((it) => it.id === id);
       if (!item) return;
       const prev = s.measured.get(id);
+      // Churn/oscillation guard: a card remounts whenever it migrates between
+      // columns, and the fresh ResizeObserver immediately reports the *same*
+      // height again. Without this bail-out that re-report re-runs the migration
+      // check and can bounce the card back (move -> remount -> measure -> move),
+      // looping until React's "Maximum update depth exceeded". A repeat of an
+      // already-recorded height carries no new information, so short-circuit it
+      // (no migration, no forced re-render). Migration therefore happens only
+      // when a card's measured height actually corrects its estimate.
+      if (prev === height) return;
       s.measured.set(id, height);
       s.heights[colIdx] += height - (prev ?? estimate(item));
       const min = Math.min(...s.heights);

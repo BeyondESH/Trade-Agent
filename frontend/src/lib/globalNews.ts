@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { api } from "../api/client";
 import type { GlobalNewsItem } from "../types/trading";
 import { formatRelativeTime } from "./newsfeed";
@@ -241,13 +241,20 @@ export function useGlobalNewsStream(): {
     };
   }, [client]);
 
+  // Stable callback identities: these feed `useCallback` / `useEffect` deps in
+  // `GlobalNewsFeed`, so returning fresh inline arrows each render would make
+  // those effects re-run on every render (render churn / update-depth loops).
+  const flushPending = useCallback(() => client.flushPending(), [client]);
+  const hasMore = useCallback((category?: string) => client.hasMoreFor(category), [client]);
+  const loadMore = useCallback((category?: string) => client.loadMore(category), [client]);
+
   return {
     items: client.items,
     state: client.state,
     sources: client.sources,
     pendingCount: client.pendingCount,
-    flushPending: () => client.flushPending(),
-    hasMore: (category?: string) => client.hasMoreFor(category),
-    loadMore: (category?: string) => client.loadMore(category),
+    flushPending,
+    hasMore,
+    loadMore,
   };
 }
