@@ -1,0 +1,14 @@
+# Build-context filter for the Trade-Agent dev image.
+#
+# The image does NOT COPY the repository: the container gets its code from the
+# `trade-workspace` named volume, populated by `scripts/dev-sync.sh` (one-way
+# rsync from the read-only /src-ro bind). The Dockerfile is therefore the only
+# file the build actually needs.
+#
+# This file only governs what the Docker *CLI* sends to the daemon as build
+# context. Excluding everything keeps the context tiny and guarantees no host
+# artifact (node_modules, .venv, backend/data, tool state, ...) can ever leak
+# into an image layer. Order matters: the last matching pattern wins, so
+# `!Dockerfile` re-includes the one file the build requires.
+**
+!Dockerfile

@@ -1,0 +1,26 @@
+# Line-ending policy.
+#
+# The Windows host runs with `core.autocrlf=true`. Without this file Git would
+# rewrite the working tree to CRLF, and CRLF is what reaches the Linux dev
+# container over the /mnt/d bind mount. That breaks shell shebangs
+# (`#!/usr/bin/env bash\r` -> "bad interpreter") and other text tooling. Force LF
+# in the working tree for every text file. Keep this minimal: it is a policy for
+# future checkouts, not a bulk renormalisation of the repository.
+* text=auto eol=lf
+
+# Shell scripts must always be LF, with no exceptions.
+*.sh text eol=lf
+
+# Binary assets: never convert, never diff.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.parquet binary
+*.xlsx binary
+*.heapsnapshot binary

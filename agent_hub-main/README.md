@@ -121,7 +121,7 @@ Run it with no arguments for an interactive menu, or pass a command directly (se
 - **Always up to date** — resolves each package's latest published version automatically; nothing to pin, so differing versions across packages just work.
 - **Skill deployment built in** — wires skills straight into Claude Code, Codex, and OpenClaw via `--target`.
 - **Reversible** — roll any package back to a previously published version.
-- **Safe to preview** — `--dry-run` prints every command without running it.
+- **Safe to preview** — `--dry-run` prints every command it would run and spawns nothing: no package manager, no network I/O.
 - **Lightweight** — a single dependency-free script run with `npx`; auto-detects npm or pnpm.
 
 ### Commands
@@ -137,7 +137,7 @@ Run it with no arguments for an interactive menu, or pass a command directly (se
 **Flags**
 
 - `--target <tools>` — where to deploy skills: `claude`, `codex`, `openclaw`, `all` (comma-separated; default `claude`)
-- `--dry-run` — preview commands without executing them
+- `--dry-run` — preview commands without executing them or spawning a package manager (no network I/O)
 - `--version` · `--help`
 
 ### Examples

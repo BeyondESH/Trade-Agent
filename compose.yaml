@@ -1,0 +1,72 @@
+# ---------------------------------------------------------------------------
+# Docker Compose dev environment for Trade-Agent — NATIVE WORKING COPY model.
+#
+# The repository is NOT bind-mounted. The container keeps its own working copy
+# on ext4 inside the `trade-workspace` named volume; the Windows tree is
+# bind-mounted READ-ONLY at /src-ro and mirrored in one-way by
+# `scripts/dev-sync.sh` (rsync host -> container). Everything (git, pytest,
+# vitest, pnpm) then runs inside the container on native ext4.
+#
+# Why: the previous design bind-mounted the repo over 9p/virtiofs. That made
+# `git` crash with SIGBUS (git memory-maps its pack file; 9p cannot reliably
+# back the page fault) and slowed pytest to 462-547 s (vs ~104 s on the host).
+#
+# Docker Engine lives INSIDE WSL, not on Windows. Run everything from WSL:
+#   wsl.exe -d Ubuntu-26.04 -- bash -lc \
+#     'cd /mnt/d/work/project/trade && scripts/dev-sync.sh up'
+#
+# ⚠️  DANGER: `docker compose down -v` DELETES THE NAMED VOLUMES — and the
+#     entire working tree lives in `trade-workspace`. `down -v` therefore
+#     destroys your working copy (you would have to re-sync from scratch).
+#     Always use plain `docker compose down`.
+#
+# See docs/docker-dev.md for the full operational guide.
+# ---------------------------------------------------------------------------
+
+name: trade
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trade-dev:latest
+    init: true          # reap orphaned children (vite / uvicorn / node spawn subprocesses)
+    tty: true           # let `docker compose exec dev bash` be interactive
+    stdin_open: true
+    working_dir: /workspace
+    # Match the WSL host uid/gid (1000:1000). The named volumes are pre-owned by
+    # 1000 in the image, so uid 1000 can write the working copy directly.
+    user: "1000:1000"
+    command: ["sleep", "infinity"]
+    environment:
+      # Bind vite to 0.0.0.0 so the Windows browser can reach the published port.
+      DEV_SERVER_HOST: "0.0.0.0"
+      LANG: "C.UTF-8"
+      LC_ALL: "C.UTF-8"
+      # uv's default hardlink install fails across filesystems; keep copy mode.
+      UV_LINK_MODE: "copy"
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    volumes:
+      # READ-ONLY mirror of the Windows source tree — the sync SOURCE only.
+      # Nothing ever writes here; the repo itself is never bind-mounted.
+      - type: bind
+        source: ${TRADE_SRC:-/mnt/d/work/project/trade}
+        target: /src-ro
+        read_only: true
+      # The native working copy (ext4). git + tests run here at full speed.
+      - trade-workspace:/workspace
+      # Backend data has its own volume: the container never writes the host's
+      # parquet store, and `--delete` syncs never touch it.
+      - trade-data:/workspace/backend/data
+    ports:
+      - "8181:8181"     # backend API
+      - "5173:5173"     # vite dev server
+
+volumes:
+  # Explicit `name:` pins the real Docker volume names (instead of the
+  # project-prefixed `trade_trade-workspace`), matching docs and `doctor`.
+  trade-workspace:
+    name: trade-workspace
+  trade-data:
+    name: trade-data

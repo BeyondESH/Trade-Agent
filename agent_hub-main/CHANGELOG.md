@@ -22,8 +22,8 @@ goes with which" guesswork.
 
 ### Unchanged
 - **All commands and flags** — `upgrade-all`, `upgrade <pkg>`, `rollback <pkg> --to <version>`,
-  `install [pkg] [--target <tools>]`, `--dry-run`, `--target`. The installer is unchanged JS;
-  only the version and docs moved.
+  `install [pkg] [--target <tools>]`, `--dry-run`, `--target`. The installer's command
+  surface is unchanged; only the version and docs moved.
 - **Managed package set** — still `@bitget-ai/bitget-agent-skill`, `@bitget-ai/bitget-signal`,
   `@bitget-ai/bitget-agent-cli`. `@bitget-ai/bitget-agent-mcp` is **not** managed here by design:
   it is launched on demand via `npx` by its MCP host, so there is no global install to upgrade or roll back.
@@ -34,6 +34,18 @@ goes with which" guesswork.
 - **Cross-repo MCP smoke test** (`npm run e2e`) still ships in this repo. Its tool arguments were
   updated to the UTA v3 verb surface; it requires `@bitget-ai/bitget-agent-mcp@3.0.0` to be
   published before it can run green end-to-end.
+
+### Fixed
+- **`--dry-run` is now strictly side-effect free.** It no longer spawns the package manager or
+  performs any network I/O. Version-dependent previews show `<latest>` (and the global root a
+  `<global-root>` placeholder) and a one-line note states that version resolution was skipped.
+  Previously the read-only queries (`npm/pnpm list -g`, `view`, `root -g`) still ran, so a
+  "preview" could reach the network.
+- **An unavailable package manager now fails cleanly.** If `npm`/`pnpm` cannot be spawned, the
+  installer prints one actionable message (install Node.js 20+ or pnpm, then retry) and exits
+  non-zero, instead of leaking a raw `spawn npm ENOENT` from the top-level catch.
+- **Documentation:** removed `--interactive` from the 1.1.0 "All commands and flags" list. No such
+  flag exists (and never did); the interactive menu is the no-argument invocation.
 
 ## [1.1.0] - 2026-05-29
 
@@ -58,7 +70,7 @@ goes with which" guesswork.
 - **Minimum Node.js version: 20.0.0** (was 18). Node 18 reached end-of-life in April 2025.
 
 ### Unchanged
-- All commands and flags: `upgrade-all`, `upgrade <pkg>`, `rollback <pkg> --to <version>`, `install [pkg] [--target <tools>]`, `--dry-run`, `--target`, `--interactive`.
+- All commands and flags: `upgrade-all`, `upgrade <pkg>`, `rollback <pkg> --to <version>`, `install [pkg] [--target <tools>]`, `--dry-run`, `--target`.
 - Cross-repo MCP smoke test (`npm run e2e`) — same coverage, same WARN/PASS criteria.
 - Documentation portal lives in this repo's `docs/` directory.
 

@@ -145,6 +145,35 @@ market-data gaps --symbol BTCUSDT --timeframe 5m
 market-data analyze --symbol BTCUSDT --timeframe 1h
 ```
 
+### 4. 可选：Docker 开发容器
+
+仓库附带一套基于 Docker Compose 的 Debian 开发环境（`compose.yaml` / `Dockerfile` /
+`scripts/dev-sync.sh`），采用**原生工作副本（native working copy）**模型：**仓库不再
+bind-mount 进容器**，容器在 ext4 命名卷里维护自己的**工作副本**，Windows 侧仓库只读挂载为
+`/src-ro` 作为**单向 rsync** 源；git / pytest / vitest / pnpm 全部在容器内运行。旧设计把仓库
+bind-mount 进 9p 挂载，容器内 `git` 会 **SIGBUS / Bus error**、pytest 慢到 **462–547 s**，
+新设计下 git 正常、pytest 实测 **69.5 s**（pytest 自报；端到端 74.4 s）。
+
+```bash
+# 构建 + 启动 + 首次同步，然后进入容器
+wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh up'
+wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh shell'
+```
+
+日常流程：**宿主编辑 → `scripts/dev-sync.sh sync` → 容器内运行 / 测试**（单向：宿主 → 容器）。
+容器名 `dev`，工作目录 `/workspace`（命名卷，ext4），暴露 `8181`（后端 API）/ `5173`（前端）；
+`scripts/dev-sync.sh` 另提供 `sync / up / shell / down / logs / backend / frontend /
+test-backend / test-frontend / hub-e2e / doctor` 子命令。完整说明（同步语义、`.git` 双工作副本
+注意事项、`backend/data` 与 `backend/.env`、命名卷、镜像来源）见
+**[docs/docker-dev.md](docs/docker-dev.md)**。
+
+> ⚠️ **`docker compose down -v` 会删除 `trade-workspace` 卷，等于销毁整个工作副本**——请只用
+> `docker compose down`。
+>
+> 环境限制（详见文档）：本环境 **`docker.io` 不可达**，基础镜像经镜像源
+> （`docker.m.daocloud.io`）拉取并 retag 为 `python:3.12-slim-bookworm`；容器内的 git 与宿主
+> git 是**两份独立工作副本**，git 写操作请在 Windows 宿主完成。
+
 ## 环境变量
 
 后端配置前缀为 `MD_`（`backend/.env` 加载），全部可选：

@@ -8,6 +8,16 @@ import budgets from "./perf-budgets.json";
 const BACKEND = `http://127.0.0.1:${process.env.E2E_BACKEND_PORT ?? 8000}`;
 const BACKEND_WS = `ws://127.0.0.1:${process.env.E2E_BACKEND_PORT ?? 8000}`;
 
+/** Bind the dev server to 0.0.0.0 inside a container so the host browser can reach it. */
+const DEV_SERVER_HOST = process.env.DEV_SERVER_HOST ?? "127.0.0.1";
+
+/**
+ * A bind-mounted Windows drive (9p/virtiofs) does not propagate inotify events
+ * into a Linux container, so the file watcher must poll for HMR to work at all.
+ * Opt-in via `CHOKIDAR_USEPOLLING`; the host default stays off.
+ */
+const USE_POLLING = ["true", "1"].includes(process.env.CHOKIDAR_USEPOLLING ?? "");
+
 /**
  * Dev and preview share one proxy table: `vite preview` does NOT inherit
  * `server.proxy`, so the production build would otherwise serve the UI with no
@@ -91,9 +101,10 @@ export default defineConfig({
     },
   },
   server: {
-    host: "127.0.0.1",
+    host: DEV_SERVER_HOST,
     port: Number(process.env.E2E_FRONTEND_PORT ?? 5173),
     strictPort: Boolean(process.env.E2E_FRONTEND_PORT),
+    watch: USE_POLLING ? { usePolling: true, interval: 300 } : undefined,
     proxy: PROXY,
   },
   preview: {

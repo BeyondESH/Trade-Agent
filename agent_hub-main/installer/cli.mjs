@@ -20,6 +20,15 @@ const { version: CLI_VERSION } = createRequire(import.meta.url)(
   "../package.json"
 );
 
+// ── Dry-run preview constants ──────────────────────────────────────────
+// Shown in --dry-run previews wherever the value can only be obtained by running
+// a package manager (installed/latest version, global package root).
+const LATEST_PLACEHOLDER = "<latest>";
+const GLOBAL_ROOT_PLACEHOLDER = "<global-root>";
+// Printed once per dry-run command: makes it explicit that nothing was queried.
+const DRY_RUN_NOTE =
+  "ℹ --dry-run: version resolution skipped — no npm/pnpm is executed and no network call is made.";
+
 const HELP = `
 bitget-agent-installer v${CLI_VERSION}
 
@@ -71,6 +80,24 @@ function detectPM() {
 
 // ── Shell Helpers ──────────────────────────────────────────────────────
 
+// Reports (at most once per process) that a required executable could not be
+// spawned — e.g. `npm` is not installed or is not on PATH. Without this the raw
+// `spawn npm ENOENT` error escapes to main().catch(); here it becomes one
+// actionable line in the CLI's own style plus a well-defined non-zero exit code.
+let spawnFailureReported = false;
+function reportSpawnFailure(cmd) {
+  if (spawnFailureReported) return;
+  spawnFailureReported = true;
+  const isPm = cmd === "npm" || cmd === "pnpm";
+  console.error(
+    `✗ Could not run ${isPm ? `the "${cmd}" package manager` : `"${cmd}"`} — it was not found or is not executable.`
+  );
+  if (isPm) {
+    console.error("  Install Node.js 20+ (which includes npm) or pnpm, then retry.");
+  }
+  process.exitCode = 1;
+}
+
 function exec(cmd, args, { dryRun = false } = {}) {
   const full = `${cmd} ${args.join(" ")}`;
   if (dryRun) {
@@ -78,27 +105,56 @@ function exec(cmd, args, { dryRun = false } = {}) {
     return Promise.resolve(0);
   }
   console.log(`$ ${full}`);
-  return new Promise((resolve, reject) => {
-    const child = nodeSpawn(cmd, args, {
-      stdio: ["ignore", "inherit", "inherit"],
-      shell: false,
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = nodeSpawn(cmd, args, {
+        stdio: ["ignore", "inherit", "inherit"],
+        shell: false,
+      });
+    } catch {
+      reportSpawnFailure(cmd);
+      resolve(1);
+      return;
+    }
+    child.on("error", () => {
+      reportSpawnFailure(cmd);
+      resolve(1);
     });
-    child.on("error", reject);
     child.on("close", (code) => resolve(code));
   });
 }
 
-function execCapture(cmd, args) {
-  return new Promise((resolve, reject) => {
-    const child = nodeSpawn(cmd, args, {
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: false,
-    });
+/**
+ * Run a read-only command and capture its output.
+ *
+ * Returns `null` in --dry-run: nothing is spawned and no network I/O happens.
+ * Returns `null` (and reports a friendly, actionable error once) when the
+ * command cannot be spawned, so callers degrade gracefully instead of letting
+ * `spawn npm ENOENT` escape to the top-level catch.
+ */
+function execCapture(cmd, args, { dryRun = false } = {}) {
+  if (dryRun) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = nodeSpawn(cmd, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: false,
+      });
+    } catch {
+      reportSpawnFailure(cmd);
+      resolve(null);
+      return;
+    }
     let stdout = "";
     let stderr = "";
-    child.stdout.on("data", (d) => (stdout += d));
-    child.stderr.on("data", (d) => (stderr += d));
-    child.on("error", reject);
+    child.stdout?.on("data", (d) => (stdout += d));
+    child.stderr?.on("data", (d) => (stderr += d));
+    child.on("error", () => {
+      reportSpawnFailure(cmd);
+      resolve(null);
+    });
     child.on("close", (code) =>
       resolve({ code, stdout: stdout.trim(), stderr: stderr.trim() })
     );
@@ -107,49 +163,52 @@ function execCapture(cmd, args) {
 
 // ── Registry / Global Queries ──────────────────────────────────────────
 
-async function getInstalledVersions(pm) {
-  const { code, stdout } = await execCapture(pm, [
-    "list",
-    "-g",
-    "--depth=0",
-    "--json",
-  ]);
-  if (code !== 0 || !stdout) return new Map(TARGET_PACKAGES.map((p) => [p, null]));
+async function getInstalledVersions(pm, dryRun = false) {
+  const res = await execCapture(pm, ["list", "-g", "--depth=0", "--json"], { dryRun });
+  if (!res || res.code !== 0 || !res.stdout) {
+    return new Map(TARGET_PACKAGES.map((p) => [p, null]));
+  }
 
-  const data = JSON.parse(stdout);
+  const data = JSON.parse(res.stdout);
   const deps = data.dependencies || {};
   return new Map(
     TARGET_PACKAGES.map((p) => [p, deps[p]?.version || null])
   );
 }
 
-async function getLatestVersion(pm, pkg) {
-  const { code, stdout } = await execCapture(pm, ["view", pkg, "version"]);
-  if (code !== 0 || !stdout) return null;
-  return stdout.replace(/^"|"$/g, "");
+async function getLatestVersion(pm, pkg, dryRun = false) {
+  // Dry-run resolves nothing: preview the version-dependent part as a placeholder.
+  if (dryRun) return LATEST_PLACEHOLDER;
+  const res = await execCapture(pm, ["view", pkg, "version"]);
+  if (!res || res.code !== 0 || !res.stdout) return null;
+  return res.stdout.replace(/^"|"$/g, "");
 }
 
-async function getVersionHistory(pm, pkg) {
-  const { code, stdout } = await execCapture(pm, [
+async function getVersionHistory(pm, pkg, dryRun = false) {
+  // No network in dry-run: an empty history tells the caller to skip validation.
+  if (dryRun) return [];
+  const res = await execCapture(pm, [
     "view",
     pkg,
     "versions",
     "--json",
   ]);
-  if (code !== 0 || !stdout) return [];
-  const versions = JSON.parse(stdout);
+  if (!res || res.code !== 0 || !res.stdout) return [];
+  const versions = JSON.parse(res.stdout);
   return Array.isArray(versions) ? versions.reverse() : [versions];
 }
 
-async function getGlobalRoot(pm) {
-  const { code, stdout } = await execCapture(pm, ["root", "-g"]);
-  if (code !== 0 || !stdout) return null;
-  return stdout;
+async function getGlobalRoot(pm, dryRun = false) {
+  // No package manager in dry-run: callers substitute GLOBAL_ROOT_PLACEHOLDER.
+  if (dryRun) return null;
+  const res = await execCapture(pm, ["root", "-g"]);
+  if (!res || res.code !== 0 || !res.stdout) return null;
+  return res.stdout;
 }
 
 async function deploySkills(pm, pkgNames, targets, dryRun) {
-  const globalRoot = await getGlobalRoot(pm);
-  if (!globalRoot) {
+  const globalRoot = await getGlobalRoot(pm, dryRun);
+  if (!globalRoot && !dryRun) {
     console.error("✗ Could not determine global package root");
     return false;
   }
@@ -158,7 +217,11 @@ async function deploySkills(pm, pkgNames, targets, dryRun) {
   for (const pkg of pkgNames) {
     if (!SKILL_PACKAGES.includes(pkg)) continue;
 
-    const scriptPath = join(globalRoot, pkg, "scripts", "install.js");
+    // In dry-run the real root is unknown, so preview an explicit placeholder
+    // rather than silently using a bogus path.
+    const scriptPath = globalRoot
+      ? join(globalRoot, pkg, "scripts", "install.js")
+      : `${GLOBAL_ROOT_PLACEHOLDER}/${pkg}/scripts/install.js`;
     const targetStr = targets.join(",");
 
     console.log(`\n📦 Deploying ${pkg} skills → ${targets.map((t) => DEPLOY_TARGETS[t].label).join(", ")}`);
@@ -222,12 +285,12 @@ function isInteractive() {
 
 async function cmdUpgradeAll(pm, dryRun, targets) {
   console.log("\n🔄 Upgrading all packages to latest...\n");
-  const installed = await getInstalledVersions(pm);
+  const installed = await getInstalledVersions(pm, dryRun);
   let allOk = true;
 
   for (const pkg of TARGET_PACKAGES) {
     const current = installed.get(pkg);
-    const latest = await getLatestVersion(pm, pkg);
+    const latest = await getLatestVersion(pm, pkg, dryRun);
     if (!latest) {
       console.error(`✗ Failed to fetch latest version for ${pkg}`);
       allOk = false;
@@ -277,9 +340,9 @@ async function cmdUpgradeAll(pm, dryRun, targets) {
 async function cmdUpgrade(pm, pkg, dryRun, targets) {
   if (!validatePkg(pkg)) return;
 
-  const installed = await getInstalledVersions(pm);
+  const installed = await getInstalledVersions(pm, dryRun);
   const current = installed.get(pkg);
-  const latest = await getLatestVersion(pm, pkg);
+  const latest = await getLatestVersion(pm, pkg, dryRun);
 
   if (!latest) {
     console.error(`✗ Failed to fetch latest version for ${pkg}`);
@@ -337,8 +400,8 @@ async function cmdRollback(pm, pkg, toVersion, dryRun, targets) {
     return;
   }
 
-  const versions = await getVersionHistory(pm, pkg);
-  if (versions.length === 0) {
+  const versions = dryRun ? [] : await getVersionHistory(pm, pkg);
+  if (versions.length === 0 && !dryRun) {
     console.error(`✗ Failed to fetch version history for ${pkg}`);
     process.exitCode = 1;
     return;
@@ -347,7 +410,7 @@ async function cmdRollback(pm, pkg, toVersion, dryRun, targets) {
   let targetVersion = toVersion;
 
   if (!targetVersion) {
-    const installed = await getInstalledVersions(pm);
+    const installed = await getInstalledVersions(pm, dryRun);
     const current = installed.get(pkg);
     console.log(
       `\n${pkg} — ${current ? `current: ${current}` : "(not installed)"}`
@@ -371,7 +434,7 @@ async function cmdRollback(pm, pkg, toVersion, dryRun, targets) {
     targetVersion = display[idx - 1];
   }
 
-  if (!versions.includes(targetVersion)) {
+  if (!dryRun && !versions.includes(targetVersion)) {
     console.error(
       `✗ Version ${targetVersion} not found for ${pkg}. Use '${pm} view ${pkg} versions --json' to see available versions.`
     );
@@ -379,7 +442,7 @@ async function cmdRollback(pm, pkg, toVersion, dryRun, targets) {
     return;
   }
 
-  const installed = await getInstalledVersions(pm);
+  const installed = await getInstalledVersions(pm, dryRun);
   const current = installed.get(pkg);
 
   if (current === targetVersion) {
@@ -430,16 +493,20 @@ async function cmdInstall(pm, pkg, targetStr, dryRun) {
     pkgNames = [...SKILL_PACKAGES];
   }
 
-  const installed = await getInstalledVersions(pm);
-  const missing = pkgNames.filter((p) => !installed.get(p));
-  if (missing.length > 0) {
-    for (const p of missing) {
-      console.error(
-        `${p} is not globally installed. Run \`npx bitget-agent-installer upgrade ${p}\` first.`
-      );
+  // Global-install state cannot be known without running a package manager, so
+  // dry-run skips the precondition and previews the deployment commands.
+  if (!dryRun) {
+    const installed = await getInstalledVersions(pm);
+    const missing = pkgNames.filter((p) => !installed.get(p));
+    if (missing.length > 0) {
+      for (const p of missing) {
+        console.error(
+          `${p} is not globally installed. Run \`npx bitget-agent-installer upgrade ${p}\` first.`
+        );
+      }
+      process.exitCode = 1;
+      return;
     }
-    process.exitCode = 1;
-    return;
   }
 
   const ok = await deploySkills(pm, pkgNames, targets, dryRun);
@@ -485,16 +552,18 @@ async function interactiveInstall(pm, dryRun) {
       return;
   }
 
-  const installed = await getInstalledVersions(pm);
-  const missing = pkgNames.filter((p) => !installed.get(p));
-  if (missing.length > 0) {
-    for (const p of missing) {
-      console.error(
-        `${p} is not globally installed. Run \`npx bitget-agent-installer upgrade ${p}\` first.`
-      );
+  if (!dryRun) {
+    const installed = await getInstalledVersions(pm);
+    const missing = pkgNames.filter((p) => !installed.get(p));
+    if (missing.length > 0) {
+      for (const p of missing) {
+        console.error(
+          `${p} is not globally installed. Run \`npx bitget-agent-installer upgrade ${p}\` first.`
+        );
+      }
+      process.exitCode = 1;
+      return;
     }
-    process.exitCode = 1;
-    return;
   }
 
   const ok = await deploySkills(pm, pkgNames, targets, dryRun);
@@ -502,7 +571,7 @@ async function interactiveInstall(pm, dryRun) {
 }
 
 async function interactiveMenu(pm, dryRun) {
-  const installed = await getInstalledVersions(pm);
+  const installed = await getInstalledVersions(pm, dryRun);
 
   console.log(`\nbitget-agent-installer v${CLI_VERSION}\n`);
   console.log("? Select an action:");
@@ -572,6 +641,11 @@ async function main() {
   if (opts.version) {
     console.log(CLI_VERSION);
     return;
+  }
+
+  const DRY_RUN_COMMANDS = ["upgrade-all", "upgrade", "rollback", "install"];
+  if (opts.dryRun && DRY_RUN_COMMANDS.includes(opts.command)) {
+    console.log(DRY_RUN_NOTE);
   }
 
   const pm = detectPM();
