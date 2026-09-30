@@ -14,6 +14,10 @@
     "format:check": "biome format .",
     "preview": "vite preview",
     "diagnose:kline": "node scripts/diagnose-kline-realtime.mjs",
+    "perf:meter": "node scripts/perf-meter.mjs",
+    "perf:gate": "node scripts/perf-gate.mjs",
+    "perf:cls": "node scripts/cls-audit.mjs",
+    "perf:dom": "node scripts/dom-bisect.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

@@ -1,0 +1,39 @@
+{
+  "policy": "只升不降（棘轮）：预算取自实施时的实测基线并向宽松侧取整；后续变更只能收紧，放宽 MUST 附新的实测证据（见 docs/frontend-performance.md）。若某项预算暂时不可达，SHALL 在 exemptions 中登记原因与收敛计划，MUST NOT 直接删除或放宽该预算。",
+  "measuredAt": "2026-09-30",
+  "measuredOn": "production `vite build` + `vite preview`, backend streaming on :8181, 4x CPU + Fast 4G for LCP/CLS",
+  "budgets": {
+    "initialChunkKb": 180,
+    "firstPaintPreloadJsKb": 600,
+    "renderBlockingCssKb": 90,
+    "renderBlockingRequests": 1,
+    "lcpMs": 2500,
+    "cls": 0.1,
+    "domCeiling": 1500,
+    "domCycleDelta": 20,
+    "mainThreadPct": 20,
+    "transitionMaxGapMs": 80
+  },
+  "measurements": {
+    "initialChunkKb": 152.4,
+    "firstPaintPreloadJsKb": 535.1,
+    "renderBlockingCssKb": 70.05,
+    "renderBlockingRequests": 1,
+    "lcpMs": 2005,
+    "cls": 0.0,
+    "domCeiling": 875,
+    "domCycleDelta": 0,
+    "mainThreadPct": 0.63,
+    "transitionMaxGapMs": 30.8
+  },
+  "exemptions": {},
+  "boundedExceptions": {
+    "sporadicTransitionSpike": {
+      "scope": "所有视图（MUST NOT 视为 community 专有；详见 docs/frontend-performance.md §11）",
+      "observedMs": 155,
+      "cause": "framer-motion 主线程动画/布局工作（motion chunk 的 y / rr）与 React commit（react-vendor 的 At）偶发叠加；reduced-motion 对照下该类长任务归零",
+      "boundedBy": "transitionMaxGapMs 以 3 轮中位数估计，单次偶发尖峰不触发门禁；确定性的逐视图回归会抬高中位数并被阻断。该尖峰的消除手段是移除/改写挂载动画，而动画属设计资产（本变更 MUST NOT 改动），故登记为有界例外而非静默丢弃。",
+      "measuredAt": "2026-09-30"
+    }
+  }
+}

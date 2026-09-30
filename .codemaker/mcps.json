@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "codemap": {
+      "args": [
+        "serve"
+      ],
+      "autoApprove": true,
+      "command": "codemap",
+      "disabled": false,
+      "env": {},
+      "timeout": 60,
+      "type": "stdio"
+    }
+  }
+}

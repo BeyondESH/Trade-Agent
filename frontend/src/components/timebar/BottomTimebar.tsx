@@ -1,4 +1,5 @@
-import { Calendar as CalIcon, Clock, Globe } from "lucide-react";
+import { Calendar as CalIcon, Globe } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import type React from "react";
 import { t } from "../../lib/i18n";
 
@@ -15,6 +16,7 @@ interface Props {
 }
 
 const RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "5Y", "ALL"];
+const SEGMENT_SPRING = { type: "spring" as const, stiffness: 420, damping: 32 };
 
 export const BottomTimebar: React.FC<Props> = ({
   onSelectRange,
@@ -25,101 +27,107 @@ export const BottomTimebar: React.FC<Props> = ({
   onTogglePercentScale,
   isAutoScale,
   onToggleAutoScale,
-  theme,
 }) => {
-  const isDark = theme === "dark";
+  const reduce = useReducedMotion();
+  const segTransition = reduce ? { duration: 0 } : SEGMENT_SPRING;
+
+  const scaleToggles = [
+    {
+      id: "toggle-percent-btn",
+      active: isPercentScale,
+      onClick: onTogglePercentScale,
+      label: "%",
+      title: "百分比坐标",
+    },
+    {
+      id: "toggle-log-btn",
+      active: isLogScale,
+      onClick: onToggleLogScale,
+      label: "log",
+      title: "对数坐标",
+    },
+    {
+      id: "toggle-auto-btn",
+      active: isAutoScale,
+      onClick: onToggleAutoScale,
+      label: "auto",
+      title: "自动坐标",
+    },
+  ];
 
   return (
     <div
       id="bottom-timebar"
-      className={`h-[28px] flex-none px-3 flex items-center justify-between border-t text-[11px] select-none ${
-        isDark
-          ? "bg-[#131722] border-[#2a2e39] text-[#787b86]"
-          : "bg-white border-[#e0e3eb] text-[#787b86]"
-      }`}
+      className="h-[28px] flex-none px-3 flex items-center justify-between border-t border-line bg-surface text-[11px] text-muted select-none"
     >
-      {/* Left Time Ranges */}
-      <div className="flex items-center gap-1">
-        {RANGES.map((r) => (
-          <button
-            key={r}
-            id={`range-btn-${r}`}
-            onClick={() => onSelectRange(r)}
-            className={`px-1.5 py-0.5 rounded font-medium transition-colors ${
-              selectedRange === r
-                ? "bg-[#2962ff] text-white font-bold"
-                : isDark
-                  ? "hover:bg-[#2a2e39] hover:text-[#d1d4dc]"
-                  : "hover:bg-[#f0f3fa] hover:text-[#131722]"
-            }`}
-          >
-            {r}
-          </button>
-        ))}
+      {/* Left: time-range segmented control */}
+      <div className="flex h-full items-center gap-1.5">
+        <div className="flex items-center gap-0.5 rounded-lg bg-surface-2/70 p-0.5">
+          {RANGES.map((r) => {
+            const isActive = selectedRange === r;
+            return (
+              <button
+                key={r}
+                id={`range-btn-${r}`}
+                onClick={() => onSelectRange(r)}
+                className={`relative h-5 rounded px-1.5 font-medium transition-colors ${
+                  isActive ? "text-signal-ink font-bold" : "text-muted hover:text-content"
+                }`}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="timebar-range-pill"
+                    transition={segTransition}
+                    className="absolute inset-0 rounded bg-signal shadow-e1"
+                  />
+                )}
+                <span className="relative z-10">{r}</span>
+              </button>
+            );
+          })}
+        </div>
 
-        <div className="h-3 w-[1px] bg-gray-500/20 mx-1" />
+        <div className="h-3 w-px bg-line/60" />
 
         <button
-          className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-gray-500/20`}
+          className="flex h-6 items-center gap-1 rounded-md px-1.5 text-muted hover:bg-surface-2 hover:text-content"
           title="Go to specific date"
         >
           <CalIcon className="w-3 h-3" />
         </button>
       </div>
 
-      {/* Right Timezone & Scales */}
-      <div className="flex items-center gap-2 font-mono">
-        <div className="flex items-center gap-1 text-gray-500 text-[10px]">
+      {/* Right: timezone + scale segmented control */}
+      <div className="flex h-full items-center gap-2 ta-num">
+        <div className="flex items-center gap-1 text-faint text-2xs">
           <Globe className="w-3 h-3" />
           <span>{t("UTC+0 (Live)")}</span>
         </div>
 
-        <div className="h-3 w-[1px] bg-gray-500/20" />
+        <div className="h-3 w-px bg-line/60" />
 
-        <button
-          id="toggle-percent-btn"
-          onClick={onTogglePercentScale}
-          className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
-            isPercentScale
-              ? "bg-[#2962ff] text-white"
-              : isDark
-                ? "hover:bg-[#2a2e39]"
-                : "hover:bg-[#f0f3fa]"
-          }`}
-          title="百分比坐标"
-        >
-          %
-        </button>
-
-        <button
-          id="toggle-log-btn"
-          onClick={onToggleLogScale}
-          className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
-            isLogScale
-              ? "bg-[#2962ff] text-white"
-              : isDark
-                ? "hover:bg-[#2a2e39]"
-                : "hover:bg-[#f0f3fa]"
-          }`}
-          title="对数坐标"
-        >
-          log
-        </button>
-
-        <button
-          id="toggle-auto-btn"
-          onClick={onToggleAutoScale}
-          className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
-            isAutoScale
-              ? "bg-[#2962ff] text-white"
-              : isDark
-                ? "hover:bg-[#2a2e39]"
-                : "hover:bg-[#f0f3fa]"
-          }`}
-          title="自动坐标"
-        >
-          auto
-        </button>
+        <div className="flex items-center gap-0.5 rounded-lg bg-surface-2/70 p-0.5">
+          {scaleToggles.map((item) => (
+            <button
+              key={item.id}
+              id={item.id}
+              onClick={item.onClick}
+              title={item.title}
+              className={`relative h-5 rounded px-1.5 font-bold transition-colors ${
+                item.active ? "text-signal-ink" : "text-muted hover:text-content"
+              }`}
+            >
+              {item.active && (
+                <motion.span
+                  layoutId="timebar-scale-pill"
+                  transition={segTransition}
+                  className="absolute inset-0 rounded bg-signal shadow-e1"
+                />
+              )}
+              <span className="relative z-10">{item.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

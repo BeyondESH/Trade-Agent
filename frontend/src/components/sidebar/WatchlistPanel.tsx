@@ -9,7 +9,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { t } from "../../lib/i18n";
 import type { SymbolInfo } from "../../types/trading";
 
@@ -21,39 +21,96 @@ interface Props {
   theme: "dark" | "light";
 }
 
+/** Fallback row height, until the real one is measured off the first row. */
+const ROW_H = 48;
+/** Rows mounted beyond the viewport on each side, to hide scroll seams. */
+const OVERSCAN = 6;
+
 export const WatchlistPanel: React.FC<Props> = ({
   symbols,
   activeSymbol,
   onSelectSymbol,
   onAddSymbol,
-  theme,
 }) => {
   const [activeTab, setActiveTab] = useState<"All" | "Crypto" | "Stocks" | "Forex">("All");
-  const isDark = theme === "dark";
 
-  const filteredSymbols = symbols.filter((s) => {
-    if (activeTab === "All") return true;
-    if (activeTab === "Crypto") return s.category === "crypto";
-    if (activeTab === "Stocks") return s.category === "stocks";
-    if (activeTab === "Forex") return s.category === "forex" || s.category === "commodities";
-    return true;
+  const filteredSymbols = useMemo(
+    () =>
+      symbols.filter((s) => {
+        if (activeTab === "All") return true;
+        if (activeTab === "Crypto") return s.category === "crypto";
+        if (activeTab === "Stocks") return s.category === "stocks";
+        if (activeTab === "Forex") return s.category === "forex" || s.category === "commodities";
+        return true;
+      }),
+    [symbols, activeTab],
+  );
+
+  // --- Row windowing ---------------------------------------------------------
+  // The exchange lists thousands of instruments and this dock mounts on the
+  // DEFAULT view, so rendering every row put ~35k nodes on screen. Only the
+  // visible slice is mounted. Memoising the filter above matters: scrolling
+  // re-renders on every frame, and re-filtering the full list each time was the
+  // other half of the cost.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportH, setViewportH] = useState(480);
+  const rowHRef = useRef(ROW_H);
+  const [, remeasure] = useState(0);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const sync = () => setViewportH(el.clientHeight);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Read the real row height off the DOM, so the arithmetic stays correct if the
+  // row styling ever changes.
+  useEffect(() => {
+    const row = scrollRef.current?.querySelector<HTMLElement>("[data-row]");
+    if (!row) return;
+    const h = row.getBoundingClientRect().height;
+    if (h > 8 && Math.abs(h - rowHRef.current) > 0.5) {
+      rowHRef.current = h;
+      remeasure((n) => n + 1);
+    }
   });
 
+  // A category switch is a new result set: return to the top.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = 0;
+    setScrollTop(0);
+  }, [activeTab]);
+
+  const total = filteredSymbols.length;
+  const rowH = rowHRef.current;
+  const windowStart = Math.max(0, Math.floor(scrollTop / rowH) - OVERSCAN);
+  const windowEnd = Math.min(total, Math.ceil((scrollTop + viewportH) / rowH) + OVERSCAN);
+  const visibleSymbols = filteredSymbols.slice(windowStart, windowEnd);
+  const topPad = windowStart * rowH;
+  const bottomPad = Math.max(0, (total - windowEnd) * rowH);
+
   return (
-    <div id="watchlist-panel" className="flex flex-col h-full w-full select-none text-xs">
+    <div
+      id="watchlist-panel"
+      className="flex flex-col h-full w-full select-none text-xs bg-surface text-content"
+    >
       {/* Watchlist Header */}
-      <div
-        className={`p-2.5 border-b flex items-center justify-between ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
-      >
-        <div className="flex items-center gap-1 font-bold text-sm">
+      <div className="p-2.5 border-b border-line flex items-center justify-between">
+        <div className="flex items-center gap-1.5 font-bold text-sm text-content">
           <span>{t("Watchlist")}</span>
-          <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted" />
         </div>
         <div className="flex items-center gap-1">
           <button
             id="watchlist-add-symbol-btn"
             onClick={onAddSymbol}
-            className={`p-1 rounded hover:bg-gray-500/20 text-[#2962ff] transition-colors`}
+            className="rounded-md p-1 text-signal hover:bg-signal/10 transition-colors"
             title={t("Add Symbol")}
           >
             <Plus className="w-4 h-4" />
@@ -62,19 +119,15 @@ export const WatchlistPanel: React.FC<Props> = ({
       </div>
 
       {/* Category Pills */}
-      <div
-        className={`flex items-center gap-1 p-1.5 border-b ${isDark ? "border-[#2a2e39] bg-[#131722]" : "border-[#e0e3eb] bg-white"}`}
-      >
+      <div className="flex items-center gap-1 p-1.5 border-b border-line bg-ink">
         {(["All", "Crypto", "Stocks", "Forex"] as const).map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveTab(cat)}
             className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
               activeTab === cat
-                ? "bg-[#2962ff] text-white"
-                : isDark
-                  ? "text-gray-400 hover:text-white hover:bg-[#2a2e39]"
-                  : "text-gray-600 hover:text-black hover:bg-[#f0f3fa]"
+                ? "bg-signal text-signal-ink"
+                : "text-muted hover:text-content hover:bg-surface-2"
             }`}
           >
             {cat}
@@ -83,45 +136,45 @@ export const WatchlistPanel: React.FC<Props> = ({
       </div>
 
       {/* Symbol List Table */}
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-500/10">
-        {filteredSymbols.map((s) => {
+      <div
+        ref={scrollRef}
+        onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+        className="flex-1 overflow-y-auto divide-y divide-line/60"
+      >
+        <div style={{ height: topPad }} />
+        {visibleSymbols.map((s) => {
           const isSelected = s.id === activeSymbol.id;
           const isUp = s.change24hPercent >= 0;
 
           return (
             <div
               key={s.id}
+              data-row="1"
               onClick={() => onSelectSymbol(s)}
               className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors ${
-                isSelected
-                  ? isDark
-                    ? "bg-[#2a2e39]/80 border-l-2 border-[#2962ff]"
-                    : "bg-[#f0f3fa] border-l-2 border-[#2962ff]"
-                  : isDark
-                    ? "hover:bg-[#2a2e39]/40"
-                    : "hover:bg-gray-50"
+                isSelected ? "bg-surface-2 border-l-2 border-signal" : "hover:bg-surface-2/50"
               }`}
             >
               {/* Left ticker */}
               <div className="flex flex-col">
                 <div className="flex items-center gap-1">
                   <span className="font-bold text-xs">{s.ticker}</span>
-                  <span className="text-[10px] text-gray-500 uppercase">{s.exchange}</span>
+                  <span className="text-2xs text-faint uppercase">{s.exchange}</span>
                 </div>
-                <span className="text-[10px] text-gray-400 truncate max-w-[120px]">{s.name}</span>
+                <span className="text-2xs text-muted truncate max-w-[120px]">{s.name}</span>
               </div>
 
               {/* Right price and change */}
               <div className="flex flex-col items-end">
-                <span className="font-mono font-bold text-xs">
+                <span className="font-mono ta-num min-w-[8.5ch] font-bold text-xs">
                   {s.price.toLocaleString(undefined, {
                     minimumFractionDigits: s.digits,
                     maximumFractionDigits: s.digits,
                   })}
                 </span>
                 <span
-                  className={`font-mono text-[10px] font-semibold px-1 py-0.2 rounded ${
-                    isUp ? "text-[#089981] bg-[#089981]/10" : "text-[#f23645] bg-[#f23645]/10"
+                  className={`font-mono ta-num min-w-[8ch] text-center text-2xs font-semibold px-1 py-0.2 rounded ${
+                    isUp ? "text-up bg-up/10" : "text-down bg-down/10"
                   }`}
                 >
                   {isUp ? "+" : ""}
@@ -131,23 +184,22 @@ export const WatchlistPanel: React.FC<Props> = ({
             </div>
           );
         })}
+        <div style={{ height: bottomPad }} />
       </div>
 
       {/* Bottom Symbol Detail Snapshot */}
-      <div
-        className={`p-3 border-t flex flex-col gap-2 ${isDark ? "border-[#2a2e39] bg-[#131722]" : "border-[#e0e3eb] bg-[#f8fafc]"}`}
-      >
+      <div className="p-3 border-t border-line flex flex-col gap-2 bg-ink">
         <div className="flex items-center justify-between">
           <span className="font-bold text-sm">{activeSymbol.ticker}</span>
           <span
             className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
               activeSymbol.technicalRating === "Strong Buy" ||
               activeSymbol.technicalRating === "Buy"
-                ? "bg-[#089981]/20 text-[#089981]"
+                ? "bg-up/20 text-up"
                 : activeSymbol.technicalRating === "Strong Sell" ||
                     activeSymbol.technicalRating === "Sell"
-                  ? "bg-[#f23645]/20 text-[#f23645]"
-                  : "bg-gray-500/20 text-gray-400"
+                  ? "bg-down/20 text-down"
+                  : "bg-surface-2 text-muted"
             }`}
           >
             {activeSymbol.technicalRating || t("Neutral")}
@@ -155,17 +207,17 @@ export const WatchlistPanel: React.FC<Props> = ({
         </div>
 
         {/* Day Range Bar */}
-        <div className="flex flex-col gap-1 text-[10px] text-gray-400">
+        <div className="flex flex-col gap-1 text-2xs text-muted">
           <div className="flex justify-between">
             <span>{t("Day Range")}</span>
-            <span className="font-mono">
+            <span className="font-mono ta-num min-w-[17ch]">
               {activeSymbol.low24h.toFixed(activeSymbol.digits)} -{" "}
               {activeSymbol.high24h.toFixed(activeSymbol.digits)}
             </span>
           </div>
-          <div className="w-full h-1.5 bg-gray-500/20 rounded-full overflow-hidden relative">
+          <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden relative">
             <div
-              className="h-full bg-[#2962ff] rounded-full"
+              className="h-full bg-signal rounded-full"
               style={{
                 width: `${Math.min(
                   100,
@@ -182,20 +234,16 @@ export const WatchlistPanel: React.FC<Props> = ({
         </div>
 
         {/* 52W Range & Market Cap */}
-        <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-400 pt-1">
+        <div className="grid grid-cols-2 gap-2 text-2xs text-muted pt-1">
           <div>
-            <div className="text-gray-500">{t("24h Volume")}</div>
-            <div
-              className={`font-semibold font-mono ${isDark ? "text-gray-300" : "text-gray-700"}`}
-            >
+            <div className="text-faint">{t("24h Volume")}</div>
+            <div className="font-semibold font-mono ta-num min-w-[7ch] text-content">
               {activeSymbol.volume24h}
             </div>
           </div>
           <div>
-            <div className="text-gray-500">{t("Market Cap")}</div>
-            <div
-              className={`font-semibold font-mono ${isDark ? "text-gray-300" : "text-gray-700"}`}
-            >
+            <div className="text-faint">{t("Market Cap")}</div>
+            <div className="font-semibold font-mono ta-num min-w-[7ch] text-content">
               {activeSymbol.marketCap || "N/A"}
             </div>
           </div>

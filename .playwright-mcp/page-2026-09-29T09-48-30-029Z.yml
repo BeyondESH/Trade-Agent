@@ -1,0 +1,144 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "TA Trade-Agent" [ref=e7]:
+        - generic [ref=e8]: TA
+        - generic [ref=e9]: Trade-Agent
+      - generic [ref=e14]:
+        - list [ref=e15]:
+          - listitem [ref=e16] [cursor=pointer]:
+            - generic [ref=e20]: BTCUSDT.P
+            - button [ref=e21]
+          - listitem [ref=e26] [cursor=pointer]:
+            - generic [ref=e29]: Markets
+            - button [ref=e30]
+          - listitem [ref=e34] [cursor=pointer]:
+            - generic [ref=e37]: Screener 2.0
+            - button [ref=e38]
+        - button "添加新工作区标签" [ref=e42]
+    - generic [ref=e44]:
+      - button "快速搜索... ⌘K" [ref=e45]:
+        - generic [ref=e49]: 快速搜索...
+        - generic [ref=e50]: ⌘K
+      - generic "云同步:已开启" [ref=e52] [cursor=pointer]: 已自动保存
+      - button "通知" [ref=e58]
+      - button "键盘快捷键 (?)" [ref=e62]
+      - button "桌面应用设置" [ref=e65]
+      - generic "Trader Profile (Pro Plan Active)" [ref=e70] [cursor=pointer]:
+        - generic [ref=e71]: TA
+        - generic [ref=e72]: Pro+
+  - generic [ref=e73]:
+    - generic [ref=e74]: 离线
+    - generic [ref=e77]: 暂无行情数据
+  - generic [ref=e78]:
+    - complementary [ref=e79]:
+      - generic [ref=e80]:
+        - button "超级图表" [ref=e81]
+        - button "市场" [ref=e87]
+        - button "筛选器" [ref=e91]
+        - button "热力图" [ref=e96]
+        - button "社区" [ref=e100]
+        - button "新闻" [ref=e107]
+        - button "研报" [ref=e112]
+      - generic [ref=e117]: 其他
+      - generic [ref=e120]:
+        - button "Create Alert" [ref=e121]
+        - button "命令面板 (⌘K)" [ref=e125]
+        - button "切换浅色模式" [ref=e129]
+        - button "键盘快捷键 (?)" [ref=e136]
+        - button "桌面设置" [ref=e139]
+    - main [ref=e143]:
+      - generic [ref=e144]:
+        - generic [ref=e145]:
+          - generic [ref=e146]:
+            - generic [ref=e148]:
+              - generic [ref=e149]:
+                - img [ref=e151] [cursor=pointer]
+                - generic [ref=e153] [cursor=pointer]: BTCUSDT
+                - generic [ref=e155] [cursor=pointer]: 1m
+                - generic [ref=e156] [cursor=pointer]: 15m
+                - generic [ref=e157] [cursor=pointer]: 1h
+                - generic [ref=e158] [cursor=pointer]: 6h
+                - generic [ref=e159] [cursor=pointer]: 1d
+                - generic [ref=e160] [cursor=pointer]: 1w
+                - generic [ref=e161] [cursor=pointer]: 1mo
+                - generic "全部周期" [ref=e162] [cursor=pointer]: ⋯
+                - generic [ref=e163] [cursor=pointer]: 指标
+                - generic [ref=e167] [cursor=pointer]: 时区
+                - generic [ref=e173] [cursor=pointer]: 设置
+                - generic [ref=e177] [cursor=pointer]: 截屏
+                - generic [ref=e181] [cursor=pointer]: 全屏
+              - generic [ref=e185]:
+                - generic [ref=e187]:
+                  - generic [ref=e188] [cursor=pointer]
+                  - generic [ref=e195] [cursor=pointer]
+                  - generic [ref=e202] [cursor=pointer]
+                  - generic [ref=e211] [cursor=pointer]
+                  - generic [ref=e218] [cursor=pointer]
+                  - generic [ref=e226] [cursor=pointer]
+                  - generic [ref=e233] [cursor=pointer]
+                  - generic [ref=e238] [cursor=pointer]
+                  - generic [ref=e243] [cursor=pointer]
+                - generic [ref=e247]: BTCUSDT
+            - generic [ref=e270]:
+              - generic [ref=e271]:
+                - generic [ref=e272]:
+                  - button "1D" [ref=e273]
+                  - button "5D" [ref=e275]
+                  - button "1M" [ref=e276]
+                  - button "3M" [ref=e277]
+                  - button "6M" [ref=e278]
+                  - button "YTD" [ref=e279]
+                  - button "1Y" [ref=e280]
+                  - button "5Y" [ref=e281]
+                  - button "ALL" [ref=e282]
+                - button "Go to specific date" [ref=e284]
+              - generic [ref=e287]:
+                - generic [ref=e288]: UTC+0 (实时)
+                - generic [ref=e294]:
+                  - button "%" [ref=e295]
+                  - button "log" [ref=e296]
+                  - button "auto" [ref=e297]
+          - generic [ref=e299]:
+            - generic [ref=e300]:
+              - separator "调整面板宽度" [ref=e301]
+              - generic [ref=e304]:
+                - generic [ref=e305]:
+                  - generic [ref=e306]: 自选
+                  - button "添加品种" [ref=e311]
+                - generic [ref=e313]:
+                  - button "All" [ref=e314]
+                  - button "Crypto" [ref=e315]
+                  - button "Stocks" [ref=e316]
+                  - button "Forex" [ref=e317]
+                - generic [ref=e319]:
+                  - generic [ref=e320]:
+                    - generic [ref=e321]: BTCUSDT
+                    - generic [ref=e322]: 中性
+                  - generic [ref=e324]:
+                    - generic [ref=e325]: 日内区间
+                    - generic [ref=e326]: 0.00 - 0.00
+                  - generic [ref=e329]:
+                    - generic [ref=e330]:
+                      - generic [ref=e331]: 24小时成交量
+                      - generic [ref=e332]: "-"
+                    - generic [ref=e333]:
+                      - generic [ref=e334]: 市值
+                      - generic [ref=e335]: N/A
+            - generic [ref=e336]:
+              - generic [ref=e337]:
+                - button "自选与详情" [ref=e338]
+                - button "提醒" [ref=e343]
+                - button "新闻头条" [ref=e348]
+                - button "数据窗口" [ref=e353]
+                - button "热门列表" [ref=e359]
+                - button "财经日历" [ref=e363]
+                - button "订单簿 (DOM)" [ref=e367]
+                - button "公开动态与聊天" [ref=e371]
+              - button "Collapse Side Panel" [ref=e375]
+        - generic [ref=e379]:
+          - generic [ref=e380]:
+            - button "Stock / Crypto Screener" [ref=e381]
+            - button "Text Notes" [ref=e385]
+          - button "Expand Panel" [ref=e390]
+  - status

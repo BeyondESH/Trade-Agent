@@ -1,18 +1,20 @@
 import {
   Award,
   ChevronRight,
-  Filter,
-  Flame,
+  MessageCircle,
   ThumbsUp,
   TrendingDown,
   TrendingUp,
   Users,
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import type React from "react";
 import { useState } from "react";
 import { COMMUNITY_IDEAS_DATA } from "../../data/marketData";
 import { t } from "../../lib/i18n";
 import type { CommunityIdea, ThemeMode } from "../../types/trading";
+import { RemoteImage } from "../ui/remote-image";
+import { Reveal } from "../ui/reveal";
 
 type IdeaFilter = "all" | "crypto" | "stocks" | "forex";
 
@@ -20,6 +22,10 @@ interface Props {
   onOpenChartWithTicker: (ticker: string) => void;
   theme: ThemeMode;
 }
+
+const FILTERS: IdeaFilter[] = ["all", "crypto", "stocks", "forex"];
+const SPRING = { type: "spring", stiffness: 380, damping: 30 } as const;
+const PANEL = "flex flex-col rounded-xl border border-line bg-surface shadow-e1";
 
 /** Classify a static idea by its instrument so the filter really filters. */
 function ideaCategory(symbol: string): "crypto" | "stocks" | "forex" {
@@ -29,11 +35,68 @@ function ideaCategory(symbol: string): "crypto" | "stocks" | "forex" {
   return "stocks";
 }
 
+/** Segmented filter control: one brass indicator slides to the active tab. */
+function FilterSegmented({
+  value,
+  onChange,
+}: {
+  value: IdeaFilter;
+  onChange: (value: IdeaFilter) => void;
+}) {
+  const reduce = useReducedMotion();
+  return (
+    <div className="flex items-center gap-0.5 rounded-lg border border-line bg-ink/60 p-0.5">
+      {FILTERS.map((filter) => {
+        const active = filter === value;
+        return (
+          <button
+            key={filter}
+            type="button"
+            data-testid={`community-filter-${filter}`}
+            onClick={() => onChange(filter)}
+            className={`relative flex items-center rounded-md px-3 py-1 text-2xs font-semibold uppercase tracking-wider transition-colors ${
+              active ? "text-signal-ink" : "text-muted hover:text-content"
+            }`}
+          >
+            {active && (
+              <motion.span
+                layoutId="community-filter-indicator"
+                className="absolute inset-0 rounded-md bg-signal"
+                transition={reduce ? { duration: 0 } : SPRING}
+              />
+            )}
+            <span className="relative z-10">{filter}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const SentimentBadge: React.FC<{ sentiment: CommunityIdea["sentiment"] }> = ({ sentiment }) => {
+  const long = sentiment === "LONG";
+  const short = sentiment === "SHORT";
+  const cls = long
+    ? "bg-up/15 text-up"
+    : short
+      ? "bg-down/15 text-down"
+      : "bg-surface-2 text-muted";
+  return (
+    <span className={`ta-eyebrow inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${cls}`}>
+      {long ? (
+        <TrendingUp className="h-3 w-3" />
+      ) : short ? (
+        <TrendingDown className="h-3 w-3" />
+      ) : null}
+      {sentiment}
+    </span>
+  );
+};
+
 export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, theme }) => {
   const [ideas, setIdeas] = useState<CommunityIdea[]>(COMMUNITY_IDEAS_DATA);
   const [activeFilter, setActiveFilter] = useState<IdeaFilter>("all");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-  const isDark = theme === "dark";
 
   const visibleIdeas = ideas.filter(
     (idea) => activeFilter === "all" || ideaCategory(idea.symbol) === activeFilter,
@@ -55,150 +118,128 @@ export const CommunityIdeasView: React.FC<Props> = ({ onOpenChartWithTicker, the
   return (
     <div
       id="community-ideas-view"
-      className={`flex-1 h-full overflow-y-auto p-4 select-none font-sans flex flex-col ${
-        isDark ? "bg-[#131722] text-[#d1d4dc]" : "bg-[#f0f3fa] text-[#131722]"
-      }`}
+      className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-ink text-content select-none"
     >
-      {/* Top Header */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#9c27b0]" />
-            <span>{t("Community Trade Ideas & Market Analysis")}</span>
-          </h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {t(
-              "Discover trading strategies, harmonic patterns, and price action insights published by top global traders.",
-            )}
-          </p>
+      {/* Sticky header: title + filter segmented control */}
+      <header className="ta-glass sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Users className="h-4 w-4 shrink-0 text-signal" />
+          <div className="min-w-0">
+            <h1 className="ta-display truncate text-base tracking-tight text-content">
+              {t("Community Trade Ideas & Market Analysis")}
+            </h1>
+            <p className="mt-0.5 hidden truncate text-xs text-muted lg:block">
+              {t(
+                "Discover trading strategies, harmonic patterns, and price action insights published by top global traders.",
+              )}
+            </p>
+          </div>
         </div>
+        <FilterSegmented value={activeFilter} onChange={setActiveFilter} />
+      </header>
 
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-1 bg-black/20 p-1 rounded-lg border border-gray-500/20 text-xs font-semibold">
-          {(["all", "crypto", "stocks", "forex"] as const).map((f) => (
-            <button
-              key={f}
-              data-testid={`community-filter-${f}`}
-              onClick={() => setActiveFilter(f)}
-              className={`px-3 py-1 rounded-md uppercase tracking-wider transition-colors ${
-                activeFilter === f
-                  ? "bg-[#2962ff] text-white shadow-xs"
-                  : isDark
-                    ? "text-gray-400 hover:text-white"
-                    : "text-gray-600 hover:text-black"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Ideas Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {visibleIdeas.map((idea) => {
-          const isLong = idea.sentiment === "LONG";
+      {/* Analyst notes grid */}
+      <div className="grid grid-cols-1 gap-4 p-6 lg:grid-cols-2">
+        {visibleIdeas.map((idea, i) => {
           const isLiked = likedIds[idea.id];
 
           return (
-            <div
-              key={idea.id}
-              data-testid={`community-idea-${idea.id}`}
-              className={`p-4 rounded-xl border flex flex-col justify-between transition-all hover:border-[#2962ff] ${
-                isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
-              }`}
-            >
-              <div>
-                {/* Author & Header */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src={idea.avatar}
-                      alt={idea.author}
-                      className="w-9 h-9 rounded-full object-cover border border-gray-500/30"
-                    />
-                    <div>
-                      <div className="font-bold text-xs text-white flex items-center gap-1.5">
-                        <span>{idea.author}</span>
-                        <Award className="w-3 h-3 text-[#ff9800]" />
+            <Reveal key={idea.id} delay={Math.min(i, 6)}>
+              <motion.article
+                data-testid={`community-idea-${idea.id}`}
+                whileHover={{ y: -1 }}
+                transition={SPRING}
+                className={`${PANEL} h-full justify-between p-4 transition-shadow hover:shadow-e2`}
+              >
+                <div>
+                  {/* Author row */}
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <RemoteImage
+                        src={idea.avatar}
+                        alt={idea.author}
+                        className="h-9 w-9 shrink-0 rounded-full border border-line object-cover"
+                        fallback={
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface-2 text-2xs font-bold text-muted">
+                            {idea.author.slice(0, 1).toUpperCase()}
+                          </span>
+                        }
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-content">
+                          <span className="truncate">{idea.author}</span>
+                          <Award className="h-3 w-3 shrink-0 text-signal" />
+                        </div>
+                        <div className="ta-eyebrow truncate text-faint">{idea.authorRank}</div>
                       </div>
-                      <div className="text-[10px] text-gray-400">
-                        {idea.authorRank} • {idea.time}
-                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className="ta-num rounded border border-line/70 bg-surface-2 px-1.5 py-0.5 text-2xs font-semibold text-muted">
+                        {idea.timeframe}
+                      </span>
+                      <SentimentBadge sentiment={idea.sentiment} />
                     </div>
                   </div>
 
-                  {/* Sentiment Badge & Timeframe */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-gray-500/20 text-gray-300">
-                      {idea.timeframe}
-                    </span>
-                    <span
-                      className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1 ${
-                        isLong ? "bg-[#089981]/20 text-[#089981]" : "bg-[#f23645]/20 text-[#f23645]"
-                      }`}
-                    >
-                      {isLong ? (
-                        <TrendingUp className="w-3 h-3" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3" />
-                      )}
-                      <span>{idea.sentiment}</span>
-                    </span>
+                  {/* Title */}
+                  <h3
+                    onClick={() => onOpenChartWithTicker(idea.symbol)}
+                    className="mb-2 cursor-pointer text-sm font-bold leading-snug text-content transition-colors hover:text-signal"
+                  >
+                    {idea.title}
+                  </h3>
+
+                  {/* Description - clamped to two lines */}
+                  <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-muted">
+                    {idea.description}
+                  </p>
+
+                  {/* Tags */}
+                  <div className="mb-4 flex flex-wrap gap-1.5">
+                    {idea.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded bg-surface-2 px-2 py-0.5 text-2xs font-medium text-muted"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
                   </div>
                 </div>
 
-                {/* Title */}
-                <h3
-                  onClick={() => onOpenChartWithTicker(idea.symbol)}
-                  className="font-bold text-sm text-white hover:text-[#2962ff] cursor-pointer mb-2 leading-snug transition-colors"
-                >
-                  {idea.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-xs text-gray-300 leading-relaxed line-clamp-3 mb-3">
-                  {idea.description}
-                </p>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {idea.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2 py-0.5 rounded text-[10px] bg-gray-500/10 text-gray-400 font-medium"
+                {/* Footer: engagement figures + the way in */}
+                <div className="flex items-center justify-between border-t border-line/60 pt-3">
+                  <div className="flex items-center gap-4 text-xs text-muted">
+                    <button
+                      type="button"
+                      onClick={() => handleLike(idea.id)}
+                      className={`flex items-center gap-1 transition-colors ${
+                        isLiked ? "font-semibold text-signal" : "hover:text-content"
+                      }`}
                     >
-                      #{t}
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                      <span className="ta-num">{idea.likes}</span>
+                    </button>
+                    <span className="flex items-center gap-1">
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      <span className="ta-num">{idea.comments}</span>
                     </span>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* Bottom Actions */}
-              <div className="pt-3 border-t border-gray-500/20 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-4 text-gray-400">
-                  <button
-                    onClick={() => handleLike(idea.id)}
-                    className={`flex items-center gap-1 transition-colors ${
-                      isLiked ? "text-[#2962ff] font-bold" : "hover:text-white"
-                    }`}
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => onOpenChartWithTicker(idea.symbol)}
+                    className="flex items-center gap-1 rounded-md bg-signal px-3 py-1 text-xs font-semibold text-signal-ink transition-colors hover:bg-signal/90"
                   >
-                    <ThumbsUp className="w-3.5 h-3.5" />
-                    <span>{idea.likes}</span>
-                  </button>
+                    <span>
+                      {t("Open")} {idea.symbol} {t("Chart")}
+                    </span>
+                    <ChevronRight className="h-3 w-3" />
+                  </motion.button>
                 </div>
-
-                <button
-                  onClick={() => onOpenChartWithTicker(idea.symbol)}
-                  className="px-3 py-1 rounded bg-[#2962ff] text-white hover:bg-[#1e53e5] font-semibold flex items-center gap-1 shadow-xs transition-colors"
-                >
-                  <span>
-                    {t("Open")} {idea.symbol} {t("Chart")}
-                  </span>
-                  <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
+              </motion.article>
+            </Reveal>
           );
         })}
       </div>

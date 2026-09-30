@@ -1,0 +1,15 @@
+{
+  "version": "d2151d90a7165d8908a1a21480937d3295cafae0",
+  "branch": "main",
+  "repo_root": "D:\\work\\project\\trade",
+  "timestamp": 1790750419,
+  "file_count": 214,
+  "sym_count": 4075,
+  "edge_count": 6542,
+  "large_files_skipped": 0,
+  "data_files_skipped": 0,
+  "max_file_size_kb": 512,
+  "merkle_root": "62d8d55b8e8d35f7",
+  "vcs_type": "git",
+  "embedding_kind": "lookup"
+}

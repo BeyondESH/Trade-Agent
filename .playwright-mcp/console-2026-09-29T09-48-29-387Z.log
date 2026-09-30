@@ -1,0 +1,7 @@
+[     621ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:4173/favicon.ico:0
+[   47908ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://assets.geckoterminal.com/1fontfocigumyroiavcurupcrjt6:0
+[   47908ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://assets.geckoterminal.com/um2b349kmh3ygt4dg6eod27zjr7k:0
+[   47908ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://assets.geckoterminal.com/gnup3u791ck3u66prr2kd1co1ftu:0
+[  418412ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://assets.geckoterminal.com/1fontfocigumyroiavcurupcrjt6:0
+[  418413ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://assets.geckoterminal.com/gnup3u791ck3u66prr2kd1co1ftu:0
+[  418413ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://assets.geckoterminal.com/um2b349kmh3ygt4dg6eod27zjr7k:0

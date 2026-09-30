@@ -19,38 +19,29 @@ function fmtTime(ts: string): string {
   return new Date(t).toTimeString().slice(0, 8);
 }
 
-export const TradesTape: React.FC<Props> = ({ trades, precision = 2, theme }) => {
-  const isDark = theme === "dark";
+export const TradesTape: React.FC<Props> = ({ trades, precision = 2 }) => {
   return (
-    <div className="flex flex-col h-full min-h-0 text-xs">
-      <div
-        className={`px-3 py-1.5 border-b font-semibold text-xs uppercase tracking-wide ${
-          isDark ? "border-[#2a2e39] text-[#d1d4dc]" : "border-[#e0e3eb] text-[#131722]"
-        }`}
-      >
+    <div className="flex flex-col h-full min-h-0 text-xs bg-surface text-content">
+      <div className="px-3 py-1.5 border-b border-line font-semibold text-xs uppercase tracking-wide text-content">
         最新成交
       </div>
-      <div
-        className={`grid grid-cols-[1fr_1fr_auto] px-3 pb-1 text-[10px] font-medium uppercase text-gray-500`}
-      >
+      <div className="grid grid-cols-[1fr_1fr_auto] px-3 pb-1 text-2xs font-medium uppercase text-faint">
         <span>{t("Price")}</span>
         <span className="text-right">{t("Size")}</span>
         <span className="text-right pl-2">{t("Time")}</span>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto font-mono text-[11px]">
-        {trades.length === 0 && (
-          <div className={`px-3 py-3 text-center text-gray-500`}>暂无成交</div>
-        )}
+      <div className="flex-1 min-h-0 overflow-auto font-mono ta-num text-[11px]">
+        {trades.length === 0 && <div className="px-3 py-3 text-center text-muted">暂无成交</div>}
         {trades.map((t, i) => {
-          const color = t.side === "buy" ? "text-[#089981]" : "text-[#f23645]";
+          const color = t.side === "buy" ? "text-up" : "text-down";
           return (
             <div
               key={`${t.ts}-${i}`}
               className="grid grid-cols-[1fr_1fr_auto] px-3 py-0.5 items-center"
             >
               <span className={`font-semibold ${color}`}>{fmtPrice(t.price, precision)}</span>
-              <span className="text-right text-gray-400">{t.size}</span>
-              <span className="text-right pl-2 text-gray-500">{fmtTime(t.ts)}</span>
+              <span className="text-right text-muted">{t.size}</span>
+              <span className="text-right pl-2 text-faint">{fmtTime(t.ts)}</span>
             </div>
           );
         })}

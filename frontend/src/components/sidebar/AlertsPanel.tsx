@@ -25,33 +25,29 @@ export const AlertsPanel: React.FC<Props> = ({
   notifyEnabled,
   onToggleNotifications,
   activeSymbol,
-  theme,
 }) => {
-  const isDark = theme === "dark";
-
   return (
-    <div id="alerts-panel" className="flex flex-col h-full w-full select-none text-xs">
-      <div
-        className={`p-2.5 border-b flex items-center justify-between ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
-      >
+    <div
+      id="alerts-panel"
+      className="flex flex-col h-full w-full select-none text-xs bg-surface text-content"
+    >
+      <div className="p-2.5 border-b border-line flex items-center justify-between">
         <div className="flex items-center gap-1.5 font-bold text-sm">
-          <Bell className="w-4 h-4 text-[#ff9800]" />
+          <Bell className="w-4 h-4 text-signal" />
           <span>{t("Alerts Log")}</span>
         </div>
         <button
           id="alerts-create-btn"
           onClick={onOpenCreateAlert}
-          className="flex items-center gap-1 px-2 py-1 rounded bg-[#2962ff] text-white font-medium hover:bg-[#1e53e5] transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded-md bg-signal font-semibold text-signal-ink hover:bg-signal/90 transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>{t("Create")}</span>
         </button>
       </div>
 
-      <div
-        className={`px-2.5 py-1.5 border-b flex items-center justify-between ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
-      >
-        <span className="text-[10px] text-gray-400">{t("Browser Notifications")}</span>
+      <div className="px-2.5 py-1.5 border-b border-line flex items-center justify-between">
+        <span className="text-2xs text-muted">{t("Browser Notifications")}</span>
         <button
           role="switch"
           aria-checked={notifyEnabled}
@@ -59,9 +55,7 @@ export const AlertsPanel: React.FC<Props> = ({
           data-testid="alert-notify-toggle"
           onClick={onToggleNotifications}
           className={`p-1 rounded transition-colors ${
-            notifyEnabled
-              ? "text-[#ff9800] hover:bg-[#ff9800]/20"
-              : "text-gray-400 hover:bg-gray-500/20"
+            notifyEnabled ? "text-signal hover:bg-signal/20" : "text-muted hover:bg-surface-2"
           }`}
         >
           {notifyEnabled ? (
@@ -74,12 +68,12 @@ export const AlertsPanel: React.FC<Props> = ({
 
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
         {alerts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-gray-500 gap-2 text-center p-4">
-            <Bell className="w-8 h-8 opacity-30" />
+          <div className="flex flex-col items-center justify-center h-48 text-muted gap-2 text-center p-4">
+            <Bell className="w-8 h-8 text-faint opacity-30" />
             <p>{t("No active price alerts set")}</p>
             <button
               onClick={onOpenCreateAlert}
-              className="text-[#2962ff] font-semibold hover:underline"
+              className="text-signal font-semibold hover:underline"
             >
               + {t("Create alert for").replace("%s", activeSymbol.ticker)}
             </button>
@@ -94,32 +88,30 @@ export const AlertsPanel: React.FC<Props> = ({
                 data-testid={`alert-item-${al.id}`}
                 data-triggered={isTriggered ? "true" : "false"}
                 className={`p-2.5 rounded-lg border flex items-center justify-between ${
-                  isTriggered
-                    ? "border-[#ff9800] bg-[#ff9800]/10"
-                    : isDark
-                      ? "bg-[#1e222d] border-[#2a2e39]"
-                      : "bg-[#f8fafc] border-[#e0e3eb]"
+                  isTriggered ? "border-signal/40 bg-signal/10" : "bg-surface-2 border-line"
                 }`}
               >
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <div className="flex items-center gap-1.5 font-bold">
                     <span>{al.symbol}</span>
-                    <span className="text-[10px] text-[#2962ff]">{al.condition}</span>
-                    <span className="font-mono text-[11px]">${al.targetPrice}</span>
+                    <span className="text-2xs text-signal">{al.condition}</span>
+                    <span className="font-mono ta-num min-w-[7ch] text-[11px]">
+                      ${al.targetPrice}
+                    </span>
                     {isTriggered && (
                       <CheckCircle2
                         data-testid={`alert-triggered-${al.id}`}
-                        className="w-3.5 h-3.5 text-[#ff9800]"
+                        className="w-3.5 h-3.5 text-signal"
                       />
                     )}
                   </div>
-                  <div className="text-[10px] text-gray-400 truncate">
+                  <div className="text-2xs text-muted truncate">
                     {al.note || t("Price alert notification")} · {al.frequency}
                   </div>
                   {isTriggered && al.triggerTime && (
                     <div
                       data-testid={`alert-trigger-time-${al.id}`}
-                      className="text-[10px] text-[#ff9800]"
+                      className="text-2xs text-signal"
                     >
                       {t("Triggered")} · {formatRelativeTime(al.triggerTime)}
                     </div>
@@ -130,7 +122,7 @@ export const AlertsPanel: React.FC<Props> = ({
                     <button
                       data-testid={`alert-reset-${al.id}`}
                       onClick={() => onResetAlert(al.id)}
-                      className="p-1 rounded hover:bg-[#2962ff]/20 text-gray-400 hover:text-[#2962ff] transition-colors"
+                      className="rounded-md p-1 text-muted hover:bg-signal/20 hover:text-signal transition-colors"
                       title={t("Reset Alert")}
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
@@ -143,9 +135,7 @@ export const AlertsPanel: React.FC<Props> = ({
                     data-testid={`alert-toggle-${al.id}`}
                     onClick={() => onToggleAlert(al.id, !enabled)}
                     className={`p-1 rounded transition-colors ${
-                      enabled
-                        ? "text-[#ff9800] hover:bg-[#ff9800]/20"
-                        : "text-gray-500 hover:bg-gray-500/20"
+                      enabled ? "text-signal hover:bg-signal/20" : "text-muted hover:bg-surface-2"
                     }`}
                     title={enabled ? t("Disable Alert") : t("Enable Alert")}
                   >
@@ -158,7 +148,7 @@ export const AlertsPanel: React.FC<Props> = ({
                   <button
                     data-testid={`alert-delete-${al.id}`}
                     onClick={() => onRemoveAlert(al.id)}
-                    className="p-1 rounded hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
+                    className="rounded-md p-1 text-muted hover:bg-down/20 hover:text-down transition-colors"
                     title={t("Delete Alert")}
                   >
                     <Trash2 className="w-3.5 h-3.5" />

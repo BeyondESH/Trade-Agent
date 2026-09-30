@@ -68,36 +68,25 @@ function tabLabel(tab: CategoryTab): string {
   return tab === "all" ? t("All") : categoryLabel(tab);
 }
 
-export const ScreenerPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme }) => {
+export const ScreenerPanel: React.FC<Props> = ({ symbols, onSelectSymbol }) => {
   const { tickers, search, setSearch, tab, setTab, sortKey, sortDir, setSort } = useTickerList();
-  const isDark = theme === "dark";
 
-  const headerClass = `border-b text-gray-500 uppercase text-[10px] font-sans ${
-    isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"
-  }`;
+  const headerClass = "border-b border-line text-muted uppercase text-[10px] font-sans";
 
   return (
     <div id="screener-tab" className="flex flex-col h-full w-full select-none text-xs">
       {/* Search & Filter Header */}
-      <div
-        className={`px-3 py-1.5 border-b flex items-center justify-between gap-3 ${
-          isDark ? "border-[#2a2e39] bg-[#1e222d]" : "border-[#e0e3eb] bg-[#f0f3fa]"
-        }`}
-      >
+      <div className="px-3 py-1.5 border-b border-line flex items-center justify-between gap-3 bg-surface">
         <div className="flex items-center gap-2 flex-1 max-w-sm">
-          <div
-            className={`flex items-center gap-1.5 px-2 py-1 rounded border w-full ${
-              isDark ? "bg-[#131722] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
-            }`}
-          >
-            <Search className="w-3.5 h-3.5 text-gray-400" />
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-line bg-ink w-full">
+            <Search className="w-3.5 h-3.5 text-muted" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("Search symbol...")}
               aria-label={t("Ticker")}
-              className="bg-transparent outline-none w-full text-xs"
+              className="bg-transparent outline-none w-full text-xs text-content placeholder:text-faint"
             />
           </div>
         </div>
@@ -110,11 +99,7 @@ export const ScreenerPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
               data-testid={`screener-tab-${cat}`}
               onClick={() => setTab(cat)}
               className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                tab === cat
-                  ? "bg-[#2962ff] text-white"
-                  : isDark
-                    ? "text-gray-400 hover:text-white"
-                    : "text-gray-600 hover:text-black"
+                tab === cat ? "bg-signal text-signal-ink" : "text-muted hover:text-content"
               }`}
             >
               {tabLabel(cat)}
@@ -140,7 +125,7 @@ export const ScreenerPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
                       data-testid={`screener-sort-${col.key}`}
                       onClick={() => setSort(col.key)}
                       className={`inline-flex items-center gap-1 uppercase ${
-                        active ? "text-[#2962ff]" : "hover:text-white"
+                        active ? "text-signal" : "hover:text-content"
                       }`}
                     >
                       <span>{col.label}</span>
@@ -157,10 +142,10 @@ export const ScreenerPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-500/10">
+          <tbody className="divide-y divide-line/60">
             {tickers.length === 0 ? (
               <tr>
-                <td colSpan={COLUMNS.length} className="py-6 text-center text-gray-500 font-sans">
+                <td colSpan={COLUMNS.length} className="py-6 text-center text-muted font-sans">
                   {t("No symbols available")}
                 </td>
               </tr>
@@ -178,41 +163,31 @@ export const ScreenerPanel: React.FC<Props> = ({ symbols, onSelectSymbol, theme 
                     key={`${tk.category ?? "USDT-FUTURES"}:${tk.instId}`}
                     data-testid={`screener-row-${tk.instId}`}
                     onClick={() => onSelectSymbol(matched)}
-                    className={`cursor-pointer transition-colors ${
-                      isDark ? "hover:bg-[#1e222d]" : "hover:bg-gray-50"
-                    }`}
+                    className="cursor-pointer transition-colors hover:bg-surface-2"
                   >
-                    <td className="py-1.5 px-2 font-bold text-[#2962ff] font-sans">{tk.instId}</td>
+                    <td className="py-1.5 px-2 font-bold text-signal font-sans">{tk.instId}</td>
                     <td className="py-1.5 px-2 text-right">{formatPrice(numOrNull(tk.lastPr))}</td>
                     <td
                       className={`py-1.5 px-2 text-right font-bold ${
-                        change == null
-                          ? "text-gray-400"
-                          : change >= 0
-                            ? "text-[#089981]"
-                            : "text-[#f23645]"
+                        change == null ? "text-muted" : change >= 0 ? "text-up" : "text-down"
                       }`}
                     >
                       {formatPercent(change, 2)}
                     </td>
                     <td
                       className={`py-1.5 px-2 text-right tabular-nums ${
-                        funding == null
-                          ? "text-gray-400"
-                          : funding >= 0
-                            ? "text-[#089981]"
-                            : "text-[#f23645]"
+                        funding == null ? "text-muted" : funding >= 0 ? "text-up" : "text-down"
                       }`}
                     >
                       {formatPercent(funding == null ? null : funding * 100, 4)}
                     </td>
-                    <td className="py-1.5 px-2 text-right text-gray-400 tabular-nums">
+                    <td className="py-1.5 px-2 text-right text-muted tabular-nums">
                       {formatPrice(numOrNull(tk.markPrice))}
                     </td>
-                    <td className="py-1.5 px-2 text-right text-gray-400 tabular-nums">
+                    <td className="py-1.5 px-2 text-right text-muted tabular-nums">
                       {formatPercent(amplitude == null ? null : amplitude * 100, 2)}
                     </td>
-                    <td className="py-1.5 px-2 text-right text-gray-400 tabular-nums">
+                    <td className="py-1.5 px-2 text-right text-muted tabular-nums">
                       {formatCompact(turnoverOf(tk))}
                     </td>
                   </tr>

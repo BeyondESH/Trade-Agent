@@ -1,7 +1,11 @@
 import { Keyboard, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type React from "react";
+import { useEffect, useRef } from "react";
 import { t } from "../../lib/i18n";
+import { modalShell, scrim } from "../../lib/motion";
 import type { ThemeMode } from "../../types/trading";
+import { Kbd } from "../ui/kbd";
 
 interface Props {
   isOpen: boolean;
@@ -9,10 +13,26 @@ interface Props {
   theme: ThemeMode;
 }
 
-export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose, theme }) => {
-  const isDark = theme === "dark";
+export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose }) => {
+  const reduce = useReducedMotion();
+  const shellRef = useRef<HTMLDivElement>(null);
 
-  if (!isOpen) return null;
+  // Escape closes while the dialog is open.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
+
+  // Move focus into the dialog on open: first field, else the shell itself.
+  useEffect(() => {
+    if (!isOpen) return;
+    const firstField = shellRef.current?.querySelector<HTMLElement>("input, select, textarea");
+    (firstField ?? shellRef.current)?.focus();
+  }, [isOpen]);
 
   const categories = [
     {
@@ -48,66 +68,83 @@ export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose, theme
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none">
-      <div
-        id="keyboard-shortcuts-modal"
-        className={`w-full max-w-2xl rounded-xl shadow-2xl border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100 ${
-          isDark
-            ? "bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]"
-            : "bg-white border-[#e0e3eb] text-[#131722]"
-        }`}
-      >
-        {/* Header */}
-        <div
-          className={`p-3 border-b flex items-center justify-between ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="keyboard-shortcuts-backdrop"
+          variants={scrim}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 select-none backdrop-blur-sm"
         >
-          <div className="flex items-center gap-2 font-bold text-sm">
-            <Keyboard className="w-4 h-4 text-[#2962ff]" />
-            <span>{t("BeyondEther Desktop Keyboard Shortcuts")}</span>
-          </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-500/20 text-gray-400">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Content Body */}
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[460px] overflow-y-auto">
-          {categories.map((cat, i) => (
-            <div
-              key={i}
-              className={`p-3 rounded-lg border flex flex-col gap-2 ${
-                isDark ? "bg-[#131722]/60 border-[#2a2e39]" : "bg-gray-50 border-[#e0e3eb]"
-              }`}
-            >
-              <div className="font-bold text-xs text-[#2962ff] uppercase tracking-wider">
-                {cat.title}
+          <motion.div
+            key="keyboard-shortcuts-shell"
+            ref={shellRef}
+            id="keyboard-shortcuts-modal"
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
+            variants={reduce ? scrim : modalShell}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            className="flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-line bg-surface text-content shadow-float outline-none"
+          >
+            {/* Header */}
+            <div className="p-3 border-b border-line flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Keyboard className="w-4 h-4 text-signal" />
+                <span>{t("BeyondEther Desktop Keyboard Shortcuts")}</span>
               </div>
-              <div className="flex flex-col gap-1.5 text-xs">
-                {cat.shortcuts.map((s, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-2">
-                    <span className="text-gray-300">{s.desc}</span>
-                    <kbd className="px-2 py-0.5 rounded bg-gray-500/20 font-mono text-[11px] font-bold text-white whitespace-nowrap">
-                      {s.key}
-                    </kbd>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2">
+                <Kbd>Esc</Kbd>
+                <button
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="p-1 rounded hover:bg-surface-2 text-muted hover:text-content"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Footer */}
-        <div
-          className={`p-3 border-t flex justify-end ${isDark ? "border-[#2a2e39] bg-[#131722]" : "border-[#e0e3eb] bg-gray-50"}`}
-        >
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 rounded text-xs font-semibold bg-[#2962ff] text-white hover:bg-[#1e53e5]"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+            {/* Content Body */}
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[460px] overflow-y-auto">
+              {categories.map((cat, i) => (
+                <div
+                  key={i}
+                  className="p-3 rounded-lg border border-line bg-surface-2 flex flex-col gap-2"
+                >
+                  <div className="font-bold text-xs text-signal uppercase tracking-wider">
+                    {cat.title}
+                  </div>
+                  <div className="flex flex-col gap-1.5 text-xs">
+                    {cat.shortcuts.map((s, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2">
+                        <span className="text-content">{s.desc}</span>
+                        <kbd className="rounded bg-ink px-1.5 py-0.5 ta-num text-2xs text-muted whitespace-nowrap">
+                          {s.key}
+                        </kbd>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t border-line flex justify-end bg-surface-2">
+              <button
+                onClick={onClose}
+                className="rounded-md bg-signal px-4 py-1.5 text-xs font-semibold text-signal-ink hover:bg-signal/90"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

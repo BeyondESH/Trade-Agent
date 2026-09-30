@@ -9,4 +9,6 @@ node_modules/
 e2e-results/
 test-results/
 playwright-report/
+# Local visual-verification screenshots (regenerated, never committed).
+/design-preview/
 

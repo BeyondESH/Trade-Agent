@@ -1,10 +1,11 @@
-import { Eye, FileText, Loader2, RefreshCw, Search } from "lucide-react";
+import { Eye, FileText, RefreshCw, Search } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../api/client";
 import type { ProposalMeta, StrategyProposal } from "../../api/types";
 import { t } from "../../lib/i18n";
 import type { ThemeMode } from "../../types/trading";
+import { Skeleton } from "../ui/skeleton";
 import { ProposalDetail } from "./research/ProposalDetail";
 import { ProposalList, toMillis } from "./research/ProposalList";
 
@@ -26,13 +27,11 @@ const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
 const PROPOSAL_LIMIT = 100;
 
 /**
- * Read-only 研报 view: a filterable proposal list, a full proposal detail
+ * Read-only 研报 view: a filterable proposal rail, a full proposal detail
  * (evidence + provenance) and the execution-run SSE timeline. There is no
  * order/mutation affordance anywhere in this view by design.
  */
 export const ResearchView: React.FC<{ theme: ThemeMode }> = ({ theme }) => {
-  const isDark = theme === "dark";
-
   const [proposals, setProposals] = useState<ProposalMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,82 +104,80 @@ export const ResearchView: React.FC<{ theme: ThemeMode }> = ({ theme }) => {
     <div
       id="research-view"
       data-testid="research-view"
-      className={`flex-1 h-full overflow-y-auto p-4 select-none font-sans flex flex-col ${
-        isDark ? "bg-[#131722] text-[#d1d4dc]" : "bg-[#f0f3fa] text-[#131722]"
-      }`}
+      className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-ink text-content select-none"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#2962ff]" />
-            <span>{t("Research Reports")}</span>
-          </h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {t("AI research proposals and the deterministic execution audit trail.")}
-          </p>
-        </div>
-        <span
-          data-testid="research-readonly-badge"
-          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold bg-gray-500/15 text-gray-400"
-        >
-          <Eye className="w-3 h-3" />
-          {t("Read-only")}
-        </span>
-      </div>
-
-      {/* Filters */}
-      <form
-        className="flex items-center gap-2 flex-wrap mb-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setSymbol(symbolInput.trim());
-        }}
-      >
-        <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs ${
-            isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
-          }`}
-        >
-          <Search className="w-3.5 h-3.5 text-gray-400" />
-          <input
-            data-testid="research-symbol-filter"
-            value={symbolInput}
-            onChange={(e) => setSymbolInput(e.target.value)}
-            placeholder={t("Filter by symbol...")}
-            className="bg-transparent outline-none w-40 placeholder:text-gray-500"
-          />
+      {/* Sticky command header - the AI layer carries the violet accent */}
+      <header className="ta-glass sticky top-0 z-20 border-b border-line">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-research/15 text-research">
+              <FileText className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <h1 className="ta-display truncate text-base tracking-tight text-content">
+                {t("Research Reports")}
+              </h1>
+              <p className="mt-0.5 hidden truncate text-xs text-muted lg:block">
+                {t("AI research proposals and the deterministic execution audit trail.")}
+              </p>
+            </div>
+          </div>
+          <span
+            data-testid="research-readonly-badge"
+            className="ta-eyebrow flex shrink-0 items-center gap-1 rounded-md border border-line/70 bg-surface-2 px-2 py-1 text-muted"
+          >
+            <Eye className="h-3 w-3" />
+            {t("Read-only")}
+          </span>
         </div>
 
-        <select
-          data-testid="research-time-filter"
-          value={range}
-          onChange={(e) => setRange(e.target.value as RangeKey)}
-          className={`px-3 py-1.5 rounded-lg border text-xs ${
-            isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
-          }`}
+        {/* Filter bar - the view's only form input */}
+        <form
+          className="flex flex-wrap items-center gap-2 border-t border-line/60 px-6 py-2.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setSymbol(symbolInput.trim());
+          }}
         >
-          {RANGE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {t(o.label)}
-            </option>
-          ))}
-        </select>
+          <div className="flex items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs transition-colors focus-within:border-research/60">
+            <Search className="h-3.5 w-3.5 text-muted" />
+            <input
+              data-testid="research-symbol-filter"
+              value={symbolInput}
+              onChange={(e) => setSymbolInput(e.target.value)}
+              placeholder={t("Filter by symbol...")}
+              className="w-40 bg-transparent outline-none placeholder:text-faint"
+            />
+          </div>
 
-        <button
-          type="button"
-          data-testid="research-refresh"
-          onClick={() => void load()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2962ff] text-white text-xs font-semibold hover:bg-[#1e53e5]"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          {t("Refresh")}
-        </button>
-      </form>
+          <select
+            data-testid="research-time-filter"
+            value={range}
+            onChange={(e) => setRange(e.target.value as RangeKey)}
+            className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs text-content outline-none transition-colors focus:border-research/60"
+          >
+            {RANGE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {t(o.label)}
+              </option>
+            ))}
+          </select>
 
-      {/* List + Detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] gap-4 flex-1 min-h-0">
-        <div className="min-h-0">
+          <button
+            type="button"
+            data-testid="research-refresh"
+            onClick={() => void load()}
+            className="flex items-center gap-1.5 rounded-md bg-signal px-3 py-1.5 text-xs font-semibold text-signal-ink transition-colors hover:bg-signal/90"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {t("Refresh")}
+          </button>
+        </form>
+      </header>
+
+      {/* Two-pane: proposal rail + detail */}
+      <div className="grid grid-cols-1 gap-4 p-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+        <div className="min-w-0">
           <ProposalList
             proposals={visible}
             selectedId={selectedId}
@@ -196,15 +193,20 @@ export const ResearchView: React.FC<{ theme: ThemeMode }> = ({ theme }) => {
           {detailLoading ? (
             <div
               data-testid="research-detail-loading"
-              className="flex items-center justify-center gap-2 py-10 text-xs text-gray-500"
+              className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-e1"
             >
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>{t("Loading...")}</span>
+              <Skeleton className="h-5 w-40" />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10" />
+                ))}
+              </div>
+              <Skeleton className="h-24" />
             </div>
           ) : detailError ? (
             <div
               data-testid="research-detail-error"
-              className="py-10 text-center text-xs text-[#f23645]"
+              className="rounded-xl border border-down/30 bg-down/10 px-4 py-10 text-center text-xs text-down"
             >
               {t("Proposal unavailable")}: {detailError}
             </div>
@@ -213,7 +215,7 @@ export const ResearchView: React.FC<{ theme: ThemeMode }> = ({ theme }) => {
           ) : (
             <div
               data-testid="research-detail-empty"
-              className="flex items-center justify-center py-10 text-xs text-gray-500"
+              className="flex items-center justify-center rounded-xl border border-dashed border-line bg-surface/40 py-16 text-xs text-muted"
             >
               {t("Select a proposal to view details")}
             </div>

@@ -1,121 +1,362 @@
 @import "tailwindcss";
 
-/* Self-hosted webfonts (OFL-1.1): Google Sans Flex for Latin/Latin-ext,
-   Noto Sans SC (Source Han Sans) for CJK. Each @font-face carries its own
-   unicode-range, so the browser per-glyph falls GFlex -> Noto -> system. */
-@import "@fontsource-variable/google-sans-flex/wght.css";
-@import "@fontsource-variable/noto-sans-sc";
+/* Self-hosted webfonts (OFL-1.1). Google Sans Flex exposes the `wght` + `wdth`
+   axis pair (weight 1-1000, width 25-151%) which this design uses as its
+   primary typographic lever; Noto Sans SC covers CJK. Each @font-face carries
+   its own unicode-range, so the browser per-glyph falls GFlex -> Noto -> system.
 
-/* BeyondEther palette CSS variables consumed by klinecharts-pro-theme.css and
-   other chart chrome overrides. */
+   The 112 `@font-face` declarations do NOT live in this stylesheet: keeping
+   them here made them part of the render-blocking critical CSS (~137 KB of the
+   ~224 KB file, 61%). They now live in `src/fonts.css` and are loaded off the
+   critical path by `main.tsx` (frontend-performance-budgets task 3.4).
+   `font-display: swap` and `unicode-range` sharding are unchanged, so text
+   still renders immediately in the fallback stack and swaps when fonts land. */
+
+/* ===========================================================================
+   Trade-Agent design tokens
+   ---------------------------------------------------------------------------
+   Tailwind v4 does NOT auto-load tailwind.config.js, so the colours, fontSize,
+   borderRadius and boxShadow declared there never generated: utilities like
+   bg-primary / border-border / text-muted-foreground silently did nothing.
+   This block is now the single source of truth, expressed with v4's native
+   @theme inline.
+
+   The runtime palette lives on --ta-* and is swapped by <html data-theme>.
+   `@theme inline` inlines `var(--ta-*)` straight into each generated utility,
+   so `bg-surface` / `text-muted` / `border-line` both really generate AND
+   re-theme live when the attribute flips - no duplicated dark/light rules.
+   =========================================================================== */
+
 :root,
 [data-theme="dark"] {
-  --tv-accent: #2962ff;
-  --tv-bg: #131722;
-  --tv-panel: #1e222d;
-  --tv-border: #2a2e39;
-  --tv-text: #d1d4dc;
-  --tv-muted: #787b86;
-  --tv-up: #089981;
-  --tv-down: #f23645;
-  --tv-scrollbar-thumb: #2a2e39;
-  --tv-scrollbar-thumb-hover: #787b86;
+  color-scheme: dark;
+
+  /* surfaces - deep teal-slate ink, deliberately not TradingView blue-black
+     (#131722) nor pure black */
+  --ta-ink: #0a1216;
+  --ta-surface: #101b20;
+  --ta-surface-2: #16252b;
+  --ta-line: #1d2e35;
+  --ta-line-strong: #2b424b;
+
+  /* text - the tertiary step must still clear WCAG AA at 10px (eyebrow
+     labels), so faint sits just below muted rather than far below it;
+     hierarchy is carried by size, weight and tracking as much as luminance */
+  --ta-text: #e7eef1;
+  --ta-muted: #93a8b0;
+  --ta-faint: #798f98;
+
+  /* semantic: signal = brass (instrument vernacular), up/down = market
+     direction, research = reserved for the AI proposal layer */
+  --ta-signal: #e3a44e;
+  --ta-signal-ink: #1b1205;
+  --ta-up: #22b98c;
+  --ta-down: #ef5a5f;
+  --ta-research: #8b7cf6;
+  /* Invariant dark ink for text sitting ON a jade/coral fill - the on-fill text
+     must not flip with the theme, so the fill carries the theme instead. */
+  --ta-onfill: #08110f;
+
+  /* Heatmap intensity steps. A single fill opacity cannot satisfy dark on-fill
+     text on BOTH grounds: on ink a block must be strong to be seen, on paper it
+     must stay weak enough for dark text to hold. So the opacity lives per theme
+     and the component just names the step. */
+  --ta-heat-1: 75%;
+  --ta-heat-2: 88%;
+  --ta-heat-3: 100%;
+
+  --ta-scrollbar-thumb: #1d2e35;
+  --ta-scrollbar-thumb-hover: #3b545e;
+  --ta-shadow-float: 0 18px 50px -18px rgb(0 0 0 / 0.85);
+
+  /* Material system. A raised surface is elevation + a top inner highlight that
+     fakes a light source; that highlight is what separates a designed surface
+     from a flat fill. --ta-well recedes (chart, empty canvas) instead of
+     floating, giving the composition a real foreground/background. */
+  --ta-elev-1: 0 1px 2px rgb(0 0 0 / 0.35);
+  --ta-elev-2: 0 8px 24px -10px rgb(0 0 0 / 0.6), inset 0 1px 0 0 rgb(255 255 255 / 0.035);
+  --ta-elev-3: 0 28px 70px -24px rgb(0 0 0 / 0.8), inset 0 1px 0 0 rgb(255 255 255 / 0.05);
+  --ta-well: rgb(0 0 0 / 0.22);
+  --ta-flash-up: color-mix(in oklab, var(--ta-up) 22%, transparent);
+  --ta-flash-down: color-mix(in oklab, var(--ta-down) 22%, transparent);
 }
 
 [data-theme="light"] {
-  --tv-accent: #2962ff;
-  --tv-bg: #f0f3fa;
-  --tv-panel: #ffffff;
-  --tv-border: #e0e3eb;
-  --tv-text: #131722;
-  --tv-muted: #787b86;
-  --tv-up: #089981;
-  --tv-down: #f23645;
-  --tv-scrollbar-thumb: #c5c9d4;
-  --tv-scrollbar-thumb-hover: #787b86;
+  color-scheme: light;
+
+  --ta-ink: #eef2f3;
+  --ta-surface: #ffffff;
+  --ta-surface-2: #f6f9fa;
+  --ta-line: #dce5e8;
+  --ta-line-strong: #c3d0d5;
+
+  --ta-text: #0b171c;
+  --ta-muted: #52666e;
+  --ta-faint: #5f7078;
+
+  /* same hues, deepened until they clear AA as TEXT on the light ground
+     (they are also used as fills, where the extra depth reads as richer) */
+  --ta-signal: #9c5b18;
+  --ta-signal-ink: #ffffff;
+  --ta-up: #0b7a59;
+  --ta-down: #c63439;
+  --ta-research: #5b4bd6;
+  --ta-onfill: #08110f;
+  --ta-heat-1: 22%;
+  --ta-heat-2: 45%;
+  --ta-heat-3: 68%;
+
+  --ta-scrollbar-thumb: #c3d0d5;
+  --ta-scrollbar-thumb-hover: #8ca0a8;
+  --ta-shadow-float: 0 20px 50px -20px rgb(11 23 28 / 0.28);
+
+  --ta-elev-1: 0 1px 2px rgb(11 23 28 / 0.07);
+  --ta-elev-2: 0 10px 28px -14px rgb(11 23 28 / 0.16), inset 0 1px 0 0 rgb(255 255 255 / 0.9);
+  --ta-elev-3: 0 34px 80px -28px rgb(11 23 28 / 0.26), inset 0 1px 0 0 rgb(255 255 255 / 0.95);
+  --ta-well: rgb(11 23 28 / 0.045);
+  --ta-flash-up: color-mix(in oklab, var(--ta-up) 16%, transparent);
+  --ta-flash-down: color-mix(in oklab, var(--ta-down) 16%, transparent);
 }
 
-/* shadcn/ui variable layer bound to the --tv-* tokens. Components reference
-   these (bg-background, text-foreground, ...) so both theme families stay in
-   sync; colors MUST NOT be hardcoded in components. */
-:root,
-[data-theme="dark"] {
-  --background: var(--tv-bg);
-  --foreground: var(--tv-text);
-  --card: var(--tv-panel);
-  --card-foreground: var(--tv-text);
-  --popover: var(--tv-panel);
-  --popover-foreground: var(--tv-text);
-  --primary: var(--tv-accent);
-  --primary-foreground: #ffffff;
-  --secondary: var(--tv-panel);
-  --secondary-foreground: var(--tv-text);
-  --muted: var(--tv-panel);
-  --muted-foreground: var(--tv-muted);
-  --accent: var(--tv-accent);
-  --accent-foreground: #ffffff;
-  --destructive: var(--tv-down);
-  --destructive-foreground: #ffffff;
-  --border: var(--tv-border);
-  --input: var(--tv-border);
-  --ring: var(--tv-accent);
-  --radius: 0.375rem;
-}
-
-[data-theme="light"] {
-  --background: #ffffff;
-  --foreground: #131722;
-  --card: var(--tv-panel);
-  --card-foreground: #131722;
-  --popover: var(--tv-panel);
-  --popover-foreground: #131722;
-  --primary: var(--tv-accent);
-  --primary-foreground: #ffffff;
-  --secondary: var(--tv-panel);
-  --secondary-foreground: #131722;
-  --muted: var(--tv-panel);
-  --muted-foreground: var(--tv-muted);
-  --accent: var(--tv-accent);
-  --accent-foreground: #ffffff;
-  --destructive: var(--tv-down);
-  --destructive-foreground: #ffffff;
-  --border: var(--tv-border);
-  --input: var(--tv-border);
-  --ring: var(--tv-accent);
-  --radius: 0.375rem;
-}
-
-/* Single source of truth for the global font stack: Western (Latin/digits/
-   punctuation) -> Google Sans Flex, CJK -> Noto Sans SC, then system fallback.
-   "Google Sans Flex Variable" MUST precede "Noto Sans SC Variable" so Latin
-   never falls onto Noto's Latin subset; CJK falls back to Noto because GFlex
-   claims no CJK unicode-range (except a lone U+4E00 in its nushu subset). */
-@theme {
+@theme inline {
   --font-sans:
     "Google Sans Flex Variable", "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei",
     "Helvetica Neue", "Segoe UI", "Inter", Arial, sans-serif;
+  /* In this terminal `font-mono` has always meant "tabular figures", not a
+     monospace face. Mapping it to the same family keeps CJK/Latin mixed lines
+     from falling into Consolas; tabular figures are applied below. */
+  --font-mono: var(--font-sans);
+
+  /* semantic palette (all resolve through --ta-*, so they follow the theme) */
+  --color-ink: var(--ta-ink);
+  --color-surface: var(--ta-surface);
+  --color-surface-2: var(--ta-surface-2);
+  --color-line: var(--ta-line);
+  --color-line-strong: var(--ta-line-strong);
+  --color-content: var(--ta-text);
+  --color-muted: var(--ta-muted);
+  --color-faint: var(--ta-faint);
+  --color-signal: var(--ta-signal);
+  --color-signal-ink: var(--ta-signal-ink);
+  --color-up: var(--ta-up);
+  --color-down: var(--ta-down);
+  --color-research: var(--ta-research);
+  --color-onfill: var(--ta-onfill);
+
+  /* shadcn/ui compatibility aliases - this is what repairs the primitives in
+     src/components/ui/* whose classes had never generated */
+  --color-background: var(--ta-ink);
+  --color-foreground: var(--ta-text);
+  --color-card: var(--ta-surface);
+  --color-card-foreground: var(--ta-text);
+  --color-popover: var(--ta-surface-2);
+  --color-popover-foreground: var(--ta-text);
+  --color-primary: var(--ta-signal);
+  --color-primary-foreground: var(--ta-signal-ink);
+  --color-secondary: var(--ta-surface-2);
+  --color-secondary-foreground: var(--ta-text);
+  --color-muted-foreground: var(--ta-muted);
+  --color-accent: var(--ta-signal);
+  --color-accent-foreground: var(--ta-signal-ink);
+  --color-destructive: var(--ta-down);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--ta-line);
+  --color-input: var(--ta-line);
+  --color-ring: var(--ta-signal);
+
+  /* density: one extra step below text-xs, for eyebrows and axis labels */
+  --text-2xs: 10px;
+  --text-2xs--line-height: 14px;
+
+  --shadow-float: var(--ta-shadow-float);
+  --shadow-e1: var(--ta-elev-1);
+  --shadow-e2: var(--ta-elev-2);
+  --shadow-e3: var(--ta-elev-3);
 }
 
-html,
-body,
-#tradingview-desktop-root {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+@layer base {
+  html,
+  body,
+  #trade-agent-root {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* terminal-wide: digits align in columns without breaking CJK runs */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* quality floor: keyboard focus is always visible */
+  :focus-visible {
+    outline: 2px solid var(--ta-signal);
+    outline-offset: 1px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--ta-signal) 35%, transparent);
+    color: var(--ta-text);
+  }
 }
 
-/* Numeric/mono columns keep tabular alignment without breaking CJK body text. */
-.font-mono,
-.tnum,
-[data-theme] .font-mono {
-  font-family: var(--font-sans);
-  font-variant-numeric: tabular-nums;
+@layer components {
+  /* Instrument title: compressed width + tight tracking carries the brand and
+     page personality. Width axis degrades to a normal-width bold grotesque if
+     the browser cannot honour font-stretch, so nothing depends on it. */
+  .ta-display {
+    font-stretch: 90%;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  /* Eyebrow: only ever used where the text is a real label, never as trim. */
+  .ta-eyebrow {
+    font-size: var(--text-2xs);
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  /* Tabular figures for data columns. */
+  .ta-num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* "Instrument rule": a hairline with a short signal lead segment. Used to
+     mark the active tab / nav item - it encodes selection, it does not
+     decorate. Set the height at the call site (e.g. h-px). */
+  .ta-rule {
+    position: relative;
+    background: var(--ta-line);
+  }
+  .ta-rule::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 28px;
+    background: var(--ta-signal);
+  }
+}
+
+/* ------------------------------------------------------------------ motion ---
+   Motion is reinforcement, never decoration. Spring choreography lives in the
+   components (motion/react); these keyframes cover the ambient cases. The
+   global prefers-reduced-motion rule above neutralises all of it on request. */
+@keyframes ta-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Opacity-only fade for workspace view switches. Deliberately avoids a
+   transform: an animated transform on an ancestor becomes a containing block
+   and would mis-position every `position: fixed` descendant (chart menus). */
+@keyframes ta-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Tick flash: a quote cell washes jade/coral the instant its value changes.
+   This is the terminal's heartbeat - the one animation that earns its keep. */
+@keyframes ta-flash-up {
+  from {
+    background-color: var(--ta-flash-up);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes ta-flash-down {
+  from {
+    background-color: var(--ta-flash-down);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+/* Feed pulse: a live dot emitting a ring, used sparingly for stream state. */
+@keyframes ta-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes ta-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@layer components {
+  /* Frosted chrome for overlays, sticky bars and the command palette. */
+  .ta-glass {
+    background-color: color-mix(in oklab, var(--ta-surface) 72%, transparent);
+    backdrop-filter: blur(20px) saturate(150%);
+  }
+
+  /* Sunken well for chart / canvas / empty regions. */
+  .ta-well {
+    background-color: var(--ta-well);
+  }
+
+  /* Edge fade for horizontal scrollers (tape, tab bar) so overflow reads as
+     "more content" instead of a hard clip. */
+  .ta-fade-x {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 14px,
+      #000 calc(100% - 14px),
+      transparent
+    );
+  }
+
+  /* Heatmap cell fills. The opacity comes from --ta-heat-* so the same class
+     reads correctly in both themes (see the token blocks). */
+  .ta-heat-up-1 {
+    background-color: color-mix(in oklab, var(--ta-up) var(--ta-heat-1), transparent);
+  }
+  .ta-heat-up-2 {
+    background-color: color-mix(in oklab, var(--ta-up) var(--ta-heat-2), transparent);
+  }
+  .ta-heat-up-3 {
+    background-color: color-mix(in oklab, var(--ta-up) var(--ta-heat-3), transparent);
+  }
+  .ta-heat-down-1 {
+    background-color: color-mix(in oklab, var(--ta-down) var(--ta-heat-1), transparent);
+  }
+  .ta-heat-down-2 {
+    background-color: color-mix(in oklab, var(--ta-down) var(--ta-heat-2), transparent);
+  }
+  .ta-heat-down-3 {
+    background-color: color-mix(in oklab, var(--ta-down) var(--ta-heat-3), transparent);
+  }
 }
 
 /* Themed implicit scrollbars. Tracks stay width-fixed (8px) so nothing reflows
    on show/hide; the thumb fades in via background-color transparency when the
-   container is hovered or itself hovered. Colors bind to --tv-* tokens so the
-   dark/light theme is honored without per-theme rules. */
+   container is hovered or itself hovered. */
 
 /* -webkit (Chromium / Electron) */
 *::-webkit-scrollbar {
@@ -136,11 +377,11 @@ body,
 *:hover::-webkit-scrollbar-thumb,
 *:focus::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb:hover {
-  background-color: var(--tv-scrollbar-thumb);
+  background-color: var(--ta-scrollbar-thumb);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: var(--tv-scrollbar-thumb-hover);
+  background-color: var(--ta-scrollbar-thumb-hover);
 }
 
 *::-webkit-scrollbar-corner {
@@ -149,17 +390,27 @@ body,
 
 /* Standard property twin-setting as a forward-compatible fallback. Placed in
    the base layer so utilities (e.g. @utility no-scrollbar) can override it:
-   unlayered rules always beat layered ones, which broke scrollbar-width:
-   none and left Chromium scrollbar gutters occupying 8px of layout space. */
+   unlayered rules always beat layered ones, which broke scrollbar-width: none
+   and left Chromium scrollbar gutters occupying 8px of layout space. */
 @layer base {
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--tv-scrollbar-thumb) transparent;
+    scrollbar-color: var(--ta-scrollbar-thumb) transparent;
   }
 }
 
-/* Reduced motion: no fade transition, thumb directly visible. */
+/* Quality floor: honour the OS reduced-motion preference globally. The design
+   uses motion only as reinforcement, so removing it costs nothing structural. */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
   *::-webkit-scrollbar-thumb {
     transition: none;
   }

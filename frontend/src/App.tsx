@@ -1,5 +1,5 @@
 import type { Period, SymbolInfo as ProSymbolInfo } from "@klinecharts/pro";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { periodFromTimeframe, periodToTimeframe } from "./api/datafeed";
 import type { SeriesRef } from "./api/types";
 import { INITIAL_CALENDAR } from "./data/marketData";
@@ -41,10 +41,11 @@ import { api } from "./api/client";
 import { BottomDock } from "./components/bottom/BottomDock";
 
 // SuperCharts Components
-import { NativeChart } from "./components/chart/NativeChart";
+// NativeChart is code-split too — see the lazy() declaration below.
 // Desktop Shell Components
 import { DesktopTitleBar } from "./components/desktop/DesktopTitleBar";
 import { GlobalNavRail } from "./components/desktop/GlobalNavRail";
+import { MarketTape } from "./components/desktop/MarketTape";
 import { CommandPaletteModal } from "./components/modals/CommandPaletteModal";
 // Modals & Overlays
 import { CreateAlertModal } from "./components/modals/CreateAlertModal";
@@ -53,14 +54,47 @@ import { KeyboardShortcutsModal } from "./components/modals/KeyboardShortcutsMod
 import { RightDock } from "./components/sidebar/RightDock";
 import { ToastHost } from "./components/ToastHost";
 import { BottomTimebar } from "./components/timebar/BottomTimebar";
-import { CommunityIdeasView } from "./components/views/CommunityIdeasView";
+import { Skeleton } from "./components/ui/skeleton";
 // Dedicated Desktop Full Views
 import { DashboardView } from "./components/views/DashboardView";
-import { HeatmapsView } from "./components/views/HeatmapsView";
-import { MarketsView } from "./components/views/MarketsView";
-import { NewsCalendarView } from "./components/views/NewsCalendarView";
-import { ResearchView } from "./components/views/ResearchView";
-import { ScreenerView } from "./components/views/ScreenerView";
+
+// Only the *chart* view is eager: it is the default view AND its
+// `.klinecharts-pro-watermark` is the measured LCP element (Chrome trace at
+// 4x CPU + Fast 4G) originally suggested the chart library sat on the critical
+// path for the largest paint, so deferring it would move LCP later.
+// MEASUREMENT REFUTED THAT: lazily loading the chart too improved every axis
+// (LCP 2,037 -> 1,898/2,005 ms, first-paint JS ~907 -> ~522 KB, render-blocking
+// CSS 108 KB / 2 requests -> 68.3 KB / 1 request) with CLS unchanged at 0.00.
+// The chart library is therefore code-split as well. See
+// docs/frontend-performance.md for the numbers and the method.
+//
+// The six non-chart views are never on the first-paint path, so they are
+// code-split behind React.lazy and fetched only when the user opens them.
+const MarketsView = lazy(() =>
+  import("./components/views/MarketsView").then((m) => ({ default: m.MarketsView })),
+);
+const ScreenerView = lazy(() =>
+  import("./components/views/ScreenerView").then((m) => ({ default: m.ScreenerView })),
+);
+const HeatmapsView = lazy(() =>
+  import("./components/views/HeatmapsView").then((m) => ({ default: m.HeatmapsView })),
+);
+const CommunityIdeasView = lazy(() =>
+  import("./components/views/CommunityIdeasView").then((m) => ({
+    default: m.CommunityIdeasView,
+  })),
+);
+const NewsCalendarView = lazy(() =>
+  import("./components/views/NewsCalendarView").then((m) => ({ default: m.NewsCalendarView })),
+);
+const ResearchView = lazy(() =>
+  import("./components/views/ResearchView").then((m) => ({ default: m.ResearchView })),
+);
+// The chart library is code-split as well. The earlier worry that deferring it
+// would delay the LCP watermark was refuted by measurement — see above.
+const NativeChart = lazy(() =>
+  import("./components/chart/NativeChart").then((m) => ({ default: m.NativeChart })),
+);
 import {
   isNotifyEnabled,
   notifyAlert,
@@ -84,6 +118,7 @@ import {
 } from "./lib/alertsStore";
 import { t } from "./lib/i18n";
 import { pushToast } from "./lib/toastStore";
+import { pickMajors } from "./lib/watchlist";
 
 /** Map a store Alert to the sidebar AlertItem shape. */
 function alertToItem(a: Alert): AlertItem {
@@ -100,6 +135,28 @@ function alertToItem(a: Alert): AlertItem {
     frequency: "Every Time",
   };
 }
+
+/**
+ * Placeholder shown while a lazily-loaded view's chunk is in flight. It fills
+ * the same workspace box as a real view so the swap introduces no layout shift
+ * (the chart view, which owns the initial paint, is never suspended).
+ */
+const SKELETON_TILES = ["a", "b", "c", "d", "e", "f"];
+const ViewSkeleton: React.FC = () => (
+  <div
+    role="status"
+    className="flex flex-col flex-1 h-full w-full gap-3 p-4"
+    aria-busy="true"
+    aria-label="正在加载视图"
+  >
+    <Skeleton className="h-9 w-52" />
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {SKELETON_TILES.map((tile) => (
+        <Skeleton key={tile} className="h-28" />
+      ))}
+    </div>
+  </div>
+);
 
 export default function App() {
   // 1. Desktop Multi-Tab System
@@ -124,6 +181,8 @@ export default function App() {
 
   // 2. Symbol & Market State
   const { symbols: realSymbols, priceMap } = useRealSymbols();
+  // Drives the tape's live marker: true once the realtime feed has delivered quotes.
+  const feedLive = Object.keys(priceMap).length > 0;
   const [symbols, setSymbols] = useState<SymbolInfo[]>([]);
   const [activeSymbol, setActiveSymbol] = useState<SymbolInfo>(DEFAULT_SYMBOL);
   const [timeframe, setTimeframe] = useState<string>("1h");
@@ -212,6 +271,13 @@ export default function App() {
 
   // 5. Theme
   const [theme, setTheme] = useState<ThemeMode>("dark");
+
+  // The design tokens are swapped by [data-theme] on <html>, so this attribute
+  // is what actually drives every colour in the app. `theme` stays the single
+  // source of truth for both the CSS layer and the canvas chart theme.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   // 7. Secondary Layouts & Panels
   const [events] = useState<EconomicEvent[]>(INITIAL_CALENDAR);
@@ -582,6 +648,13 @@ export default function App() {
 
   const activeCandle = candles[candles.length - 1] || null;
 
+  // The tape is a glanceable ribbon, not a directory: the exchange lists
+  // thousands of instruments, so lead with the ones a trader recognises.
+  const tapeSymbols = useMemo(
+    () => pickMajors(symbols, activeSymbol?.id, 14),
+    [symbols, activeSymbol?.id],
+  );
+
   // Bottom dock open state — when open, the chart workspace becomes a vertical
   // scroll container so tall bottom panels reveal fully (right-dock-ui-polish).
   const [bottomOpen, setBottomOpen] = useState<boolean>(false);
@@ -600,12 +673,10 @@ export default function App() {
 
   return (
     <div
-      id="tradingview-desktop-root"
-      className={`flex flex-col h-screen w-screen overflow-hidden font-sans select-none ${
-        theme === "dark" ? "bg-[#131722] text-[#d1d4dc]" : "bg-[#f0f3fa] text-[#131722]"
-      }`}
+      id="trade-agent-root"
+      className="flex flex-col h-screen w-screen overflow-hidden font-sans select-none bg-ink text-content"
     >
-      {/* 1. BeyondEther Desktop Top TitleBar & Multi-Tab Manager */}
+      {/* 1. Trade-Agent Desktop Top TitleBar & Multi-Tab Manager */}
       <DesktopTitleBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -619,6 +690,14 @@ export default function App() {
         onOpenDesktopSettings={() => setIsDesktopSettingsOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsOpen(true)}
         triggeredAlerts={alerts.filter((a) => a.triggered)}
+      />
+
+      {/* 1b. Market tape — the terminal's always-on read of the market pulse */}
+      <MarketTape
+        symbols={tapeSymbols}
+        activeSymbolId={activeSymbol?.id}
+        live={feedLive}
+        onSelectSymbol={handleSelectSymbol}
       />
 
       {/* 2. Main Desktop Client Body: Global Left Rail + Active Workspace View */}
@@ -636,107 +715,124 @@ export default function App() {
         />
 
         {/* Dynamic Workspace Router */}
-        <main className="flex flex-col flex-1 h-full overflow-hidden relative">
-          {isDashboard && <DashboardView theme={theme} onOpen={(type) => handlePromoteTab(type)} />}
+        <main
+          key={isDashboard ? "dashboard" : activeView}
+          className="flex flex-col flex-1 h-full overflow-hidden relative animate-[ta-fade_0.22s_ease-out]"
+        >
+          {/* One Suspense boundary for the lazily-loaded views; the eager chart
+              branch below never suspends, so first paint is unaffected. */}
+          <Suspense fallback={<ViewSkeleton />}>
+            {isDashboard && (
+              <DashboardView
+                onOpen={(type) => handlePromoteTab(type)}
+                symbols={symbols}
+                onOpenSymbol={handleOpenChartWithSymbol}
+              />
+            )}
 
-          {!isDashboard && activeView === "chart" && (
-            <div
-              ref={chartWorkspaceRef}
-              className={`flex flex-col h-full w-full ${
-                bottomOpen ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"
-              }`}
-            >
-              {/* Chart Main Layout Area */}
+            {!isDashboard && activeView === "chart" && (
               <div
-                className={`flex w-full overflow-hidden relative transition-all ${
-                  bottomOpen ? "min-h-full flex-none" : "flex-1"
+                ref={chartWorkspaceRef}
+                className={`flex flex-col h-full w-full ${
+                  bottomOpen ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"
                 }`}
               >
-                {/* Central native klinecharts-pro chart */}
-                <div className="flex flex-col flex-1 h-full overflow-hidden relative">
-                  <NativeChart
-                    symbol={activeSymbol}
-                    timeframe={timeframe}
-                    theme={theme}
-                    onSymbolChange={handleNativeSymbolChange}
-                    onPeriodChange={handleNativePeriodChange}
-                    onCreateAlertAt={handleCreateAlertAt}
-                  />
+                {/* Chart Main Layout Area */}
+                <div
+                  className={`flex w-full overflow-hidden relative transition-all ${
+                    bottomOpen ? "min-h-full flex-none" : "flex-1"
+                  }`}
+                >
+                  {/* Central native klinecharts-pro chart */}
+                  <div className="flex flex-col flex-1 h-full overflow-hidden relative">
+                    {/* Nested boundary: only the chart area suspends, so the
+                        docks around it still paint immediately. */}
+                    <Suspense fallback={<ViewSkeleton />}>
+                      <NativeChart
+                        symbol={activeSymbol}
+                        timeframe={timeframe}
+                        theme={theme}
+                        onSymbolChange={handleNativeSymbolChange}
+                        onPeriodChange={handleNativePeriodChange}
+                        onCreateAlertAt={handleCreateAlertAt}
+                      />
+                    </Suspense>
 
-                  {/* Time Range Selector & Scale Badges Bar */}
-                  <BottomTimebar
-                    onSelectRange={setSelectedRange}
-                    selectedRange={selectedRange}
-                    isLogScale={isLogScale}
-                    onToggleLogScale={() => setIsLogScale(!isLogScale)}
-                    isPercentScale={isPercentScale}
-                    onTogglePercentScale={() => setIsPercentScale(!isPercentScale)}
-                    isAutoScale={isAutoScale}
-                    onToggleAutoScale={() => setIsAutoScale(!isAutoScale)}
+                    {/* Time Range Selector & Scale Badges Bar */}
+                    <BottomTimebar
+                      onSelectRange={setSelectedRange}
+                      selectedRange={selectedRange}
+                      isLogScale={isLogScale}
+                      onToggleLogScale={() => setIsLogScale(!isLogScale)}
+                      isPercentScale={isPercentScale}
+                      onTogglePercentScale={() => setIsPercentScale(!isPercentScale)}
+                      isAutoScale={isAutoScale}
+                      onToggleAutoScale={() => setIsAutoScale(!isAutoScale)}
+                      theme={theme}
+                    />
+                  </div>
+
+                  {/* Right Dock (Watchlist, Alerts, News, Data Window, Hotlists, Calendar, DOM, Ideas) */}
+                  <RightDock
+                    symbols={symbols}
+                    activeSymbol={activeSymbol}
+                    onSelectSymbol={handleSelectSymbol}
+                    onAddSymbol={() => setIsCommandPaletteOpen(true)}
+                    activeCandle={activeCandle}
+                    indicators={indicators}
+                    alerts={alerts}
+                    onRemoveAlert={(id) => {
+                      setAlerts((prev) => prev.filter((a) => a.id !== id));
+                      removeAlert(id);
+                      mirrorAlertDelete(id);
+                    }}
+                    onToggleAlert={handleToggleAlert}
+                    onResetAlert={handleResetAlert}
+                    notifyEnabled={notifyEnabled}
+                    onToggleNotifications={handleToggleNotifications}
+                    onOpenCreateAlert={() => setIsAlertOpen(true)}
+                    events={events}
+                    orderBook={orderBook}
+                    trades={trades}
                     theme={theme}
                   />
                 </div>
 
-                {/* Right Dock (Watchlist, Alerts, News, Data Window, Hotlists, Calendar, DOM, Ideas) */}
-                <RightDock
+                {/* Bottom Dock (Screener, Text Notes) */}
+                <BottomDock
+                  symbol={activeSymbol}
                   symbols={symbols}
-                  activeSymbol={activeSymbol}
                   onSelectSymbol={handleSelectSymbol}
-                  onAddSymbol={() => setIsCommandPaletteOpen(true)}
-                  activeCandle={activeCandle}
-                  indicators={indicators}
-                  alerts={alerts}
-                  onRemoveAlert={(id) => {
-                    setAlerts((prev) => prev.filter((a) => a.id !== id));
-                    removeAlert(id);
-                    mirrorAlertDelete(id);
-                  }}
-                  onToggleAlert={handleToggleAlert}
-                  onResetAlert={handleResetAlert}
-                  notifyEnabled={notifyEnabled}
-                  onToggleNotifications={handleToggleNotifications}
-                  onOpenCreateAlert={() => setIsAlertOpen(true)}
-                  events={events}
-                  orderBook={orderBook}
-                  trades={trades}
+                  onOpenChange={setBottomOpen}
                   theme={theme}
                 />
               </div>
+            )}
 
-              {/* Bottom Dock (Screener, Text Notes) */}
-              <BottomDock
-                symbol={activeSymbol}
+            {activeView === "markets" && <MarketsView theme={theme} />}
+
+            {activeView === "screener" && (
+              <ScreenerView
                 symbols={symbols}
-                onSelectSymbol={handleSelectSymbol}
-                onOpenChange={setBottomOpen}
+                onOpenChartWithTicker={handleOpenChartWithTicker}
                 theme={theme}
               />
-            </div>
-          )}
+            )}
 
-          {activeView === "markets" && <MarketsView theme={theme} />}
+            {activeView === "heatmaps" && (
+              <HeatmapsView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
+            )}
 
-          {activeView === "screener" && (
-            <ScreenerView
-              symbols={symbols}
-              onOpenChartWithTicker={handleOpenChartWithTicker}
-              theme={theme}
-            />
-          )}
+            {activeView === "community" && (
+              <CommunityIdeasView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
+            )}
 
-          {activeView === "heatmaps" && (
-            <HeatmapsView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
-          )}
+            {activeView === "news" && (
+              <NewsCalendarView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
+            )}
 
-          {activeView === "community" && (
-            <CommunityIdeasView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
-          )}
-
-          {activeView === "news" && (
-            <NewsCalendarView onOpenChartWithTicker={handleOpenChartWithTicker} theme={theme} />
-          )}
-
-          {activeView === "research" && <ResearchView theme={theme} />}
+            {activeView === "research" && <ResearchView theme={theme} />}
+          </Suspense>
         </main>
       </div>
 

@@ -1,0 +1,14 @@
+/* Self-hosted webfont declarations (OFL-1.1), deliberately kept OUT of the
+   critical `index.css`: the two @fontsource packages expand to 112 `@font-face`
+   rules (~137 KB, 61% of what used to be the render-blocking stylesheet).
+
+   `main.tsx` pulls this file in with a dynamic `import()` so Vite emits it as
+   its own async stylesheet, injected off the critical path. Rendering never
+   waits on it: `font-display: swap` (declared by @fontsource) paints text in
+   the fallback stack immediately, and `unicode-range` sharding still means only
+   the CJK/Latin shards actually hit by the UI are downloaded.
+
+   The font STACK itself stays single-sourced in `src/index.css` (`--font-sans`)
+   and `src/lib/fonts.ts` (canvas); this file only declares the faces. */
+@import "@fontsource-variable/google-sans-flex/wdth.css";
+@import "@fontsource-variable/noto-sans-sc";

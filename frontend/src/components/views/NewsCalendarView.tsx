@@ -1,11 +1,17 @@
 import { AlertCircle, Calendar, Clock, ExternalLink, Globe, Newspaper, Radio } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { INITIAL_CALENDAR } from "../../data/marketData";
 import { t } from "../../lib/i18n";
-import { fetchNewsflashPage, NEWSFLASH_TYPES, type NewsflashType } from "../../lib/newsfeed";
-import type { NewsItem } from "../../types/trading";
-import { EconomicEvent, type ThemeMode } from "../../types/trading";
+import {
+  fetchNewsflashPage,
+  formatRelativeTime,
+  NEWSFLASH_TYPES,
+  type NewsflashType,
+} from "../../lib/newsfeed";
+import type { NewsItem, ThemeMode } from "../../types/trading";
+import { Reveal } from "../ui/reveal";
 import { GlobalNewsFeed } from "./GlobalNewsFeed";
 
 interface Props {
@@ -16,6 +22,92 @@ interface Props {
 const PAGE_SIZE = 20;
 const SCROLL_THRESHOLD = 120;
 
+/** Shared surface recipe for this desk's panels. */
+const PANEL = "flex flex-col rounded-xl border border-line bg-surface shadow-e1";
+
+/** Section header: a real label on the left, an action/control on the right. */
+const SectionLabel: React.FC<{ children: React.ReactNode; right?: React.ReactNode }> = ({
+  children,
+  right,
+}) => (
+  <div className="flex items-center justify-between gap-3 border-b border-line/70 px-3.5 py-2.5">
+    <span className="ta-eyebrow text-faint">{children}</span>
+    {right}
+  </div>
+);
+
+interface SegItem<T extends string> {
+  value: T;
+  label: string;
+  icon?: React.ReactNode;
+}
+
+/**
+ * Segmented control with a single sliding indicator (`layoutId`). The indicator
+ * is one shared element that springs between positions, so the active state
+ * reads as a physical toggle rather than a colour swap.
+ */
+function Segmented<T extends string>({
+  items,
+  value,
+  onChange,
+  layoutId,
+  size = "sm",
+}: {
+  items: SegItem<T>[];
+  value: T;
+  onChange: (value: T) => void;
+  layoutId: string;
+  size?: "sm" | "md";
+}) {
+  const reduce = useReducedMotion();
+  return (
+    <div className="flex items-center gap-0.5 rounded-lg border border-line bg-ink/60 p-0.5">
+      {items.map((item) => {
+        const active = item.value === value;
+        return (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onChange(item.value)}
+            className={`relative flex items-center rounded-md font-semibold transition-colors ${
+              size === "md" ? "px-3 py-1.5 text-xs" : "px-2.5 py-1 text-2xs"
+            } ${active ? "text-signal-ink" : "text-muted hover:text-content"}`}
+          >
+            {active && (
+              <motion.span
+                layoutId={layoutId}
+                className="absolute inset-0 rounded-md bg-signal"
+                transition={
+                  reduce ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 30 }
+                }
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5 whitespace-nowrap">
+              {item.icon}
+              {item.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const ImpactPill: React.FC<{ impact: "high" | "medium" | "low" }> = ({ impact }) => (
+  <span
+    className={`ta-eyebrow inline-flex rounded px-1.5 py-0.5 ${
+      impact === "high"
+        ? "bg-down/15 text-down"
+        : impact === "medium"
+          ? "bg-signal/15 text-signal"
+          : "bg-surface-2 text-muted"
+    }`}
+  >
+    {impact}
+  </span>
+);
+
 export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme }) => {
   const [activeTab, setActiveTab] = useState<"news" | "calendar" | "global">("news");
   const [newsType, setNewsType] = useState<NewsflashType>("all");
@@ -25,7 +117,6 @@ export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [calendarImpact, setCalendarImpact] = useState<"all" | "high" | "medium">("all");
-  const isDark = theme === "dark";
 
   // Request sequence guard: a category switch invalidates in-flight responses.
   const loadSeq = useRef(0);
@@ -88,222 +179,234 @@ export const NewsCalendarView: React.FC<Props> = ({ onOpenChartWithTicker, theme
     (c) => calendarImpact === "all" || c.impact === calendarImpact,
   );
 
+  const liveBadge = (
+    <span className="flex items-center gap-1.5">
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-[ta-ping_2s_ease-out_infinite] rounded-full bg-up" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-up" />
+      </span>
+      <span className="ta-eyebrow text-up">{t("Live")}</span>
+    </span>
+  );
+
   return (
     <div
       id="news-calendar-view"
-      className={`flex-1 h-full overflow-y-auto p-4 select-none font-sans flex flex-col ${
-        isDark ? "bg-[#131722] text-[#d1d4dc]" : "bg-[#f0f3fa] text-[#131722]"
-      }`}
+      className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-ink text-content select-none"
       onScroll={handleScroll}
     >
-      {/* Top Header */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Newspaper className="w-5 h-5 text-[#4caf50]" />
-            <span>{t("News & Economic Calendar")}</span>
-          </h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {t("Real-time crypto newsflash, central bank decisions, and earnings releases.")}
-          </p>
-        </div>
-
-        {/* Tab Toggle */}
-        <div className="flex items-center bg-black/20 p-1 rounded-lg border border-gray-500/20 text-xs font-semibold">
-          <button
-            onClick={() => setActiveTab("news")}
-            className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors ${
-              activeTab === "news"
-                ? "bg-[#2962ff] text-white shadow-xs"
-                : isDark
-                  ? "text-gray-400 hover:text-white"
-                  : "text-gray-600 hover:text-black"
-            }`}
-          >
-            <Newspaper className="w-3.5 h-3.5" />
-            <span>{t("Market News Wire")}</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("calendar")}
-            className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors ${
-              activeTab === "calendar"
-                ? "bg-[#2962ff] text-white shadow-xs"
-                : isDark
-                  ? "text-gray-400 hover:text-white"
-                  : "text-gray-600 hover:text-black"
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>{t("Economic Calendar")}</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("global")}
-            className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors ${
-              activeTab === "global"
-                ? "bg-[#2962ff] text-white shadow-xs"
-                : isDark
-                  ? "text-gray-400 hover:text-white"
-                  : "text-gray-600 hover:text-black"
-            }`}
-          >
-            <Radio className="w-3.5 h-3.5" />
-            <span>{t("Global News Feed")}</span>
-          </button>
-        </div>
-      </div>
-
-      {activeTab === "news" ? (
-        /* News Wire View — one tab per BlockBeats newsflash endpoint */
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            {NEWSFLASH_TYPES.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setNewsType(t.key)}
-                className={`px-3 py-1 rounded-lg border text-xs font-medium transition-colors ${
-                  newsType === t.key
-                    ? "bg-[#2962ff] border-[#2962ff] text-white"
-                    : isDark
-                      ? "bg-[#1e222d] border-[#2a2e39] text-gray-400 hover:text-white"
-                      : "bg-white border-[#e0e3eb] text-gray-600 hover:text-black"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+      {/* Sticky command header: title + live state + segmented mode switch */}
+      <header className="ta-glass sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Newspaper className="h-4 w-4 shrink-0 text-signal" />
+          <div className="min-w-0">
+            <h1 className="ta-display truncate text-base tracking-tight text-content">
+              {t("News & Economic Calendar")}
+            </h1>
+            <p className="mt-0.5 hidden truncate text-xs text-muted lg:block">
+              {t("Real-time crypto newsflash, central bank decisions, and earnings releases.")}
+            </p>
           </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {liveBadge}
+          <Segmented
+            layoutId="news-mode-indicator"
+            value={activeTab}
+            onChange={setActiveTab}
+            items={[
+              {
+                value: "news",
+                label: t("Market News Wire"),
+                icon: <Newspaper className="h-3.5 w-3.5" />,
+              },
+              {
+                value: "calendar",
+                label: t("Economic Calendar"),
+                icon: <Calendar className="h-3.5 w-3.5" />,
+              },
+              {
+                value: "global",
+                label: t("Global News Feed"),
+                icon: <Radio className="h-3.5 w-3.5" />,
+              },
+            ]}
+          />
+        </div>
+      </header>
 
-          {loading && <div className="text-xs text-gray-400">{t("Loading...")}</div>}
-          {error && (
-            <div className="flex items-center gap-2 text-xs text-[#f23645]">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>
-                {t("News feed unavailable:")} {error}
-              </span>
-            </div>
-          )}
+      <div className="flex flex-col gap-5 p-6">
+        {activeTab === "news" ? (
+          /* News wire - a true timeline: hairline rail, node dots, staggered rise */
+          <section className={PANEL}>
+            <SectionLabel
+              right={
+                <span className="ta-num text-2xs text-faint">
+                  {loading ? t("Loading...") : `${news.length}`}
+                </span>
+              }
+            >
+              {t("News Headlines")}
+            </SectionLabel>
 
-          <div className="grid grid-cols-1 gap-3">
-            {news.map((n) => (
-              <div
-                key={n.id}
-                className={`p-4 rounded-xl border flex flex-col gap-2 transition-all hover:border-[#2962ff] ${
-                  isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500 text-[10px]">{n.time}</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-500/20 text-gray-400">
-                    {newsType}
+            <div className="p-3.5">
+              {/* News-type filter as a scrollable segmented control */}
+              <div className="ta-fade-x mb-3 overflow-x-auto">
+                <Segmented
+                  layoutId="news-type-indicator"
+                  value={newsType}
+                  onChange={setNewsType}
+                  items={NEWSFLASH_TYPES.map((type) => ({
+                    value: type.key,
+                    label: type.label,
+                  }))}
+                />
+              </div>
+
+              {error && (
+                <div className="mb-3 flex items-center gap-2 rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-xs text-down">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {t("News feed unavailable:")} {error}
                   </span>
                 </div>
+              )}
 
-                <h3 className="font-bold text-sm text-white leading-snug">{n.title}</h3>
-                <p className="text-xs text-gray-300 leading-relaxed line-clamp-4">{n.summary}</p>
+              <div className="flex flex-col">
+                {news.map((n, i) => (
+                  <Reveal key={n.id} delay={Math.min(i, 8)} className="relative pl-8 pb-3">
+                    {/* hairline left rail */}
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-[9px] top-0 bottom-0 w-px bg-line"
+                    />
+                    {/* node dot */}
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-[5px] top-[13px] h-2 w-2 rounded-full bg-signal ring-2 ring-ink"
+                    />
+                    <motion.article
+                      whileHover={{ y: -1 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      className="group flex flex-col gap-2 rounded-xl border border-line bg-surface p-3.5 shadow-e1 transition-[box-shadow,border-color] hover:border-line-strong hover:shadow-e2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="ta-eyebrow ta-num text-signal">
+                          {formatRelativeTime(n.time)}
+                        </span>
+                        <span className="ta-eyebrow rounded border border-line/70 bg-surface-2 px-1.5 py-0.5 text-faint">
+                          {n.category}
+                        </span>
+                      </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-gray-500/20 mt-1">
-                  <div className="flex items-center gap-1.5 text-gray-400">
-                    <Clock className="w-3 h-3" />
-                    <span className="text-[11px]">{n.time}</span>
-                  </div>
-                  <a
-                    href={`https://m.theblockbeats.info/flash/${n.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-gray-400 hover:text-white flex items-center gap-1 text-xs"
-                  >
-                    <Globe className="w-3 h-3" />
-                    <span>{t("Full Article")}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
+                      <h3 className="text-sm font-bold leading-snug text-content">{n.title}</h3>
+                      <p className="line-clamp-4 text-xs leading-relaxed text-muted">{n.summary}</p>
 
-          {loadingMore && (
-            <div className="text-xs text-gray-400 text-center py-2">{t("Loading...")}</div>
-          )}
-          {!hasMore && news.length > 0 && (
-            <div className="text-xs text-gray-400 text-center py-2">{t("All Loaded")}</div>
-          )}
-        </div>
-      ) : activeTab === "global" ? (
-        /* Global News Feed — AKShare multi-source 7x24 flash, SSE rolling */
-        <GlobalNewsFeed theme={theme} />
-      ) : (
-        /* Economic Calendar View (BlockBeats has no calendar API; stays mock) */
-        <div
-          className={`p-4 rounded-xl border flex flex-col gap-3 ${
-            isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
-          }`}
-        >
-          <div className="flex items-center justify-between pb-2 border-b border-gray-500/20">
-            <div className="font-bold text-sm text-white">{t("Global Economic Releases")}</div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-400">{t("Impact Filter:")}</span>
-              {(["all", "high", "medium"] as const).map((imp) => (
-                <button
-                  key={imp}
-                  onClick={() => setCalendarImpact(imp)}
-                  className={`px-2.5 py-0.5 rounded font-semibold uppercase text-[10px] ${
-                    calendarImpact === imp
-                      ? "bg-[#2962ff] text-white"
-                      : "bg-gray-500/20 text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {imp}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
-              <thead>
-                <tr
-                  className={`border-b text-gray-500 uppercase text-[10px] font-sans ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
-                >
-                  <th className="py-2.5 px-3">{t("Time")}</th>
-                  <th className="py-2.5 px-3">{t("Country")}</th>
-                  <th className="py-2.5 px-3">{t("Impact")}</th>
-                  <th className="py-2.5 px-3">{t("Event")}</th>
-                  <th className="py-2.5 px-3">{t("Actual")}</th>
-                  <th className="py-2.5 px-3">{t("Forecast")}</th>
-                  <th className="py-2.5 px-3">{t("Previous")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-500/10">
-                {filteredCalendar.map((item) => (
-                  <tr key={item.id} className={isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"}>
-                    <td className="py-2.5 px-3 font-sans text-gray-400">
-                      {item.time} ({item.date})
-                    </td>
-                    <td className="py-2.5 px-3 font-bold font-sans text-white">{item.currency}</td>
-                    <td className="py-2.5 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-sans ${
-                          item.impact === "high"
-                            ? "bg-[#f23645]/20 text-[#f23645]"
-                            : item.impact === "medium"
-                              ? "bg-[#ff9800]/20 text-[#ff9800]"
-                              : "bg-gray-500/20 text-gray-400"
-                        }`}
-                      >
-                        {item.impact}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-bold font-sans text-gray-200">{item.event}</td>
-                    <td className="py-2.5 px-3 font-bold text-[#089981]">{item.actual || "-"}</td>
-                    <td className="py-2.5 px-3 text-gray-300">{item.forecast || "-"}</td>
-                    <td className="py-2.5 px-3 text-gray-400">{item.previous || "-"}</td>
-                  </tr>
+                      <div className="mt-1 flex items-center justify-between border-t border-line/60 pt-2">
+                        <span className="flex items-center gap-1.5 text-muted">
+                          <Clock className="h-3 w-3" />
+                          <span className="ta-num text-2xs">{n.time}</span>
+                        </span>
+                        <a
+                          href={`https://m.theblockbeats.info/flash/${n.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-2xs font-semibold text-muted transition-colors hover:text-signal"
+                        >
+                          <Globe className="h-3 w-3" />
+                          <span>{t("Full Article")}</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </motion.article>
+                  </Reveal>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+              </div>
+
+              {loadingMore && (
+                <div className="py-2 text-center text-xs text-muted">{t("Loading...")}</div>
+              )}
+              {!hasMore && news.length > 0 && (
+                <div className="py-2 text-center text-2xs text-faint">{t("All Loaded")}</div>
+              )}
+            </div>
+          </section>
+        ) : activeTab === "global" ? (
+          /* Global News Feed - AKShare multi-source 7x24 flash, SSE rolling */
+          <GlobalNewsFeed theme={theme} />
+        ) : (
+          /* Economic Calendar - real table with a sticky header */
+          <section className={PANEL}>
+            <SectionLabel
+              right={
+                <div className="flex items-center gap-2">
+                  <span className="ta-eyebrow text-faint">{t("Impact Filter:")}</span>
+                  <Segmented
+                    layoutId="calendar-impact-indicator"
+                    value={calendarImpact}
+                    onChange={setCalendarImpact}
+                    items={[
+                      { value: "all", label: "all" },
+                      { value: "high", label: "high" },
+                      { value: "medium", label: "medium" },
+                    ]}
+                  />
+                </div>
+              }
+            >
+              {t("Global Economic Releases")}
+            </SectionLabel>
+
+            <div className="max-h-[62vh] overflow-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead className="sticky top-0 z-10 bg-surface-2">
+                  <tr>
+                    {[
+                      t("Time"),
+                      t("Country"),
+                      t("Impact"),
+                      t("Event"),
+                      t("Actual"),
+                      t("Forecast"),
+                      t("Previous"),
+                    ].map((col) => (
+                      <th
+                        key={col}
+                        scope="col"
+                        className="ta-eyebrow whitespace-nowrap border-b border-line px-3 py-2.5 text-left text-faint"
+                      >
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCalendar.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="border-b border-line/50 last:border-0 transition-colors hover:bg-surface-2/60"
+                    >
+                      <td className="ta-num whitespace-nowrap px-3 py-2.5 text-muted">
+                        {item.time} ({item.date})
+                      </td>
+                      <td className="px-3 py-2.5 font-semibold text-content">{item.currency}</td>
+                      <td className="px-3 py-2.5">
+                        <ImpactPill impact={item.impact} />
+                      </td>
+                      <td className="px-3 py-2.5 font-semibold text-content">{item.event}</td>
+                      <td className="ta-num px-3 py-2.5 font-semibold text-up">
+                        {item.actual || "-"}
+                      </td>
+                      <td className="ta-num px-3 py-2.5 text-content">{item.forecast || "-"}</td>
+                      <td className="ta-num px-3 py-2.5 text-muted">{item.previous || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 };

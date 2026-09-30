@@ -1,0 +1,16 @@
+{
+  "$schema": "https://api-code-maker.nie.netease.com/main/config/config.json",
+  "mcp": {
+    "codemap": {
+      "command": [
+        "codemap",
+        "serve"
+      ],
+      "enabled": true,
+      "type": "local"
+    }
+  },
+  "plugin": [
+    ".codemaker/codemap/codemap-inject.mjs"
+  ]
+}

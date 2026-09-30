@@ -1,0 +1,401 @@
+rank,word,count,description
+1,test,441,test case; 测试用例，锁定行为契约 (pytest/vitest/playwright)
+2,get,168,getter; 读取取值，如 get_history 取历史 K 线
+3,set,157,setter; 写入或设置配置/状态
+4,to,141,
+5,stream,113,stream; 连续推送流，如 /ws 行情流与 news SSE
+6,news,98,news; 财经快讯与全球新闻条目
+7,fake,95,fake double; 测试替身，离线模拟外部依赖
+8,ws,91,WebSocket; 实时通道 /ws 帧订阅（非 whitespace）
+9,data,87,data; 通用数据负载，如 BlockBeats 数据端点
+10,market,84,market; 行情/市场域与 market category 品类
+11,order,79,order; 委托订单或下单动作
+12,body,78,request body; HTTP 请求体，或 DOM body
+13,client,74,client; 调用方客户端，如 httpx / MCP / WS client
+14,open,71,open; 开仓、打开文件、开盘价 open
+15,init,70,init; 初始化与启动期装配
+16,on,68,
+17,run,67,run; 执行一次回测/流水线/测试
+18,series,65,"time series; 一条 (category,symbol,timeframe) K 线序列"
+19,fetch,64,fetch; 从外部源或分页拉取数据
+20,symbol,63,symbol; 交易对代码如 BTCUSDT，或符号标识
+21,and,62,
+22,alert,61,alert; 价格警报条件与通知记录
+23,config,61,config; 运行时配置与用户偏好
+24,backtest,60,backtest; 向量化历史回测
+25,price,60,price; 价格、收盘价或档位报价
+26,store,60,store; Parquet 落盘持久化或内存仓储
+27,use,60,
+28,agent,58,AI agent; 交易智能体决策循环
+29,settings,58,settings; pydantic Settings，全部 MD_ 环境项
+30,path,57,path; 文件路径或路由路径
+31,close,56,close; 平仓、关闭连接、收盘价
+32,props,56,React props; 组件入参
+33,broker,55,broker; 撮合通道 PaperBroker 纸面 / LiveBroker 实盘
+34,chart,50,chart; K 线图表实例与工作区
+35,frame,50,frame; 一条 WS 消息帧
+36,max,50,max; 上限与钳制
+37,api,49,api; REST/WS 对外接口
+38,candle,48,candle; 单根 K 线 bar（OHLCV）
+39,category,46,category; 行情品类 SPOT / USDT-FUTURES
+40,string,46,string; 字符串类型
+41,is,45,
+42,prototype,44,prototype; JS Object.prototype（污染检测语境）
+43,time,44,time; 时刻/时间戳
+44,fixed,43,fixed; 定值或 CSS position:fixed
+45,add,42,add; 加仓（adds 计数）或添加元素
+46,trade,41,trade; 成交/交易记录
+47,event,40,event; 结构化事件或事件监听
+48,bitget,39,Bitget; 上游交易所行情与下单来源
+49,history,39,history; 深度历史 K 线或回测历史存档
+50,locale,39,locale; 图表 i18n 语言环境
+51,timeframe,38,timeframe; K 线时间级别 1m/5m/1h/1M
+52,mcp,37,MCP; bitget-agent-mcp 子进程工具通道
+53,model,37,model; ML 模型或数据模型
+54,listener,36,listener; 事件/WS 回调监听器
+55,live,35,live; 实盘，或 L2 真实进程测试
+56,handle,34,handle; 处理函数或对象句柄
+57,all,33,
+58,provider,33,provider; LLM Provider 或 DI provider
+59,rest,33,REST; HTTP 拉取通道（对立于 WS）
+60,subscribe,33,subscribe; 注册 /ws 或交易所频道订阅
+61,backfill,32,backfill; 向更早方向补齐历史
+62,error,32,error; 异常与错误码语义
+63,key,32,key; 字典/缓存键，或 API 密钥
+64,default,31,default; 默认值与缺省回落
+65,page,31,page; 分页请求的一页
+66,list,30,list; 列举集合
+67,load,30,load; 加载数据/模块/历史
+68,np,30,np; numpy 别名，数组运算
+69,ref,30,ref; React 引用或参考价 reference
+70,json,29,json; 负载格式或本地 JSONL 文件
+71,cycle,28,cycle; agent_cycle 一轮决策循环
+72,date,27,date; UTC 自然日与日历
+73,decision,27,decision; Agent 的结构化决策
+74,dict,27,dict; Python 字典
+75,empty,27,empty; 空集合/空响应边界
+76,items,27,items; 条目集合，如新闻 items
+77,state,27,state; 状态机或应用状态
+78,dir,26,dir; 目录（data_dir）
+79,effect,26,effect; React useEffect 副作用
+80,save,26,save; 落盘持久化
+81,snapshot,26,snapshot; 一次性全量快照帧
+82,str,26,str; 字符串类型
+83,array,25,array; JS 数组
+84,loop,25,loop; 轮询循环，或 MCP 单后台事件循环
+85,text,25,text; 文本内容/文案
+86,alerts,24,alerts; 多条价格警报
+87,limit,24,limit; 分页条数或参数上限
+88,params,24,params; 模型超参集合
+89,record,24,record; 存储中的一条记录
+90,remove,24,remove; 删除条目或移除元素
+91,send,24,send; 发送帧或请求
+92,window,24,window; 滚动窗口，或浏览器 window 句柄
+93,candles,23,candles; 多根 K 线集合
+94,listeners,23,listeners; 多个监听器
+95,pd,23,pd; pandas 别名（DataFrame/Series）
+96,result,23,result; 计算或回测结果
+97,ticker,23,ticker; 报价条目/频道
+98,unsubscribe,23,unsubscribe; 退订频道
+99,args,22,args; 参数列表（CLI/函数）
+100,book,22,book; 订单簿 orderbook 深度
+101,engine,22,engine; RiskEngine / 回测引擎 / 图表引擎
+102,factor,22,factor; 量化因子算子
+103,for,22,
+104,instruments,22,instruments; 可交易标的元数据
+105,line,22,line; 价格线/趋势线/画线
+106,log,22,log; 日志，或对数
+107,logger,22,logger; 日志器对象
+108,no,22,
+109,portfolio,22,portfolio; vectorbt Portfolio 回测容器
+110,read,22,read; 读取 store 或文件
+111,sweep,22,sweep; 参数网格扫描
+112,when,22,
+113,x,22,
+114,cache,21,cache; 内存或磁盘缓存
+115,categories,21,categories; 多品类集合
+116,create,21,create; 创建对象/app 工厂
+117,item,21,item; 单条目
+118,min,21,min; 下界或最小值
+119,netflow,21,netflow; 链上资金净流入（BlockBeats top10_netflow）
+120,position,21,position; 持仓与保证金占用
+121,trades,21,trades; 成交/交易记录集合
+122,url,21,url; 外部端点地址
+123,with,21,
+124,from,20,
+125,panel,20,panel; 右栏/底栏 UI 面板
+126,pro,20,pro; klinecharts-pro 开箱图表引擎
+127,sort,20,sort; 排序
+128,tab,20,tab; 标签页（工作区多标签）
+129,delete,19,delete; 删除持久化条目
+130,df,19,df; DataFrame 变量
+131,emit,19,emit; 发出事件或下发帧
+132,mark,19,mark; 图表买卖标记，或 mark-price 标记价
+133,rejects,19,rejects; 应当被拒绝/抛错的否定断言
+134,status,19,status; 任务或连接状态，openspec status
+135,update,19,update; 增量更新 bar 或配置
+136,view,19,view; 全视图或组件视图层
+137,append,18,append; 追加到序列/日志尾部
+138,complete,18,complete; 完成态（job 终态、任务勾选）
+139,context,18,context; Agent 输入上下文或 React Context
+140,control,18,control; 运行控制与 kill-switch
+141,enabled,18,enabled; 开关是否启用
+142,forward,18,forward; walk-forward 滚动再训练
+143,index,18,index; 下标/索引，或指数指标
+144,leverage,18,leverage; 杠杆倍数上限
+145,rolling,18,rolling; 滚动窗口统计
+146,socket,18,socket; WebSocket 连接
+147,type,18,type; 品类标识或类型注解
+148,walk,18,walk; walk-forward 多折推进
+149,any,17,
+150,base,17,base; 基准（种子时刻 base_ms 或基准曲线）
+151,clear,17,clear; 清空缓存/集合
+152,count,17,count; 计数（含加仓次数 adds）
+153,execution,17,execution; 执行层 ExecutionEngine
+154,global,17,global; 全局作用域或全局计数
+155,job,17,job; 后台异步作业（回测 job）
+156,map,17,map; 映射/字典
+157,request,17,request; HTTP 请求
+158,risk,17,risk; 风控校验 RiskEngine/RiskConfig
+159,tickers,17,tickers; 多报价条目
+160,values,17,values; 取值集合
+161,blockbeats,16,BlockBeats; 加密快讯与链上数据源（需 BB_API_KEY）
+162,current,16,current; 当前值/当前 bar
+163,factors,16,factors; 多因子集合
+164,features,16,features; DL 特征列
+165,margin,16,margin; 保证金比例，或裁剪余量
+166,period,16,period; 周期/period-bar 周期栏
+167,refresh,16,refresh; 刷新与缓存过期
+168,start,16,start; 起始时刻或启动
+169,step,16,step; timeframe 毫秒步长，或流程步骤
+170,buffer,15,buffer; 环形缓冲（实时 bar 缓存）
+171,build,15,build; 装配上下文/构建产物
+172,call,15,call; 调用（函数或 MCP tool）
+173,card,15,card; 指标卡片 UI
+174,color,15,color; 主题色，涨绿跌红
+175,newsflash,15,newsflash; BlockBeats 快讯栏目类型集
+176,not,15,
+177,render,15,render; 渲染组件或重绘图表
+178,stop,15,stop; 停止轮询，或止损 stop-loss
+179,breaker,14,breaker; 熔断 circuit breaker 保护性平仓
+180,excel,14,excel; 电子表格导出
+181,file,14,file; 磁盘文件
+182,find,14,find; 查找标的或识别 swing 极值
+183,funding,14,funding; 资金费率 funding-time
+184,granularity,14,granularity; Bitget 周期粒度字符串
+185,id,14,id; 唯一标识符
+186,info,14,info; 元数据，或 INFO 日志级别
+187,journal,14,journal; 交易日志 TradeJournal
+188,memo,14,memo; 交易记忆（memory store）
+189,mock,14,mock; 打桩替换依赖
+190,normalize,14,normalize; 归一化单位/别名/大小写
+191,notify,14,notify; 通知前端或跨端广播
+192,op,14,op; 单个操作/verb
+193,overlay,14,overlay; 图表叠加层（价格线/图形）
+194,parquet,14,parquet; K 线列存格式
+195,proba,14,proba; 模型上涨概率与信号阈值
+196,recent,14,recent; 近期数据探针 /candles/recent
+197,row,14,row; 单行记录
+198,scenario,14,scenario; 规格中的 WHEN/THEN 场景
+199,split,14,split; 训练/测试切分
+200,value,14,value; 数值/配置值
+201,active,13,active; 生效中的持仓或订阅
+202,argument,13,argument; 函数入参
+203,circuit,13,circuit; 熔断 enforce_circuit_breaker
+204,confirm,13,confirm; 二次确认令牌 /order/confirm
+205,entry,13,entry; 条目，或入场 entry price
+206,exists,13,exists; 存在性判定断言
+207,expr,13,expr; 因子 DSL 表达式
+208,format,13,format; 格式化显示
+209,indicator,13,indicator; 技术指标 MACD/KDJ/BOLL
+210,levels,13,levels; 支撑压力位集合 build_levels
+211,make,13,make; 构造辅助工厂
+212,object,13,object; JS 对象
+213,pop,13,pop; 弹出末项，或 popup 弹窗
+214,reset,13,reset; 重置警报/资金状态
+215,setdefault,13,setdefault; dict.setdefault 缺省填充
+216,side,13,side; 买卖方向 long/short
+217,timeframes,13,timeframes; 多时间级别
+218,token,13,token; 确认令牌，或周期 token 字符串
+219,tool,13,tool; MCP 工具或 CLI 工具
+220,by,12,
+221,calls,12,calls; mock.calls 调用记录
+222,def,12,def; Python 函数定义
+223,equity,12,equity; 账户权益与权益曲线
+224,fill,12,fill; 成交价/填充，或补洞
+225,health,12,health; /health 存活探针
+226,instrument,12,instrument; 单个标的
+227,invalid,12,invalid; 非法参数否定断言
+228,mean,12,mean; 滚动均值
+229,mkdir,12,mkdir; 创建数据目录
+230,ms,12,ms; 毫秒（时间戳单位）
+231,pct,12,pct; 百分比/比例
+232,ready,12,ready; 就绪态（artifact/连接）
+233,roundtrip,12,roundtrip; 序列化与解析的双向一致性
+234,sizing,12,sizing; 仓位规模测算 position sizing
+235,v3,12,v3; Bitget v3 可无限回溯的历史端点通道
+236,w,12,
+237,appender,11,appender; 追加写入 jsonl 的记录器
+238,asyncio,11,asyncio; 单后台事件循环（MCP 桥）
+239,auto,11,auto; 自动（重训/触发/交易开关）
+240,books,11,books; 盘口深度频道集合
+241,change,11,change; OpenSpec 变更工件，或数据变化
+242,has,11,
+243,k,11,
+244,merger,11,merger; store 与 buffer 合并去重
+245,modal,11,modal; 模态弹窗
+246,only,11,
+247,paper,11,paper; 纸面模拟交易（默认）
+248,parent,11,parent; 父组件/父目录
+249,parse,11,parse; 解析响应与结构化输入
+250,returns,11,returns; 返回值，或收益序列
+251,s,11,
+252,scheduler,11,scheduler; APScheduler 定时拉取与重训
+253,subscription,11,subscription; 订阅关系（含引用计数）
+254,symbols,11,symbols; 多品种集合
+255,write,11,write; 写盘/写日志
+256,account,10,account; 账户与凭证语境
+257,ak,10,ak; AKShare 中文快讯源前缀
+258,bar,10,bar; 单根 K 线，或进度条
+259,columns,10,columns; 数据列集合
+260,connect,10,connect; 建立 WS/DB 连接
+261,d,10,
+262,digest,10,digest; 注入 LLM 的新闻摘要
+263,dock,10,dock; 右侧/底部停靠栏
+264,exit,10,exit; 退出码，或平仓离场
+265,fmt,10,fmt; format 缩写
+266,fn,10,fn; 函数变量简写
+267,kill,10,kill; kill-switch 一键停机
+268,llm,10,llm; 大语言模型 Provider
+269,lock,10,lock; 并发互斥锁
+270,low,10,low; 最低价，或低胜率
+271,math,10,math; 纯计算（无 I/O）
+272,month,10,month; 月份与月线 1mo
+273,more,10,more; 加载更早/更多数据 applyMoreData
+274,name,10,name; 标识名/包名
+275,node,10,node; Node.js 运行时（MCP 下限 ≥20）
+276,numpy,10,numpy; 数值数组库
+277,p,10,
+278,param,10,param; 超参或查询参数
+279,pipeline,10,pipeline; 训练到回测的完整链路
+280,pytest,10,pytest; Python 测试框架
+281,range,10,range; 时间/价格区间
+282,reconnect,10,reconnect; WS 断线重连并重订阅
+283,resp,10,resp; response 响应
+284,structure,10,structure; 市场结构箱体/趋势线
+285,structured,10,structured; 结构化输出要求
+286,then,10,
+287,thread,10,thread; 线程与线程池
+288,threshold,10,threshold; 触发阈值
+289,visit,10,visit; 遍历表达式/路径
+290,a,9,
+291,box,9,box; 结构分析的价格箱体
+292,cls,9,cls; class 声明或 className
+293,constructor,9,constructor; 构造函数
+294,controller,9,controller; chartController 等编排层
+295,datetime,9,datetime; 日期时间类型
+296,exchange,9,exchange; 交易所，或外汇指数 dxy
+297,f,9,
+298,fetcher,9,fetcher; 通道级数据拉取器
+299,filter,9,filter; 条件过滤或筛币器视图
+300,kind,9,kind; provider 种类或 symbol 类型
+301,latest,9,latest; 最新一条 bar/版本
+302,layer,9,layer; 图层分组
+303,level,9,level; 周期档位或支撑压力价位
+304,meta,9,meta; 元数据
+305,mk,9,mk; make 缩写
+306,num,9,num; 数值/计数
+307,observer,9,observer; 观察者/订阅方
+308,patch,9,patch; vendored 引擎的本地改造
+309,pong,9,pong; WS 心跳回帧
+310,pos,9,pos; position 缩写或索引位置
+311,positions,9,positions; 多持仓集合
+312,predict,9,predict; 模型推理产出概率
+313,proxy,9,proxy; 后端转发外部 API，或 vite dev proxy
+314,raises,9,raises; pytest.raises 断言抛错
+315,rate,9,rate; 胜率/频控速率
+316,scroll,9,scroll; 滚动与 masonry 重排
+317,seconds,9,seconds; 秒（窗口时长）
+318,source,9,source; 数据源标识或源码
+319,stock,9,stock; 股票类标的（a-share/美股）
+320,switch,9,switch; 品种/周期/主题切换
+321,t,9,
+322,table,9,table; 数据表格
+323,tail,9,tail; 序列末端
+324,top,9,top; Top-N 候选或顶端边界
+325,trendline,9,trendline; 趋势线上下轨拟合
+326,v2,9,v2; Bitget v2 REST 近端窗口 K 线通道
+327,vbt,9,vbt; vectorbt 向量化回测库
+328,widget,9,widget; 图表内部部件（周期栏等）
+329,width,9,width; 面板/图表宽度
+330,2,8,
+331,analyze,8,analyze; /analyze 技术分析
+332,apply,8,apply; 实施变更或套用配置
+333,at,8,
+334,backend,8,backend; Python 后端服务
+335,before,8,before; 更早方向 backfill_before
+336,c,8,
+337,cat,8,cat; category 缩写，行情品类
+338,cfg,8,cfg; config 缩写
+339,end,8,end; 右边界 end_ms 或结束
+340,ewm,8,ewm; pandas 指数加权移动平均
+341,failure,8,failure; 失败路径（测试或执行）
+342,high,8,high; 最高价，或高水位
+343,incremental,8,incremental; 增量拉取/落盘
+344,ingestor,8,ingestor; KlineIngestor 历史数据入口
+345,insufficient,8,insufficient; 数据不足导致的拒绝
+346,keys,8,keys; 键集合或密钥
+347,kline,8,kline; K 线蜡烛序列
+348,last,8,last; 最末一根 bar / last_candle
+349,m,8,
+350,mirror,8,mirror; 交易所状态的内存镜像
+351,new,8,new; 新建对象或新一根 bar
+352,of,8,
+353,permission,8,permission; 权限/凭证校验
+354,ping,8,ping; WS 心跳请求帧
+355,pinned,8,pinned; 周期栏被固定的级别
+356,poll,8,poll; 轮询取样
+357,post,8,post; POST 请求，或发布事件
+358,preset,8,preset; 预设模板（模型/因子）
+359,put,8,put; PUT 请求
+360,raise,8,raise; 主动抛错
+361,resize,8,resize; 尺寸变化后重绘图表
+362,rule,8,rule; 规则型 Provider 或蒸馏规则
+363,signal,8,signal; 买卖信号与信号标记
+364,sources,8,sources; 多数据源集合
+365,sub,8,sub; subscription 缩写或子序列
+366,task,8,task; 后台任务，或 tasks.md 条目
+367,toggle,8,toggle; 布尔开关切换
+368,validate,8,validate; 参数与规格校验
+369,web,8,web; webapi HTTP 门面
+370,background,7,background; 后台线程，或背景色
+371,block,7,block; 数据块/阻塞，或分组区块
+372,blocked,7,blocked; 前置缺失导致受阻
+373,calculate,7,calculate; 计算指标/保证金
+374,closed,7,closed; 已平仓或连接已关闭
+375,command,7,command; CLI/斜杠命令
+376,datafeed,7,datafeed; 图表数据源适配层
+377,day,7,day; UTC 自然日分片
+378,detail,7,detail; 明细
+379,disconnect,7,disconnect; 断开连接
+380,drawdown,7,drawdown; 权益峰谷回撤（熔断依据）
+381,drop,7,drop; 丢弃旧帧，或删列
+382,fast,7,fast; 快路径/快速切换
+383,fit,7,fit; 模型训练或趋势线拟合
+384,full,7,full; 全量刷新或全量门禁
+385,gaps,7,gaps; K 线缺口（类型 A/B/C）
+386,group,7,group; overlay groupId 簿记
+387,ic,7,ic; 因子信息系数 IC
+388,interval,7,interval; 轮询/刷新间隔
+389,jobs,7,jobs; 多个后台作业
+390,liquidity,7,liquidity; SMC 流动性位
+391,long,7,long; 多头方向，或长时间
+392,missing,7,missing; 缺失 bar 或字段
+393,n,7,
+394,native,7,native; 交易所原生周期/能力
+395,network,7,network; 链上网络，或外网
+396,notional,7,notional; 名义敞口（size=notional/price）
+397,now,7,now; 当前时刻与新鲜度基准
+398,number,7,number; 数值类型/计数
+399,offline,7,offline; 离线单元层（不联网全绿）
+400,pnl,7,pnl; 盈亏（已实现与浮动）

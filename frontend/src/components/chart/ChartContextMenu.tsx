@@ -26,7 +26,6 @@ export const ChartContextMenu: React.FC<Props> = ({
   y,
   price,
   symbol,
-  theme,
   onCreateAlertAt,
   onAddIndicator,
   onCopyPrice,
@@ -58,7 +57,6 @@ export const ChartContextMenu: React.FC<Props> = ({
     left: Math.min(x, (typeof window !== "undefined" ? window.innerWidth : 0) - 220),
     top: Math.min(y, (typeof window !== "undefined" ? window.innerHeight : 0) - 240),
   };
-  const isDark = theme === "dark";
 
   const items = [
     {
@@ -108,19 +106,11 @@ export const ChartContextMenu: React.FC<Props> = ({
       <div
         role="menu"
         data-testid="chart-context-menu"
-        className={`fixed z-50 min-w-[220px] rounded-lg border shadow-2xl py-1 text-xs font-medium select-none ${
-          isDark
-            ? "bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]"
-            : "bg-white border-[#e0e3eb] text-[#131722]"
-        }`}
+        className="fixed z-50 min-w-[220px] rounded-lg border border-line bg-surface-2 py-1 text-xs font-medium text-content select-none shadow-float"
         style={style}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className={`px-3 py-1.5 border-b font-semibold truncate ${
-            isDark ? "border-[#2a2e39] text-gray-400" : "border-[#e0e3eb] text-gray-500"
-          }`}
-        >
+        <div className="px-3 py-1.5 border-b border-line font-semibold truncate text-muted">
           {symbol} · {formatPrice(price)}
         </div>
         {items.map(({ testId, label, icon: Icon, shortcut, run }) => (
@@ -130,19 +120,13 @@ export const ChartContextMenu: React.FC<Props> = ({
             role="menuitem"
             data-testid={testId}
             onClick={run}
-            className={`w-full flex items-center justify-between gap-3 px-3 py-2 cursor-pointer ${
-              isDark ? "hover:bg-[#2a2e39]" : "hover:bg-gray-100"
-            }`}
+            className="w-full flex items-center justify-between gap-3 px-3 py-2 cursor-pointer hover:bg-line/40"
           >
             <span className="flex items-center gap-2">
               <Icon className="w-3.5 h-3.5 opacity-70" />
               <span>{label}</span>
             </span>
-            <kbd
-              className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
-                isDark ? "bg-[#131722] text-gray-500" : "bg-gray-100 text-gray-500"
-              }`}
-            >
+            <kbd className="px-1.5 py-0.5 rounded bg-ink ta-num text-2xs text-muted">
               {shortcut}
             </kbd>
           </button>

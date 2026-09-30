@@ -1,0 +1,88 @@
+{
+  "daily": {
+    "2026-09-28": [
+      {
+        "tool": "get_graph_stats",
+        "total": 9,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "search_code",
+        "total": 6,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "get_call_chain",
+        "total": 8,
+        "error": 1,
+        "empty": 0
+      },
+      {
+        "tool": "query_cypher",
+        "total": 4,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "get_dependencies",
+        "total": 1,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "find_symbol",
+        "total": 4,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "get_symbol_detail",
+        "total": 2,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "search_knowledge",
+        "total": 6,
+        "error": 0,
+        "empty": 0
+      }
+    ],
+    "2026-09-29": [
+      {
+        "tool": "search_code",
+        "total": 3,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "get_symbol_detail",
+        "total": 4,
+        "error": 0,
+        "empty": 0
+      }
+    ],
+    "2026-09-30": [
+      {
+        "tool": "search_code",
+        "total": 4,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "get_symbol_detail",
+        "total": 6,
+        "error": 0,
+        "empty": 0
+      },
+      {
+        "tool": "find_symbol",
+        "total": 4,
+        "error": 0,
+        "empty": 0
+      }
+    ]
+  }
+}

@@ -1,26 +1,20 @@
-/* BeyondEther theme override for the klinecharts-pro chrome.
-   Must be imported AFTER the vendor `klinecharts-pro.css`. */
-.klinecharts-pro,
-.klinecharts-pro[data-theme="dark"] {
-  --klinecharts-pro-primary-color: var(--tv-accent);
-  --klinecharts-pro-hover-background-color: rgba(41, 98, 255, 0.15);
-  --klinecharts-pro-background-color: var(--tv-bg);
-  --klinecharts-pro-popover-background-color: #1e222d;
-  --klinecharts-pro-text-color: var(--tv-text);
-  --klinecharts-pro-text-second-color: var(--tv-muted);
-  --klinecharts-pro-border-color: var(--tv-border);
-  --klinecharts-pro-selected-color: rgba(41, 98, 255, 0.15);
-}
+/* Trade-Agent theme override for the klinecharts-pro chrome.
+   Must be imported AFTER the vendor `klinecharts-pro.css`.
 
+   The --ta-* palette already switches on <html data-theme>, so the chart needs
+   no dark/light fork of its own: every vendor variable simply points at a
+   semantic token and follows the app theme. */
+.klinecharts-pro,
+.klinecharts-pro[data-theme="dark"],
 .klinecharts-pro[data-theme="light"] {
-  --klinecharts-pro-primary-color: var(--tv-accent);
-  --klinecharts-pro-hover-background-color: rgba(41, 98, 255, 0.1);
-  --klinecharts-pro-background-color: var(--tv-bg);
-  --klinecharts-pro-popover-background-color: #ffffff;
-  --klinecharts-pro-text-color: var(--tv-text);
-  --klinecharts-pro-text-second-color: var(--tv-muted);
-  --klinecharts-pro-border-color: var(--tv-border);
-  --klinecharts-pro-selected-color: rgba(41, 98, 255, 0.1);
+  --klinecharts-pro-primary-color: var(--ta-signal);
+  --klinecharts-pro-hover-background-color: color-mix(in oklab, var(--ta-signal) 16%, transparent);
+  --klinecharts-pro-background-color: var(--ta-ink);
+  --klinecharts-pro-popover-background-color: var(--ta-surface-2);
+  --klinecharts-pro-text-color: var(--ta-text);
+  --klinecharts-pro-text-second-color: var(--ta-muted);
+  --klinecharts-pro-border-color: var(--ta-line);
+  --klinecharts-pro-selected-color: color-mix(in oklab, var(--ta-signal) 16%, transparent);
 }
 
 /* fill the center canvas instead of the vendor default 80vh. The inner
@@ -37,14 +31,14 @@
   top: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: color-mix(in oklab, var(--ta-ink) 72%, transparent);
 }
 
 .klinecharts-pro-modal .inner {
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
-/* left drawing bar: BE density (28x28 icons in 34px slots, 52px rail) */
+/* left drawing bar: instrument density (28x28 icons in 34px slots, 52px rail) */
 .klinecharts-pro-drawing-bar {
   width: 52px;
 }
@@ -67,11 +61,12 @@
   margin-top: 3px;
 }
 
-/* low-opacity text watermark (3-5%), replaced per symbol by the app */
+/* low-opacity text watermark, replaced per symbol by the app */
 .klinecharts-pro-watermark {
-  opacity: 0.04;
+  opacity: 0.05;
   font-size: 40px;
   font-weight: 700;
+  font-stretch: 90%;
   letter-spacing: 2px;
   white-space: nowrap;
 }

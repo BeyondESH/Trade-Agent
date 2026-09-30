@@ -1,6 +1,7 @@
 export const zh = {
   // Desktop title bar
-  BeyondEther: "BeyondEther",
+  BeyondEther: "Trade-Agent",
+  "Desktop Pro": "桌面专业版",
   "New Chart Tab": "新建图表标签",
   "Command Palette": "命令面板",
   "Color Theme: Dark": "颜色主题:深色",
@@ -166,7 +167,7 @@ export const zh = {
   "Cloud & Storage": "云端与存储",
   "Instant Cloud Sync": "即时云同步",
   "Autosave drawing annotations and templates to BeyondEther account":
-    "将绘图标注与模板自动保存到 BeyondEther 账户",
+    "将绘图标注与模板自动保存到 Trade-Agent 账户",
   "Audio Alerts & Execution Chimes": "声音提醒与成交提示音",
   "Play audio tones on order fills and price breaches": "订单成交与价格触及阈值时播放提示音",
   Condition: "条件",
@@ -178,7 +179,7 @@ export const zh = {
   "Target Price ($)": "目标价 ($)",
   "Trigger Frequency": "触发频率",
   "Alert Message / Note": "提醒消息 / 备注",
-  "BeyondEther Desktop Keyboard Shortcuts": "BeyondEther 键盘快捷键",
+  "BeyondEther Desktop Keyboard Shortcuts": "Trade-Agent 键盘快捷键",
   "Candlestick Colors": "K线颜色",
   "Up Body (Bullish)": "阳线实体 (看涨)",
   "Down Body (Bearish)": "阴线实体 (看跌)",
@@ -327,6 +328,7 @@ export const zh = {
   "Research Thread": "研究线程",
   "Execution Timeline": "执行时间线",
   Live: "实时",
+  Offline: "离线",
   Closed: "已结束",
   "Waiting for events...": "等待事件...",
   "Execution stream disconnected": "执行流连接已断开",

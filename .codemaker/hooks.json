@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bash \"C:\\Users\\lijiacheng09\\.codemaker\\codemap\\hook.sh\" \".codemaker\\rules\\codemap.mdc\" \".codemaker\\codemap\\graph.db\" \".codemaker\\codemap\\hook-payload.json\"",
+            "type": "command"
+          }
+        ],
+        "matcher": "startup"
+      },
+      {
+        "hooks": [
+          {
+            "command": "bash \"C:\\Users\\lijiacheng09\\.codemaker\\codemap\\hook.sh\" \".codemaker\\rules\\codemap.mdc\" \".codemaker\\codemap\\graph.db\" \".codemaker\\codemap\\hook-payload.json\"",
+            "type": "command"
+          }
+        ],
+        "matcher": "resume"
+      },
+      {
+        "hooks": [
+          {
+            "command": "bash \"C:\\Users\\lijiacheng09\\.codemaker\\codemap\\hook.sh\" \".codemaker\\rules\\codemap.mdc\" \".codemaker\\codemap\\graph.db\" \".codemaker\\codemap\\hook-payload.json\"",
+            "type": "command"
+          }
+        ],
+        "matcher": "clear"
+      },
+      {
+        "hooks": [
+          {
+            "command": "bash \"C:\\Users\\lijiacheng09\\.codemaker\\codemap\\hook.sh\" \".codemaker\\rules\\codemap.mdc\" \".codemaker\\codemap\\graph.db\" \".codemaker\\codemap\\hook-payload.json\"",
+            "type": "command"
+          }
+        ],
+        "matcher": "compact"
+      }
+    ]
+  }
+}

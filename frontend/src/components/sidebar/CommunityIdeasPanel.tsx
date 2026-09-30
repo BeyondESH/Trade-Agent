@@ -7,8 +7,7 @@ interface Props {
   theme: "dark" | "light";
 }
 
-export const CommunityIdeasPanel: React.FC<Props> = ({ theme }) => {
-  const isDark = theme === "dark";
+export const CommunityIdeasPanel: React.FC<Props> = () => {
   const [messages, setMessages] = useState([
     {
       id: "1",
@@ -51,12 +50,13 @@ export const CommunityIdeasPanel: React.FC<Props> = ({ theme }) => {
   };
 
   return (
-    <div id="community-ideas-panel" className="flex flex-col h-full w-full select-none text-xs">
-      <div
-        className={`p-2.5 border-b flex items-center justify-between ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
-      >
+    <div
+      id="community-ideas-panel"
+      className="flex flex-col h-full w-full select-none text-xs bg-surface text-content"
+    >
+      <div className="p-2.5 border-b border-line flex items-center justify-between">
         <div className="flex items-center gap-1.5 font-bold text-sm">
-          <MessageSquare className="w-4 h-4 text-[#2962ff]" />
+          <MessageSquare className="w-4 h-4 text-signal" />
           <span>{t("Public Stream & Chat")}</span>
         </div>
       </div>
@@ -65,44 +65,35 @@ export const CommunityIdeasPanel: React.FC<Props> = ({ theme }) => {
         {messages.map((m) => (
           <div
             key={m.id}
-            className={`p-2.5 rounded-lg border flex flex-col gap-1.5 ${
-              isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-[#f8fafc] border-[#e0e3eb]"
-            }`}
+            className="p-2.5 rounded-lg border border-line bg-surface-2 flex flex-col gap-1.5"
           >
-            <div className="flex items-center justify-between text-[10px] text-gray-400">
-              <div className="flex items-center gap-1 font-semibold text-[#2962ff]">
+            <div className="flex items-center justify-between text-2xs text-faint">
+              <div className="flex items-center gap-1 font-semibold text-signal">
                 <User className="w-3 h-3" />
                 <span>{m.user}</span>
               </div>
               <span>{m.time}</span>
             </div>
             <p className="text-xs leading-relaxed">{m.text}</p>
-            <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5">
-              <ThumbsUp className="w-3 h-3 text-gray-400 hover:text-[#2962ff] cursor-pointer" />
+            <div className="flex items-center gap-1 text-2xs text-muted mt-0.5">
+              <ThumbsUp className="w-3 h-3 text-muted hover:text-signal cursor-pointer" />
               <span>{m.likes}</span>
             </div>
           </div>
         ))}
       </div>
 
-      <form
-        onSubmit={handleSend}
-        className={`p-2 border-t flex gap-1.5 ${isDark ? "border-[#2a2e39] bg-[#131722]" : "border-[#e0e3eb] bg-white"}`}
-      >
+      <form onSubmit={handleSend} className="p-2 border-t border-line flex gap-1.5 bg-ink">
         <input
           type="text"
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
           placeholder="Share trading thought..."
-          className={`flex-1 px-2.5 py-1.5 rounded text-xs outline-none ${
-            isDark
-              ? "bg-[#1e222d] text-white border border-[#2a2e39] focus:border-[#2962ff]"
-              : "bg-gray-100 text-black border border-gray-200 focus:border-[#2962ff]"
-          }`}
+          className="flex-1 rounded-md border border-line bg-ink px-2 py-1.5 text-xs text-content outline-none placeholder:text-faint focus:border-signal"
         />
         <button
           type="submit"
-          className="p-1.5 rounded bg-[#2962ff] text-white hover:bg-[#1e53e5] transition-colors"
+          className="p-1.5 rounded-md bg-signal font-semibold text-signal-ink hover:bg-signal/90 transition-colors"
         >
           <Send className="w-4 h-4" />
         </button>

@@ -1,0 +1,36 @@
+{
+  "systems": [
+    {
+      "id": "kline_pipeline",
+      "name": "K 线数据全链路",
+      "modules": [
+        "backend/src",
+        "backend/scripts",
+        "backend/tests",
+        "frontend/src",
+        "frontend/vendor",
+        "frontend/scripts"
+      ],
+      "description": "后端接入/落盘/门禁 → 前端取数与 WS 投递 → 图表引擎渲染 → 端到端保序诊断"
+    },
+    {
+      "id": "trading_loop",
+      "name": "决策与下单闭环",
+      "modules": ["backend/src", "backend/tests", "frontend/src", "frontend/tests"],
+      "description": "确定性分析 + LLM 决策 → 风控执行闸门（纸面/实盘）→ 前端下单交互与旅程断言"
+    },
+    {
+      "id": "quality_gates",
+      "name": "质量门禁与交付一致性",
+      "modules": [
+        ".github/workflows",
+        "__root/__files",
+        "backend/__files",
+        "frontend/__files",
+        "backend/tests",
+        "frontend/tests"
+      ],
+      "description": "CI 编排 + 本地 pre-commit + 两端门禁阈值与测试分层口径的同源约束"
+    }
+  ]
+}

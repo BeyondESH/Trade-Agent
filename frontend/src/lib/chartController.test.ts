@@ -179,10 +179,10 @@ describe("alertLinesToDraw", () => {
   it("only includes the current symbol and derives semantic colors", () => {
     const dark = alertLinesToDraw(alerts, "BTCUSDT", "dark");
     expect(dark.map((l) => l.alertId)).toEqual(["a1", "a2"]);
-    expect(dark[0].color).toBe("#ff9800");
-    expect(dark[1].color).toBe("#787b86");
+    expect(dark[0].color).toBe("#e3a44e");
+    expect(dark[1].color).toBe("#546a73");
     const light = alertLinesToDraw(alerts, "BTCUSDT", "light");
-    expect(light[1].color).toBe("#5d606b");
+    expect(light[1].color).toBe("#5c737c");
   });
 
   it("honors a persisted custom color", () => {

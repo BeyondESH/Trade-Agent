@@ -17,6 +17,9 @@ opencode.json
 # Local agent workspace (never shared).
 .omo/
 
+# Playwright MCP tool artifacts (console logs / page snapshots).
+.playwright-mcp/
+
 # Build / export artifacts must not be tracked (e.g. generated AP config dumps).
 build_ap_cmh.json
 

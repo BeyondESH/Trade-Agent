@@ -90,6 +90,6 @@ describe("CreateAlertModal", () => {
         ) as HTMLInputElement
       ).value,
     ).toBe("");
-    expect(screen.getByText("Only Once").className).toContain("bg-[#2962ff]");
+    expect(screen.getByText("Only Once").className).toContain("bg-signal");
   });
 });

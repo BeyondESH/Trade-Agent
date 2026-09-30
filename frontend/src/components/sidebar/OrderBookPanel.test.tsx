@@ -84,6 +84,6 @@ describe("OrderBookPanel derivative rows", () => {
     );
     const funding = getByTestId("orderbook-funding");
     expect(funding.textContent).toBe("-0.0200%");
-    expect(funding.className).toContain("text-[#f23645]");
+    expect(funding.className).toContain("text-down");
   });
 });

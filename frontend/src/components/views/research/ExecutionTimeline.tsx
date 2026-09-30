@@ -63,7 +63,6 @@ export const ExecutionTimeline: React.FC<Props> = ({ threadId, runId, theme }) =
   const [state, setState] = useState<StreamState>("connecting");
   const [terminal, setTerminal] = useState<TimelineTerminal | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const isDark = theme === "dark";
 
   useEffect(() => {
     let alive = true;
@@ -148,39 +147,37 @@ export const ExecutionTimeline: React.FC<Props> = ({ threadId, runId, theme }) =
   return (
     <section
       data-testid="execution-timeline"
-      className={`rounded-xl border p-4 flex flex-col gap-3 ${
-        isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
-      }`}
+      className="ta-well flex flex-col gap-3 rounded-xl border border-line p-4"
     >
       <header className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Radio className="w-4 h-4 text-[#2962ff]" />
-          <h3 className="text-sm font-bold">{t("Execution Timeline")}</h3>
+          <Radio className="h-4 w-4 text-research" />
+          <h3 className="ta-display text-sm text-content">{t("Execution Timeline")}</h3>
         </div>
         <span
           data-testid="timeline-stream-state"
-          className={`text-[10px] font-mono px-2 py-0.5 rounded ${
+          className={`ta-num rounded px-2 py-0.5 text-2xs font-semibold ${
             state === "open"
-              ? "bg-[#089981]/15 text-[#089981]"
+              ? "bg-up/15 text-up"
               : state === "connecting"
-                ? "bg-[#ff9800]/15 text-[#ff9800]"
-                : "bg-gray-500/15 text-gray-400"
+                ? "bg-research/15 text-research"
+                : "bg-surface-2 text-muted"
           }`}
         >
           {stateLabel}
         </span>
       </header>
 
-      <div className="text-[10px] font-mono text-gray-500 truncate" title={threadId}>
+      <div className="ta-num truncate text-2xs text-faint" title={threadId}>
         {threadId}
       </div>
 
       {error && (
         <div
           data-testid="timeline-error"
-          className="flex items-center gap-2 text-xs text-[#f23645] bg-[#f23645]/10 border border-[#f23645]/30 rounded-lg px-3 py-2"
+          className="flex items-center gap-2 rounded-lg border border-down/30 bg-down/10 px-3 py-2 text-xs text-down"
         >
-          <AlertTriangle className="w-3.5 h-3.5" />
+          <AlertTriangle className="h-3.5 w-3.5" />
           <span>{error}</span>
         </div>
       )}
@@ -188,31 +185,42 @@ export const ExecutionTimeline: React.FC<Props> = ({ threadId, runId, theme }) =
       {entries.length === 0 && !terminal && !error ? (
         <div
           data-testid="timeline-empty"
-          className="flex items-center gap-2 text-xs text-gray-500 py-4 justify-center"
+          className="flex items-center justify-center gap-2 py-4 text-xs text-muted"
         >
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
           <span>{t("Waiting for events...")}</span>
         </div>
       ) : (
-        <ol data-testid="timeline-events" className="flex flex-col gap-2">
+        /* Vertical timeline: one connector line, a node dot per event */
+        <ol data-testid="timeline-events" className="relative flex flex-col gap-3">
+          <span
+            aria-hidden="true"
+            className="absolute left-[5px] top-1 bottom-1 w-px bg-line-strong"
+          />
           {entries.map((entry, i) => (
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: append-only ordered log
               key={`${entry.kind}-${i}`}
               data-testid={`timeline-event-${i}`}
-              className="flex items-start gap-2"
+              className="relative pl-6"
             >
-              {entry.kind === "node" ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#089981] mt-0.5 shrink-0" />
-              ) : (
-                <CircleDashed className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-              )}
-              <div className="min-w-0">
-                <div className="text-xs font-semibold">{entry.label}</div>
-                {entry.detail && (
-                  <div className="text-[11px] text-gray-400 break-words">{entry.detail}</div>
+              <span
+                aria-hidden="true"
+                className={`absolute left-0 top-1 h-2.5 w-2.5 rounded-full ${
+                  entry.kind === "node" ? "bg-research" : "border border-faint bg-surface"
+                }`}
+              />
+              <div className="flex items-center gap-1.5">
+                {entry.kind === "node" ? (
+                  <CheckCircle2 className="h-3 w-3 shrink-0 text-research" />
+                ) : (
+                  <CircleDashed className="h-3 w-3 shrink-0 text-muted" />
                 )}
+                <div className="text-xs font-semibold text-content">{entry.label}</div>
               </div>
+              {entry.detail && (
+                <div className="mt-0.5 break-words text-2xs text-muted">{entry.detail}</div>
+              )}
             </li>
           ))}
         </ol>
@@ -221,17 +229,17 @@ export const ExecutionTimeline: React.FC<Props> = ({ threadId, runId, theme }) =
       {terminal && (
         <div
           data-testid={terminal.failed ? "timeline-terminal-failed" : "timeline-terminal-success"}
-          className={`rounded-lg border px-3 py-2 text-xs flex flex-col gap-1 ${
+          className={`flex flex-col gap-1 rounded-lg border px-3 py-2 text-xs ${
             terminal.failed
-              ? "bg-[#f23645]/10 border-[#f23645]/30 text-[#f23645]"
-              : "bg-[#089981]/10 border-[#089981]/30 text-[#089981]"
+              ? "border-down/30 bg-down/10 text-down"
+              : "border-up/30 bg-up/10 text-up"
           }`}
         >
-          <div className="flex items-center gap-2 font-bold">
+          <div className="ta-eyebrow flex items-center gap-2">
             {terminal.failed ? (
-              <AlertTriangle className="w-3.5 h-3.5" />
+              <AlertTriangle className="h-3.5 w-3.5" />
             ) : (
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <CheckCircle2 className="h-3.5 w-3.5" />
             )}
             <span>
               {terminal.status === "succeeded"

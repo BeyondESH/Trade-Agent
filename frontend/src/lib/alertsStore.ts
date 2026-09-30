@@ -21,9 +21,9 @@ export interface Alert {
 // A line is an Alert: enabled entities draw as yellow alert lines, disabled ones
 // as neutral reference lines (color only distinguishes semantics, not condition).
 
-export const ALERT_LINE_COLOR = "#ff9800";
-export const REFERENCE_LINE_COLOR_DARK = "#787b86";
-export const REFERENCE_LINE_COLOR_LIGHT = "#5d606b";
+export const ALERT_LINE_COLOR = "#e3a44e";
+export const REFERENCE_LINE_COLOR_DARK = "#546a73";
+export const REFERENCE_LINE_COLOR_LIGHT = "#5c737c";
 
 export function priceLineColor(alert: Pick<Alert, "enabled" | "color">, theme: ThemeMode): string {
   if (alert.color) return alert.color;

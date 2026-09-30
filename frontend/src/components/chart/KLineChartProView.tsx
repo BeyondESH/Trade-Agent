@@ -132,6 +132,96 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         };
       }
 
+      // Canvas palette — klinecharts takes concrete colour strings (it cannot
+      // read CSS custom properties), so this is the ONE legitimate JS theme
+      // branch. These values mirror the --ta-* tokens in src/index.css.
+      const dark = (props.theme ?? "dark") !== "light";
+      const gridLine = dark ? "#1d2e35" : "#dce5e8";
+      const upColor = dark ? "#22b98c" : "#0b7a59";
+      const downColor = dark ? "#ef5a5f" : "#c63439";
+      const noChangeColor = dark ? "#798f98" : "#5f7078";
+      const textColor = dark ? "#e7eef1" : "#0b171c";
+      const crosshairLine = "#7e939b";
+      const crosshairBg = dark ? "#0a1216" : "#ffffff";
+      const crosshairBorder = dark ? "#1d2e35" : "#dce5e8";
+      const canvasStyles = {
+        grid: {
+          horizontal: { color: gridLine },
+          vertical: { color: gridLine },
+        },
+        candle: {
+          bar: {
+            upColor,
+            downColor,
+            noChangeColor,
+            upBorderColor: upColor,
+            downBorderColor: downColor,
+            noChangeBorderColor: noChangeColor,
+          },
+          priceMark: {
+            last: {
+              show: true,
+              upColor,
+              downColor,
+              noChangeColor,
+              line: {
+                show: true,
+                style: "dashed" as import("klinecharts").LineType,
+                dashedValue: [4, 4],
+              },
+              text: {
+                show: true,
+                color: textColor,
+                size: 11,
+                family: FONT_FAMILY_STACK,
+              },
+            },
+          },
+        },
+        xAxis: {
+          size: 28,
+          tickText: { size: 11, color: textColor, family: FONT_FAMILY_STACK },
+          axisLine: { color: gridLine },
+        },
+        yAxis: {
+          size: "auto" as const,
+          tickText: { size: 11, color: textColor, family: FONT_FAMILY_STACK },
+          axisLine: { color: gridLine },
+        },
+        crosshair: {
+          horizontal: {
+            line: {
+              color: crosshairLine,
+              style: "dashed" as import("klinecharts").LineType,
+              dashedValue: [4, 4],
+            },
+            text: {
+              show: true,
+              backgroundColor: crosshairBg,
+              borderColor: crosshairBorder,
+              color: textColor,
+              size: 11,
+              family: FONT_FAMILY_STACK,
+            },
+          },
+          vertical: {
+            line: {
+              color: crosshairLine,
+              style: "dashed" as import("klinecharts").LineType,
+              dashedValue: [4, 4],
+            },
+            text: {
+              show: true,
+              backgroundColor: crosshairBg,
+              borderColor: crosshairBorder,
+              color: textColor,
+              size: 11,
+              family: FONT_FAMILY_STACK,
+            },
+          },
+        },
+      };
+
       const pro = new KLineChartPro({
         container: containerRef.current as HTMLElement,
         symbol: props.symbol,
@@ -149,83 +239,7 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         onPeriodChange: (p) => propsRef.current.onPeriodChange?.(p),
         pinnedTimeframes: loadPinnedTimeframes(),
         onPinChange: (ids) => savePinnedTimeframes(ids),
-        styles: {
-          grid: {
-            horizontal: { color: "#2a2e39" },
-            vertical: { color: "#2a2e39" },
-          },
-          candle: {
-            bar: {
-              upColor: "#089981",
-              downColor: "#f23645",
-              noChangeColor: "#787b86",
-              upBorderColor: "#089981",
-              downBorderColor: "#f23645",
-              noChangeBorderColor: "#787b86",
-            },
-            priceMark: {
-              last: {
-                show: true,
-                upColor: "#089981",
-                downColor: "#f23645",
-                noChangeColor: "#787b86",
-                line: {
-                  show: true,
-                  style: "dashed" as import("klinecharts").LineType,
-                  dashedValue: [4, 4],
-                },
-                text: {
-                  show: true,
-                  color: "#d1d4dc",
-                  size: 11,
-                  family: FONT_FAMILY_STACK,
-                },
-              },
-            },
-          },
-          xAxis: {
-            size: 28,
-            tickText: { size: 11, family: FONT_FAMILY_STACK },
-            axisLine: { color: "#2a2e39" },
-          },
-          yAxis: {
-            size: "auto",
-            tickText: { size: 11, family: FONT_FAMILY_STACK },
-            axisLine: { color: "#2a2e39" },
-          },
-          crosshair: {
-            horizontal: {
-              line: {
-                color: "#9598a1",
-                style: "dashed" as import("klinecharts").LineType,
-                dashedValue: [4, 4],
-              },
-              text: {
-                show: true,
-                backgroundColor: "#131722",
-                borderColor: "#2a2e39",
-                color: "#d1d4dc",
-                size: 11,
-                family: FONT_FAMILY_STACK,
-              },
-            },
-            vertical: {
-              line: {
-                color: "#9598a1",
-                style: "dashed" as import("klinecharts").LineType,
-                dashedValue: [4, 4],
-              },
-              text: {
-                show: true,
-                backgroundColor: "#131722",
-                borderColor: "#2a2e39",
-                color: "#d1d4dc",
-                size: 11,
-                family: FONT_FAMILY_STACK,
-              },
-            },
-          },
-        },
+        styles: canvasStyles,
       });
       proRef.current = pro;
       mountedRef.current = true;
@@ -237,14 +251,6 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
       }
       props.onReady?.(chart);
 
-      // Canvas text figures are rasterized once at draw time and do not
-      // re-resolve after a webfont finishes downloading the way DOM text does
-      // (font-display: swap). Wait for self-hosted fonts to be ready, then
-      // force a relayout+redraw so axis/crosshair/price labels render with the
-      // final Google Sans Flex / Noto Sans SC instead of the fallback glyphs.
-      if (typeof document !== "undefined" && "fonts" in document) {
-        document.fonts.ready.then(() => pro.getChart()?.resize()).catch(() => undefined);
-      }
       return () => {
         // Schedule the real disposal a tick later: React StrictMode (dev)
         // immediately remounts the component after cleanup, in which case the
@@ -259,6 +265,54 @@ export const KLineChartProView = forwardRef<KLineChartProHandle, Props>(
         }, 0);
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Canvas text figures are rasterized once at draw time and do not re-resolve
+    // after a webfont lands the way DOM text does under font-display: swap.
+    // The @font-face block now loads off the critical path (src/fonts.css), so
+    // `document.fonts.ready` can resolve before the faces are even declared —
+    // therefore also listen for `loadingdone` so axis/crosshair/price labels are
+    // redrawn with the final Google Sans Flex / Noto Sans SC, never left in the
+    // fallback glyphs.
+    useEffect(() => {
+      if (typeof document === "undefined" || !("fonts" in document)) return;
+      const faces = document.fonts;
+      const redraw = () => proRef.current?.getChart()?.resize();
+      faces.ready.then(redraw).catch(() => undefined);
+      faces.addEventListener?.("loadingdone", redraw);
+      return () => faces.removeEventListener?.("loadingdone", redraw);
+    }, []);
+
+    // Keep the canvases in step with the CONTAINER. The chart lives in a flex
+    // row whose width changes without a window resize: the right dock reserves
+    // (open), releases (close) or drag-resizes its space. The vendor only
+    // re-measures on `window.resize`, so observe the container instead and
+    // re-measure at most once per animation frame, skipping no-op sizes — the
+    // canvas ends at exactly one committed width, at the frame new layout is
+    // painted.
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el || typeof ResizeObserver === "undefined") return;
+      let frame: number | null = null;
+      let lastW = el.clientWidth;
+      let lastH = el.clientHeight;
+      const resizeNow = () => {
+        frame = null;
+        const w = el.clientWidth;
+        const h = el.clientHeight;
+        if (w === 0 || h === 0 || (w === lastW && h === lastH)) return;
+        lastW = w;
+        lastH = h;
+        proRef.current?.getChart()?.resize();
+      };
+      const observer = new ResizeObserver(() => {
+        if (frame == null) frame = requestAnimationFrame(resizeNow);
+      });
+      observer.observe(el);
+      return () => {
+        observer.disconnect();
+        if (frame != null) cancelAnimationFrame(frame);
+      };
     }, []);
 
     const clickNativeTool = (index: number) => {

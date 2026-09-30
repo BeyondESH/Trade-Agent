@@ -14,8 +14,8 @@ const Badge = React.forwardRef<
       {
         "border-transparent bg-primary text-primary-foreground": variant === "default",
         "border-border text-muted-foreground": variant === "outline",
-        "border-transparent bg-[#089981]/15 text-[#089981]": variant === "success",
-        "border-transparent bg-[#f23645]/15 text-[#f23645]": variant === "danger",
+        "border-transparent bg-up/15 text-up": variant === "success",
+        "border-transparent bg-down/15 text-down": variant === "danger",
       },
       className,
     )}

@@ -9,6 +9,9 @@ on: [push, pull_request]
 #   online    pytest --run-online            -> NEVER used here; stays skipped by design
 # Playwright E2E (`npm run test:e2e`) is intentionally NOT part of CI: it needs
 # browser binaries downloaded per run and is much slower; run it locally.
+# The `frontend-perf` job is a different kind of browser use: it is an
+# independent performance gate (bundle budgets + DOM ceiling + bounded growth +
+# CLS) and, by spec, MUST fail rather than pass if it cannot run.
 
 jobs:
   backend:
@@ -102,3 +105,51 @@ jobs:
 
       - name: Coverage gate
         run: npm run test:coverage
+
+  # Independent performance gate (frontend-performance-budgets task 6.3).
+  # MUST NOT weaken any job above: this job only *adds* checks. On any
+  # unexempted budget breach it fails the overall run, and it also fails when it
+  # cannot run (no browser / no preview) — it never ends green silently
+  # (`ci-quality-gates`: "门禁不可静默通过").
+  frontend-perf:
+    name: frontend (perf gate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `vite build` fails on an over-budget entry chunk via the
+      # `initialChunkBudgetPlugin` in vite.config.ts (budget 180 kB).
+      - name: Build (enforces initial-chunk budget)
+        run: npm run build
+
+      - name: Install Chromium for the runtime gate
+        run: npx playwright install --with-deps chromium
+
+      - name: Perf gate (bundle + DOM ceiling + bounded growth + CLS)
+        run: |
+          npx vite preview --port 4173 --strictPort > /tmp/preview.log 2>&1 &
+          PREVIEW_PID=$!
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:4173/; then break; fi
+            sleep 1
+          done
+          if ! curl -sf -o /dev/null http://127.0.0.1:4173/; then
+            echo "preview failed to start"; cat /tmp/preview.log
+            kill "$PREVIEW_PID" || true; exit 1
+          fi
+          PERF_GATE_URL=http://127.0.0.1:4173 node scripts/perf-gate.mjs
+          STATUS=$?
+          kill "$PREVIEW_PID" || true
+          exit "$STATUS"

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "threshold": 0.75,
+  "maxNames": 20000,
+  "entries": {}
+}

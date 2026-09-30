@@ -1,0 +1,259 @@
+codemap clean exited with code=0 after 1374ms.
+stdout:
+Cleaned up successfully.
+
+stderr:
+2026/09/28 09:31:57 [trace_id=3d644d57b08ce866] command clean started
+[clean] 2026/09/28 09:31:58.890361 [trace_id=3d644d57b08ce866] doClean
+[clean] 2026/09/28 09:31:58.899533 [trace_id=3d644d57b08ce866] Warning: remove D:\work\project\trade\.codemaker\codemap: unlinkat D:\work\project\trade\.codemaker\codemap\crash.log: The process cannot access the file because it is being used by another process.
+[clean] 2026/09/28 09:31:59.111636 [trace_id=3d644d57b08ce866] Removed D:\work\project\trade\.codemaker\codeindex
+[clean] 2026/09/28 09:31:59.112159 [trace_id=3d644d57b08ce866] Removed .mcp.json (empty after cleanup)
+[clean] 2026/09/28 09:31:59.112682 [trace_id=3d644d57b08ce866] Removed codemap from opencode.json
+[clean] 2026/09/28 09:31:59.113731 [trace_id=3d644d57b08ce866] Removed .cursor/mcp.json (empty after cleanup)
+[clean] 2026/09/28 09:31:59.119596 [trace_id=3d644d57b08ce866] Removed CLAUDE.md (empty after cleanup)
+[clean] 2026/09/28 09:31:59.125456 [trace_id=3d644d57b08ce866] Removed codemap section from AGENTS.md
+[clean] 2026/09/28 09:31:59.133300 [trace_id=3d644d57b08ce866] Removed 5 codemap skills from .claude/skills/
+[clean] 2026/09/28 09:31:59.138798 [trace_id=3d644d57b08ce866] Removed codemap permissions from .claude/settings.local.json
+[clean] 2026/09/28 09:31:59.139844 [trace_id=3d644d57b08ce866] Removed .codemaker/rules/codemap.mdc
+[clean] 2026/09/28 09:31:59.140909 [trace_id=3d644d57b08ce866] removeSessionStartHook
+[clean] 2026/09/28 09:31:59.143342 [trace_id=3d644d57b08ce866] Removed 4 codemap SessionStart hook(s) from D:\work\project\trade\.claude\settings.local.json
+[clean] 2026/09/28 09:31:59.143847 [trace_id=3d644d57b08ce866] removeSessionStartHook
+[clean] 2026/09/28 09:31:59.147881 [trace_id=3d644d57b08ce866] Removed 4 codemap SessionStart hook(s) from D:\work\project\trade\.codemaker\hooks.json
+[clean] 2026/09/28 09:31:59.149464 [trace_id=3d644d57b08ce866] Removed OpenCode plugin files: D:\work\project\trade\.opencode\plugins and D:\work\project\trade\.codemaker\codemap\codemap-inject.mjs
+[clean] 2026/09/28 09:31:59.150587 [trace_id=3d644d57b08ce866] Removed Codex SessionStart hook from .codex/config.toml
+
+
+===== codemap setup =====
+workspace: D:\work\project\trade
+cwd: C:\Users\lijiacheng09\AppData\Local\CodeMaker Hub (inherited)
+log: D:\work\project\trade\.codemaker\codemap\hub-cli.log
+command: CODEMAP_USER=lijiacheng09 C:\Users\lijiacheng09\AppData\Local\codemap\codemap.exe setup --root D:\work\project\trade --editor codemaker,codemaker-cli --auto-update=true --auto-snapshot download-only --enhance --enhance-mode=scan
+PATH: C:\Users\lijiacheng09\.local\codemap;C:\Users\lijiacheng09\.local\bin;C:\Users\lijiacheng09\.codemap\bin;C:\Users\lijiacheng09\.codemaker\bin;C:\Users\lijiacheng09\AppData\Local\codemap;C:\Users\lijiacheng09\AppData\Local\Programs\codemap;C:\Users\lijiacheng09\.codemap\bin;C:\Users\lijiacheng09\.local/bin;C:\Users\lijiacheng09\.codemaker/bin;C:\Users\lijiacheng09\.bun/bin;C:\Users\lijiacheng09\AppData\Local\Programs;C:\Python314\Scripts\;C:\Python314\;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0\;C:\windows\System32\OpenSSH\;C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\Git\cmd;C:\Program Files\Perforce\;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Program Files\Microsoft SQL Server\170\Tools\Binn\;C:\Program Files (x86)\Lua\5.1;C:\Program Files (x86)\Lua\5.1\clibs;C:\Program Files\Pandoc\;C:\Program Files\Tailscale\;C:\Program Files\dotnet\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files (x86)\IncrediBuild;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Users\lijiacheng09\.codemaker\bin;C:\Users\lijiacheng09\AppData\Local\codemap;c:\Users\lijiacheng09\AppData\Local\Programs\Trae CN\bin;C:\Users\lijiacheng09\AppData\Local\Microsoft\WindowsApps;C:\Users\lijiacheng09\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\lijiacheng09\AppData\Local\GitHubDesktop\bin;C:\Users\lijiacheng09\AppData\Local\Python\bin;C:\Users\lijiacheng09\AppData\Roaming\npm;C:\Users\lijiacheng09\AppData\Local\Programs\mongosh\;C:\Users\lijiacheng09\.local\bin;C:\Users\lijiacheng09\Downloads\mongodb-database-tools-windows-x86_64-100.17.0\bin;D:\c++lib\ffmpeg-master-latest-win64-gpl-shared\bin;C:\Users\lijiacheng09\.dotnet\tools;D:\c++lib\luarocks-3.13.0-windows-64;C:\Users\lijiacheng09\AppData\Local\PowerToys\DSCModules\;D:\c++lib\bun-windows-x64;C:\Users\lijiacheng09\AppData\Local\Microsoft\WinGet\Links;C:\Users\lijiacheng09\AppData\Local\Microsoft\WinGet\Packages\ast-grep.ast-grep_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\Python314\Lib\site-packages\nvidia\cublas\bin;C:\Python314\Lib\site-packages\nvidia\cudnn\bin;C:\Python314\Lib\site-packages\nvidia\cuda_runtime\bin;C:\Python314\Lib\site-packages\nvidia\cuda_nvrtc\bin;C:\Program Files\JetBrains\PyCharm 2026.2.3\bin;C:\Users\lijiacheng09\.bun\bin
+
+codemap setup spawned successfully (pid: 27824).
+2026/09/28 12:29:57 [trace_id=fbae39c7c86182a0] command setup started
+2026/09/28 12:29:57 codemap version v0.0.196
+[setup] 2026/09/28 12:29:58.542149 [trace_id=fbae39c7c86182a0] auto_update set to true (project config)
+[setup] 2026/09/28 12:30:00.424711 [trace_id=fbae39c7c86182a0]   No cloud snapshot found for this repository
+[setup] 2026/09/28 12:30:00.431002 [trace_id=fbae39c7c86182a0] [1/2] Building code graph index (full)...
+[setup] 2026/09/28 12:30:00.431519 [trace_id=fbae39c7c86182a0] Build started (full, 9 phases): scan, parse, indexes, insert nodes, edges, FTS, merkle, embeddings, completed
+[setup] 2026/09/28 12:30:00.435006 [trace_id=fbae39c7c86182a0] [pool] open: 2.15 GB (db=0.00 GB, path=D:\work\project\trade\.codemaker\codemap\graph.db)
+[setup] 2026/09/28 12:30:00.527276 [trace_id=fbae39c7c86182a0] exec query=CREATE NODE TABLE IF NOT EXISTS Symbol(
+			id STRING PRIMARY KEY,
+			name STRING,
+			qual_name STRIN...
+[setup] 2026/09/28 12:30:00.532210 [trace_id=fbae39c7c86182a0] exec query=CREATE NODE TABLE IF NOT EXISTS File(
+			path STRING PRIMARY KEY,
+			language STRING,
+			package STR...
+[setup] 2026/09/28 12:30:00.535767 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS CONTAINS(FROM File TO Symbol)
+[setup] 2026/09/28 12:30:00.540152 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS IMPORTS(FROM File TO File, target_path STRING, alias STRING, is_wildc...
+[setup] 2026/09/28 12:30:00.543314 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS CALLS(FROM Symbol TO Symbol, file_path STRING, line INT64, col INT64)
+[setup] 2026/09/28 12:30:00.544879 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS INHERITS(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.546974 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS IMPLEMENTS(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.549585 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS REFERENCES_SYM(FROM Symbol TO Symbol, file_path STRING, line INT64)
+[setup] 2026/09/28 12:30:00.551710 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS DEPENDS_ON(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.555145 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS TYPE_OF(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.557768 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS HAS_CHILD(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.560909 [trace_id=fbae39c7c86182a0] exec query=ALTER TABLE Embedding ADD text_hash STRING DEFAULT ''
+[setup] 2026/09/28 12:30:00.565411 [trace_id=fbae39c7c86182a0] Starting full build...
+[setup] 2026/09/28 12:30:00.565411 [trace_id=fbae39c7c86182a0] Resetting database...
+[setup] 2026/09/28 12:30:00.587160 [trace_id=fbae39c7c86182a0] [pool] reset-reopen: 2.15 GB (db=0.00 GB, path=D:\work\project\trade\.codemaker\codemap\graph.db)
+[setup] 2026/09/28 12:30:00.653440 [trace_id=fbae39c7c86182a0] exec query=CREATE NODE TABLE IF NOT EXISTS Symbol(
+			id STRING PRIMARY KEY,
+			name STRING,
+			qual_name STRIN...
+[setup] 2026/09/28 12:30:00.659101 [trace_id=fbae39c7c86182a0] exec query=CREATE NODE TABLE IF NOT EXISTS File(
+			path STRING PRIMARY KEY,
+			language STRING,
+			package STR...
+[setup] 2026/09/28 12:30:00.662199 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS CONTAINS(FROM File TO Symbol)
+[setup] 2026/09/28 12:30:00.665943 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS IMPORTS(FROM File TO File, target_path STRING, alias STRING, is_wildc...
+[setup] 2026/09/28 12:30:00.667045 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS CALLS(FROM Symbol TO Symbol, file_path STRING, line INT64, col INT64)
+[setup] 2026/09/28 12:30:00.669652 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS INHERITS(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.672775 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS IMPLEMENTS(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.675034 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS REFERENCES_SYM(FROM Symbol TO Symbol, file_path STRING, line INT64)
+[setup] 2026/09/28 12:30:00.678719 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS DEPENDS_ON(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.680811 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS TYPE_OF(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.683945 [trace_id=fbae39c7c86182a0] exec query=CREATE REL TABLE IF NOT EXISTS HAS_CHILD(FROM Symbol TO Symbol)
+[setup] 2026/09/28 12:30:00.686560 [trace_id=fbae39c7c86182a0] exec query=ALTER TABLE Embedding ADD text_hash STRING DEFAULT ''
+[setup] 2026/09/28 12:30:00.687085 [trace_id=fbae39c7c86182a0]   reset: 121.6746ms
+[setup] 2026/09/28 12:30:00.687085 [trace_id=fbae39c7c86182a0] Scanning files...
+  Scanning: 232 files found...  Scanning: 232 files found                    
+[setup] 2026/09/28 12:30:01.322106 [trace_id=fbae39c7c86182a0]   scan: 635.0237ms (232 files)
+[setup] 2026/09/28 12:30:01.322106 [trace_id=fbae39c7c86182a0] Parsing files...
+  Parsing: 111/232 files (47.8%)...  Parsing: 232/232 files done                    
+[setup] 2026/09/28 12:30:02.086576 [trace_id=fbae39c7c86182a0]   parse: 764.473ms (232 files, 8 workers)
+[setup] 2026/09/28 12:30:02.087106 [trace_id=fbae39c7c86182a0] Building indexes...
+[setup] 2026/09/28 12:30:02.096385 [trace_id=fbae39c7c86182a0]   index: 9.279ms
+[setup] 2026/09/28 12:30:02.098923 [trace_id=fbae39c7c86182a0]   type propagation: 2.5382ms
+[setup] 2026/09/28 12:30:02.099445 [trace_id=fbae39c7c86182a0] Inserting nodes (bulk)...
+[setup] 2026/09/28 12:30:02.102075 [trace_id=fbae39c7c86182a0] BulkInsertFiles
+[setup] 2026/09/28 12:30:02.119113 [trace_id=fbae39c7c86182a0] exec query=COPY File FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\files_2451626761.csv' (HEADER=true, D...
+[setup] 2026/09/28 12:30:02.200290 [trace_id=fbae39c7c86182a0] BulkInsertSymbols
+[setup] 2026/09/28 12:30:02.355353 [trace_id=fbae39c7c86182a0] exec query=COPY Symbol FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\symbols_4155933395.csv' (HEADER=tru...
+[setup] 2026/09/28 12:30:02.522141 [trace_id=fbae39c7c86182a0] BulkInsertSymbols
+[setup] 2026/09/28 12:30:02.662538 [trace_id=fbae39c7c86182a0] exec query=COPY Symbol FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\symbols_1121831978.csv' (HEADER=tru...
+[setup] 2026/09/28 12:30:02.828059 [trace_id=fbae39c7c86182a0] BulkInsertSymbols
+[setup] 2026/09/28 12:30:02.970511 [trace_id=fbae39c7c86182a0] exec query=COPY Symbol FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\symbols_3412405048.csv' (HEADER=tru...
+[setup] 2026/09/28 12:30:03.109117 [trace_id=fbae39c7c86182a0] BulkInsertSymbols
+[setup] 2026/09/28 12:30:03.252330 [trace_id=fbae39c7c86182a0] exec query=COPY Symbol FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\symbols_1422067962.csv' (HEADER=tru...
+[setup] 2026/09/28 12:30:03.413037 [trace_id=fbae39c7c86182a0] BulkInsertSymbols
+[setup] 2026/09/28 12:30:03.554221 [trace_id=fbae39c7c86182a0] exec query=COPY Symbol FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\symbols_1495512899.csv' (HEADER=tru...
+[setup] 2026/09/28 12:30:03.691852 [trace_id=fbae39c7c86182a0] BulkInsertSymbols
+[setup] 2026/09/28 12:30:03.746872 [trace_id=fbae39c7c86182a0] exec query=COPY Symbol FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\symbols_887163165.csv' (HEADER=true...
+[setup] 2026/09/28 12:30:03.860798 [trace_id=fbae39c7c86182a0] BulkInsertContains
+[setup] 2026/09/28 12:30:03.969644 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:03.969644 [trace_id=fbae39c7c86182a0] exec query=COPY CONTAINS FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\contains_2093546355.csv' (HEADER=...
+[setup] 2026/09/28 12:30:04.015955 [trace_id=fbae39c7c86182a0]   insert nodes: 1.9165178s (2690 symbols)
+[setup] 2026/09/28 12:30:04.016458 [trace_id=fbae39c7c86182a0] Building edges (parallel)...
+[setup] 2026/09/28 12:30:04.019116 [trace_id=fbae39c7c86182a0]   parent-child: processing 2690 symbols...
+[setup] 2026/09/28 12:30:04.019116 [trace_id=fbae39c7c86182a0]   refs: resolving 19623 raw refs...
+[setup] 2026/09/28 12:30:04.019116 [trace_id=fbae39c7c86182a0]   imports: processing 2174 raw imports...
+[setup] 2026/09/28 12:30:04.019116 [trace_id=fbae39c7c86182a0]   calls: resolving 11541 raw calls...
+[setup] 2026/09/28 12:30:04.019116 [trace_id=fbae39c7c86182a0]   types: processing 250 raw type relations...
+[setup] 2026/09/28 12:30:04.020238 [trace_id=fbae39c7c86182a0]   types: collected 10 inherits + 1 implements + 75 depends_on + 0 type_of edges from 250 type relations (skipped: 0 child-not-found, 164 parent-not-found)
+[setup] 2026/09/28 12:30:04.020238 [trace_id=fbae39c7c86182a0] BulkInsertInheritsEdges
+[setup] 2026/09/28 12:30:04.020238 [trace_id=fbae39c7c86182a0] bulkInsertSimpleEdges
+[setup] 2026/09/28 12:30:04.020238 [trace_id=fbae39c7c86182a0]   imports: collected 546 edges from 2174 imports
+  refs: resolving 981/19623 (5%, 973697/s, ETA 0s)...[setup] 2026/09/28 12:30:04.021245 [trace_id=fbae39c7c86182a0] BulkInsertImportEdges
+  refs: resolving 1962/19623 (10%, 1947395/s, ETA 0s)...  refs: resolving 2943/19623 (15%, 2921092/s, ETA 0s)...  refs: resolving 3924/19623 (20%, 3894789/s, ETA 0s)...  refs: resolving 4905/19623 (25%, 4868486/s, ETA 0s)...[setup] 2026/09/28 12:30:04.019638 [trace_id=fbae39c7c86182a0]   parent-child: collected 868 edges from 2690 symbols
+  refs: resolving 5886/19623 (30%, 5842184/s, ETA 0s)...  refs: resolving 6867/19623 (35%, 3422207/s, ETA 0s)...  refs: resolving 7848/19623 (40%, 3911093/s, ETA 0s)...  refs: resolving 8829/19623 (45%, 4399980/s, ETA 0s)...  refs: resolving 9810/19623 (50%, 3774383/s, ETA 0s)...  refs: resolving 10791/19623 (55%, 4151822/s, ETA 0s)...  refs: resolving 11772/19623 (60%, 4529260/s, ETA 0s)...  refs: resolving 12753/19623 (65%, 3150678/s, ETA 0s)...[setup] 2026/09/28 12:30:04.021245 [trace_id=fbae39c7c86182a0] BulkInsertHasChildEdges
+[setup] 2026/09/28 12:30:04.024793 [trace_id=fbae39c7c86182a0] bulkInsertSimpleEdges
+  refs: resolving 13734/19623 (70%, 3015016/s, ETA 0s)...[setup] 2026/09/28 12:30:04.024793 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:04.026071 [trace_id=fbae39c7c86182a0] exec query=COPY INHERITS FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\inherits_1268003862.csv' (HEADER=...
+  refs: resolving 14715/19623 (75%, 2301484/s, ETA 0s)...  refs: resolving 15696/19623 (80%, 2454917/s, ETA 0s)...  refs: resolving 16677/19623 (85%, 2368589/s, ETA 0s)...  refs: resolving 17658/19623 (90%, 1521009/s, ETA 0s)...  refs: resolving 18639/19623 (95%, 1605509/s, ETA 0s)...  refs: resolving 19620/19623 (100%, 1619881/s, ETA 0s)...[setup] 2026/09/28 12:30:04.032349 [trace_id=fbae39c7c86182a0]   refs: resolve done: 1932 unique edges from 19623 refs (12.112ms)
+[setup] 2026/09/28 12:30:04.032349 [trace_id=fbae39c7c86182a0] BulkInsertRefEdges
+[setup] 2026/09/28 12:30:04.044554 [trace_id=fbae39c7c86182a0]   calls: resolved 11541/11541 calls (3846 resolved, 7610 unresolved, cache hits 1010/11456=9%, 8 workers), produced 11201 edges in 24.9159ms
+[setup] 2026/09/28 12:30:04.044554 [trace_id=fbae39c7c86182a0]   calls: resolve done: 11201 unique edges from 11541 calls (24.9159ms)
+[setup] 2026/09/28 12:30:04.047202 [trace_id=fbae39c7c86182a0] BulkInsertSymbols
+[setup] 2026/09/28 12:30:04.062860 [trace_id=fbae39c7c86182a0]   types: inherits bulk insert done (42.6231ms)
+[setup] 2026/09/28 12:30:04.063417 [trace_id=fbae39c7c86182a0] BulkInsertImplementsEdges
+[setup] 2026/09/28 12:30:04.063417 [trace_id=fbae39c7c86182a0] bulkInsertSimpleEdges
+[setup] 2026/09/28 12:30:04.064954 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:04.064954 [trace_id=fbae39c7c86182a0] exec query=COPY IMPLEMENTS FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\implements_3162990299.csv' (HEA...
+[setup] 2026/09/28 12:30:04.071369 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:04.071934 [trace_id=fbae39c7c86182a0] exec query=COPY HAS_CHILD FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\has_child_4182456326.csv' (HEADE...
+[setup] 2026/09/28 12:30:04.098932 [trace_id=fbae39c7c86182a0]   types: implements bulk insert done (35.5151ms)
+[setup] 2026/09/28 12:30:04.098932 [trace_id=fbae39c7c86182a0] BulkInsertDependsOnEdges
+[setup] 2026/09/28 12:30:04.099471 [trace_id=fbae39c7c86182a0] bulkInsertSimpleEdges
+[setup] 2026/09/28 12:30:04.104417 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:04.104417 [trace_id=fbae39c7c86182a0] exec query=COPY IMPORTS FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\imports_356151868.csv' (HEADER=tru...
+[setup] 2026/09/28 12:30:04.107172 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:04.107172 [trace_id=fbae39c7c86182a0] exec query=COPY DEPENDS_ON FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\depends_on_3314851753.csv' (HEA...
+[setup] 2026/09/28 12:30:04.129142 [trace_id=fbae39c7c86182a0]   parent-child: bulk insert done (107.8976ms)
+[setup] 2026/09/28 12:30:04.129142 [trace_id=fbae39c7c86182a0]   parent-child: 112.6843ms (868 edges)
+[setup] 2026/09/28 12:30:04.158929 [trace_id=fbae39c7c86182a0]   imports: bulk insert done (137.6849ms)
+[setup] 2026/09/28 12:30:04.158929 [trace_id=fbae39c7c86182a0]   imports: 142.4716ms (546 edges)
+[setup] 2026/09/28 12:30:04.183557 [trace_id=fbae39c7c86182a0]   types: depends_on bulk insert done (84.6257ms)
+[setup] 2026/09/28 12:30:04.183557 [trace_id=fbae39c7c86182a0]   types: 167.0992ms (86 edges)
+[setup] 2026/09/28 12:30:04.206080 [trace_id=fbae39c7c86182a0] copyFromWithTicker
+[setup] 2026/09/28 12:30:04.206080 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:04.206080 [trace_id=fbae39c7c86182a0] exec query=COPY REFERENCES_SYM FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\refs_969463941.csv' (HEADER...
+[setup] 2026/09/28 12:30:04.258195 [trace_id=fbae39c7c86182a0]   refs: bulk insert done (225.8468ms)
+[setup] 2026/09/28 12:30:04.258195 [trace_id=fbae39c7c86182a0]   refs: 241.738ms (1932 edges)
+[setup] 2026/09/28 12:30:04.496545 [trace_id=fbae39c7c86182a0] exec query=COPY Symbol FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\symbols_2958961905.csv' (HEADER=tru...
+[setup] 2026/09/28 12:30:04.625156 [trace_id=fbae39c7c86182a0]   calls: inserted 1526 placeholder symbols for unresolved callees
+[setup] 2026/09/28 12:30:04.625756 [trace_id=fbae39c7c86182a0] BulkInsertCallEdges
+[setup] 2026/09/28 12:30:05.640606 [trace_id=fbae39c7c86182a0] copyFromWithTicker
+[setup] 2026/09/28 12:30:05.641139 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:05.641139 [trace_id=fbae39c7c86182a0] exec query=COPY CALLS FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\calls_2832669808.csv' (HEADER=true, ...
+[setup] 2026/09/28 12:30:05.700999 [trace_id=fbae39c7c86182a0]   calls: bulk insert done (1.0752471s)
+[setup] 2026/09/28 12:30:05.701503 [trace_id=fbae39c7c86182a0] BulkInsertRefEdges
+[setup] 2026/09/28 12:30:05.738093 [trace_id=fbae39c7c86182a0] copyFromWithTicker
+[setup] 2026/09/28 12:30:05.739569 [trace_id=fbae39c7c86182a0] copyFrom
+[setup] 2026/09/28 12:30:05.739569 [trace_id=fbae39c7c86182a0] exec query=COPY REFERENCES_SYM FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\refs_2928956124.csv' (HEADE...
+[setup] 2026/09/28 12:30:05.817161 [trace_id=fbae39c7c86182a0]   calls: ctor-class ref edges inserted 495 (115.6588ms)
+[setup] 2026/09/28 12:30:05.817936 [trace_id=fbae39c7c86182a0]   calls: 1.8014852s (11201 edges)
+[setup] 2026/09/28 12:30:05.817936 [trace_id=fbae39c7c86182a0]   edges total: 1.8014852s
+[setup] 2026/09/28 12:30:05.819025 [trace_id=fbae39c7c86182a0] Building FTS index...
+[setup] 2026/09/28 12:30:05.822160 [trace_id=fbae39c7c86182a0] CreateFTSIndex
+[setup] 2026/09/28 12:30:05.822160 [trace_id=fbae39c7c86182a0] [pool] fts: requesting 2.15 GB pool for FTS index (indexed text: 1.3 MB)
+[setup] 2026/09/28 12:30:05.849969 [trace_id=fbae39c7c86182a0] [pool] reopen: 2.15 GB (db=0.01 GB, path=D:\work\project\trade\.codemaker\codemap\graph.db)
+[setup] 2026/09/28 12:30:05.934700 [trace_id=fbae39c7c86182a0] HasFTSIndex
+[setup] 2026/09/28 12:30:05.934700 [trace_id=fbae39c7c86182a0] execRead query=CALL QUERY_FTS_INDEX('Symbol', 'symbol_fts_index', 'test') RETURN node.id AS id LIMIT 1
+[setup] 2026/09/28 12:30:05.946582 [trace_id=fbae39c7c86182a0] HasFTSIndex: QUERY_FTS_INDEX failed: query failed [CALL QUERY_FTS_INDEX('Symbol', 'symbol_fts_index', 'test') RETURN node.id AS id LIMIT 1]: Binder exception: Table Symbol doesn't have an index with name symbol_fts_index.
+[setup] 2026/09/28 12:30:05.946582 [trace_id=fbae39c7c86182a0] exec query=CALL CREATE_FTS_INDEX('Symbol', 'symbol_fts_index', ['name', 'qual_name', 'signature', 'doc_string',...
+  fts index: done (1s)                    
+[setup] 2026/09/28 12:30:07.282265 [trace_id=fbae39c7c86182a0] [pool] reopen: 2.15 GB (db=0.05 GB, path=D:\work\project\trade\.codemaker\codemap\graph.db)
+[setup] 2026/09/28 12:30:07.380512 [trace_id=fbae39c7c86182a0]   fts index: 1.5614938s
+[setup] 2026/09/28 12:30:07.384239 [trace_id=fbae39c7c86182a0]   Scanning merkle metas...
+  Scanning metas: 232 files found                    
+[setup] 2026/09/28 12:30:08.017184 [trace_id=fbae39c7c86182a0]   merkle scan: 632.9477ms (232 files)
+[setup] 2026/09/28 12:30:08.044589 [trace_id=fbae39c7c86182a0]   merkle hash: 232 files (0 cached)
+  Hashing: 232/232 files (100%)...  Hashing: 232/232 files done (34ms)                    
+[setup] 2026/09/28 12:30:08.079983 [trace_id=fbae39c7c86182a0]   merkle: 699.4738ms (232 files, root=fd3b8c2bb5de4672)
+[setup] 2026/09/28 12:30:08.079983 [trace_id=fbae39c7c86182a0] Build complete: 232 files, 2690 symbols, 14633 edges (total: 7.5146028s)
+      232 files, 2690 symbols, 14633 edges
+[setup] 2026/09/28 12:30:09.574603 [trace_id=fbae39c7c86182a0]       Generating vector embeddings...
+[setup] 2026/09/28 12:30:15.858466 [trace_id=fbae39c7c86182a0] exec query=CREATE NODE TABLE IF NOT EXISTS Embedding(
+			symbol_id STRING PRIMARY KEY,
+			vec FLOAT[1024],
+			t...
+[setup] 2026/09/28 12:30:16.238602 [trace_id=fbae39c7c86182a0] BulkInsertEmbeddings
+[setup] 2026/09/28 12:30:16.238602 [trace_id=fbae39c7c86182a0] exec query=CREATE NODE TABLE IF NOT EXISTS Embedding(
+			symbol_id STRING PRIMARY KEY,
+			vec FLOAT[1024],
+			t...
+[setup] 2026/09/28 12:30:16.770473 [trace_id=fbae39c7c86182a0] exec query=COPY Embedding FROM 'D:\\work\\project\\trade\\.codemaker\\codemap\\embeddings_4274292141.csv' (HEAD...
+[setup] 2026/09/28 12:30:17.281256 [trace_id=fbae39c7c86182a0]   lookup embedding: 7.7040388s (2080 vectors)
+[setup] 2026/09/28 12:30:17.281256 [trace_id=fbae39c7c86182a0] Creating vector index...
+[setup] 2026/09/28 12:30:17.281256 [trace_id=fbae39c7c86182a0] CreateVectorIndex
+[setup] 2026/09/28 12:30:17.281256 [trace_id=fbae39c7c86182a0] DropVectorIndex
+[setup] 2026/09/28 12:30:17.281256 [trace_id=fbae39c7c86182a0] exec query=CALL DROP_VECTOR_INDEX('Embedding', 'emb_hnsw_index')
+[setup] 2026/09/28 12:30:17.281891 [trace_id=fbae39c7c86182a0] buildVectorIndex
+[setup] 2026/09/28 12:30:17.281891 [trace_id=fbae39c7c86182a0] exec query=CREATE NODE TABLE IF NOT EXISTS Embedding(
+			symbol_id STRING PRIMARY KEY,
+			vec FLOAT[1024],
+			t...
+[setup] 2026/09/28 12:30:17.282423 [trace_id=fbae39c7c86182a0] exec query=CALL CREATE_VECTOR_INDEX('Embedding', 'emb_hnsw_index', 'vec', metric := 'cosine')
+[setup] 2026/09/28 12:30:19.540654 [trace_id=fbae39c7c86182a0] Embeddings generated successfully
+      Total elapsed: 21s
+[setup] 2026/09/28 12:30:21.093721 [trace_id=fbae39c7c86182a0] [2/2] Installing MCP configuration for: codemaker, codemaker-cli...
+Installed MCP config to C:\Users\lijiacheng09\AppData\Roaming\Code\User\globalStorage\techcenter.codemaker\settings\codemaker_mcp_settings.json
+[setup] 2026/09/28 12:30:21.114455 [trace_id=fbae39c7c86182a0] installCodemakerRules
+Codemaker will auto-start the codemap server and pass WORKSPACE at runtime.
+Make sure to run 'codemap build' in each project before using.
+[setup] 2026/09/28 12:30:21.118085 [trace_id=fbae39c7c86182a0] Installed codemap rules to D:\work\project\trade\.codemaker\rules\codemap.mdc
+[setup] 2026/09/28 12:30:21.118085 [trace_id=fbae39c7c86182a0] installSessionStartHook
+[setup] 2026/09/28 12:30:21.121972 [trace_id=fbae39c7c86182a0] Installed codemap hook payload: D:\work\project\trade\.codemaker\codemap\hook-payload.json (agent=codemaker, script=C:\Users\lijiacheng09\.codemaker\codemap\hook.sh)
+[setup] 2026/09/28 12:30:21.122496 [trace_id=fbae39c7c86182a0] Installed SessionStart hook in .claude/settings.local.json (4 matchers)
+Installed MCP config to D:\work\project\trade\.codemaker\mcps.json
+[setup] 2026/09/28 12:30:21.123554 [trace_id=fbae39c7c86182a0] installSkills
+[setup] 2026/09/28 12:30:21.123554 [trace_id=fbae39c7c86182a0] installSkillsAt
+[setup] 2026/09/28 12:30:21.147775 [trace_id=fbae39c7c86182a0] Installed 5 skills to D:\work\project\trade\.claude\skills/
+[setup] 2026/09/28 12:30:21.152328 [trace_id=fbae39c7c86182a0] Updated .claude/settings.local.json (auto-allowed 9 MCP tools)
+[setup] 2026/09/28 12:30:21.157549 [trace_id=fbae39c7c86182a0] Removed OpenCode plugin files: D:\work\project\trade\.opencode\plugins and D:\work\project\trade\.codemaker\codemap\codemap-inject.mjs
+Installed MCP config to D:\work\project\trade\opencode.json
+[setup] 2026/09/28 12:30:21.166349 [trace_id=fbae39c7c86182a0] installSkills
+[setup] 2026/09/28 12:30:21.167938 [trace_id=fbae39c7c86182a0] installSkillsAt
+[setup] 2026/09/28 12:30:21.175009 [trace_id=fbae39c7c86182a0] Installed 5 skills to D:\work\project\trade\.claude\skills/
+[setup] 2026/09/28 12:30:21.175009 [trace_id=fbae39c7c86182a0] updateAgentsMD
+[setup] 2026/09/28 12:30:21.180358 [trace_id=fbae39c7c86182a0] Updated AGENTS.md at D:\work\project\trade\AGENTS.md
+[setup] 2026/09/28 12:30:21.185899 [trace_id=fbae39c7c86182a0] Installed codemap hook payload: D:\work\project\trade\.codemaker\codemap\hook-payload.json (agent=opencode, script=C:\Users\lijiacheng09\.codemaker\codemap\hook.sh)
+[setup] 2026/09/28 12:30:21.188942 [trace_id=fbae39c7c86182a0] Installed OpenCode SessionStart inject plugin: D:\work\project\trade\.codemaker\codemap\codemap-inject.mjs
+[setup] 2026/09/28 12:30:21.192123 [trace_id=fbae39c7c86182a0] Updated .claude/settings.local.json (auto-allowed 9 MCP tools)
+OpenCode will auto-start the codemap server when it opens this project.
+Installed for: codemaker, codemaker-cli
+[setup] 2026/09/28 12:30:21.193734 [trace_id=fbae39c7c86182a0] installCodeIndexBuilderSkill
+[setup] 2026/09/28 12:30:21.197768 [trace_id=fbae39c7c86182a0] [enhance] Installed code-index-builder skill to D:\work\project\trade\.claude\skills\code-index-builder
+[setup] 2026/09/28 12:30:21.197768 [trace_id=fbae39c7c86182a0] [enhance:scan] skill ready at D:\work\project\trade\.claude\skills\code-index-builder\SKILL.md
+[setup] 2026/09/28 12:30:22.078018 [trace_id=fbae39c7c86182a0] [enhance:scan] collected 19 module(s)/file(s) (scan_mode=excluded)
+[setup] 2026/09/28 12:30:37.941489 [trace_id=fbae39c7c86182a0] [enhance:scan] prompts + workspace written: D:\work\project\trade\.codemaker\codemap\enhance-prompts (20 tasks, 15.863s)
+[setup] 2026/09/28 12:30:37.942015 [trace_id=fbae39c7c86182a0] [enhance:scan] manifest written LAST as ready signal: D:\work\project\trade\.codemaker\codemap\enhance-prompts\_manifest.json (20 tasks, total scan 15.864s)
+
+[enhance:scan] Scanned 19 modules/files, wrote 20 prompts to D:\work\project\trade\.codemaker\codemap\enhance-prompts
+[enhance:scan] Manifest: D:\work\project\trade\.codemaker\codemap\enhance-prompts\_manifest.json
+[enhance:scan] External knowledge dirs injected: openspec
+[enhance:scan] Execute module prompts in parallel, then run the global prompt.
+
+[enhance:scan] When all prompts are complete, run:
+    codemap enhance finalize --root D:\work\project\trade
+
+[setup] 2026/09/28 12:30:37.951345 [trace_id=fbae39c7c86182a0] Setup complete! The MCP server will start automatically
+
+[setup] 2026/09/28 12:30:37.951345 [trace_id=fbae39c7c86182a0] when your AI editor connects, and stop when it disconnects.
+The 'serve' command runs MCP + file-watcher in one process,
+[setup] 2026/09/28 12:30:37.951345 [trace_id=fbae39c7c86182a0] so code changes are picked up in real time.
+
+codemap setup child exited with code=0 after 41814ms.

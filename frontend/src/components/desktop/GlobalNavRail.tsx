@@ -13,7 +13,9 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type React from "react";
+import { useState } from "react";
 import { t } from "../../lib/i18n";
 import type { DesktopViewMode, ThemeMode } from "../../types/trading";
 
@@ -28,6 +30,8 @@ interface Props {
   onOpenAlertModal?: () => void;
 }
 
+const RAIL_SPRING = { type: "spring" as const, stiffness: 380, damping: 30 };
+
 export const GlobalNavRail: React.FC<Props> = ({
   activeView,
   onSelectView,
@@ -38,7 +42,8 @@ export const GlobalNavRail: React.FC<Props> = ({
   onOpenSettings,
   onOpenAlertModal,
 }) => {
-  const isDark = theme === "dark";
+  const [hovered, setHovered] = useState<string | null>(null);
+  const reduce = useReducedMotion();
 
   const navItems: {
     id: DesktopViewMode;
@@ -84,16 +89,14 @@ export const GlobalNavRail: React.FC<Props> = ({
     },
   ];
 
+  const labelFor = (id: string) => (hovered === id ? id : null);
+
   return (
     <aside
       id="global-nav-rail"
-      className={`w-12 h-full flex flex-col items-center justify-between border-r py-2 select-none z-40 shrink-0 ${
-        isDark
-          ? "bg-[#0f1118] border-[#2a2e39] text-[#787b86]"
-          : "bg-[#e8ebf2] border-[#cbcfd9] text-[#606470]"
-      }`}
+      className="w-[52px] h-full flex flex-col items-center border-r border-line bg-ink py-2 select-none z-40 shrink-0"
     >
-      {/* Top Primary View Modes */}
+      {/* Top: primary workbench modes */}
       <div className="flex flex-col items-center gap-1.5 w-full">
         {navItems.map((item) => {
           const isActive = activeView === item.id;
@@ -101,51 +104,77 @@ export const GlobalNavRail: React.FC<Props> = ({
             <button
               key={item.id}
               onClick={() => onSelectView(item.id)}
-              className={`group relative w-9 h-9 rounded-lg flex flex-col items-center justify-center transition-all duration-150 ${
-                isActive
-                  ? "bg-[#2962ff] text-white shadow-md"
-                  : isDark
-                    ? "hover:bg-[#1e222d] hover:text-white"
-                    : "hover:bg-white hover:text-black"
-              }`}
+              onMouseEnter={() => setHovered(item.id)}
+              onMouseLeave={() => setHovered(null)}
+              onFocus={() => setHovered(item.id)}
+              onBlur={() => setHovered(null)}
+              className="group relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
               title={item.label}
             >
-              {item.icon}
-
-              {item.badge && !isActive && (
-                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#ff9800]" />
+              {isActive && (
+                <motion.span
+                  layoutId="navrail-active-pill"
+                  transition={reduce ? { duration: 0 } : RAIL_SPRING}
+                  className="absolute inset-0 rounded-xl bg-signal shadow-e1"
+                />
               )}
 
-              {/* Hover Tooltip Pill */}
-              <div className="opacity-0 group-hover:opacity-100 absolute left-full ml-2 z-50 px-2 py-1 rounded bg-[#1e222d] text-white text-[11px] font-semibold pointer-events-none whitespace-nowrap shadow-xl border border-[#2a2e39] transition-opacity">
-                {item.label}
-              </div>
+              <span
+                className={`relative z-10 ${
+                  isActive ? "text-signal-ink" : "text-muted group-hover:text-content"
+                }`}
+              >
+                {item.icon}
+              </span>
+
+              {item.badge && !isActive && (
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-signal" />
+              )}
+
+              {/* Spring hover label slides in from the left of the rail */}
+              <AnimatePresence>
+                {labelFor(item.id) && (
+                  <motion.span
+                    initial={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
+                    transition={reduce ? { duration: 0 } : RAIL_SPRING}
+                    className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-md border border-line bg-surface-2 px-2 py-1 text-[11px] font-semibold text-content shadow-float"
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
           );
         })}
       </div>
 
-      {/* Bottom Global Action Controls */}
-      <div className="flex flex-col items-center gap-1.5 w-full pt-2 border-t border-gray-500/20">
+      <div className="flex-1" />
+
+      {/* Labelled hairline divider: workbench modes vs. global action cluster */}
+      <div className="flex w-full flex-col items-center gap-1 pb-1.5">
+        <span className="ta-eyebrow text-faint">{t("other")}</span>
+        <span className="h-px w-6 bg-line" />
+      </div>
+
+      {/* Bottom: global action controls */}
+      <div className="flex flex-col items-center gap-1.5 w-full">
         {onOpenAlertModal && (
           <button
             data-testid="nav-create-alert"
             onClick={onOpenAlertModal}
-            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
-              isDark ? "hover:bg-[#1e222d] hover:text-white" : "hover:bg-white hover:text-black"
-            }`}
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-muted hover:bg-surface-2 hover:text-content transition-colors"
             title={t("Create Alert")}
           >
-            <Bell className="w-3.5 h-3.5 text-[#ff9800]" />
+            <Bell className="w-3.5 h-3.5 text-signal" />
           </button>
         )}
 
         <button
           data-testid="nav-command-palette"
           onClick={onOpenCommandPalette}
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
-            isDark ? "hover:bg-[#1e222d] hover:text-white" : "hover:bg-white hover:text-black"
-          }`}
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-muted hover:bg-surface-2 hover:text-content transition-colors"
           title={t("Command Palette (⌘K)")}
         >
           <Search className="w-3.5 h-3.5" />
@@ -153,11 +182,7 @@ export const GlobalNavRail: React.FC<Props> = ({
 
         <button
           onClick={onToggleTheme}
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
-            isDark
-              ? "hover:bg-[#1e222d] hover:text-yellow-400"
-              : "hover:bg-white hover:text-indigo-600"
-          }`}
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-muted hover:bg-surface-2 hover:text-content transition-colors"
           title={`${theme === "dark" ? t("Switch to Light Mode") : t("Switch to Dark Mode")}`}
         >
           {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -165,9 +190,7 @@ export const GlobalNavRail: React.FC<Props> = ({
 
         <button
           onClick={onOpenShortcuts}
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
-            isDark ? "hover:bg-[#1e222d] hover:text-white" : "hover:bg-white hover:text-black"
-          }`}
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-muted hover:bg-surface-2 hover:text-content transition-colors"
           title={t("Keyboard Shortcuts (?)")}
         >
           <Keyboard className="w-3.5 h-3.5" />
@@ -175,9 +198,7 @@ export const GlobalNavRail: React.FC<Props> = ({
 
         <button
           onClick={onOpenSettings}
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
-            isDark ? "hover:bg-[#1e222d] hover:text-white" : "hover:bg-white hover:text-black"
-          }`}
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-muted hover:bg-surface-2 hover:text-content transition-colors"
           title={t("Desktop Settings")}
         >
           <Settings className="w-3.5 h-3.5" />

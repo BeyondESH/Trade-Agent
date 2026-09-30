@@ -1,4 +1,5 @@
 import { AlertCircle, ChevronUp, ExternalLink, Globe } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -21,6 +22,8 @@ interface Props {
 const AT_TOP_THRESHOLD = 24;
 /** Page-level scroll container (NewsCalendarView root) that owns the feed scroll. */
 const SCROLL_ROOT_SELECTOR = "#news-calendar-view";
+
+const SPRING = { type: "spring", stiffness: 380, damping: 30 } as const;
 
 /** Rough pre-mount card height: title + content lines * line height. */
 function estimateHeight(item: GlobalNewsItem): number {
@@ -64,7 +67,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
   const [ioOk, setIoOk] = useState(true);
   const rootRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const isDark = theme === "dark";
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     fetchNewsCategories()
@@ -164,50 +167,58 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
     if (container) container.scrollTop = 0;
   };
 
+  const topics: { value: string | null; label: string }[] = [
+    { value: null, label: t("All") },
+    ...categories.map((c) => ({ value: c as string | null, label: t(c) })),
+  ];
+
   return (
-    <div ref={rootRef} className="flex flex-col gap-3">
-      {/* Topic chips (全部 + categories from backend) */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => setSelected(null)}
-          className={`px-3 py-1 rounded-lg border text-xs font-medium transition-colors ${
-            selected === null
-              ? "bg-[#2962ff] border-[#2962ff] text-white"
-              : isDark
-                ? "bg-[#1e222d] border-[#2a2e39] text-gray-400 hover:text-white"
-                : "bg-white border-[#e0e3eb] text-gray-600 hover:text-black"
-          }`}
-        >
-          {t("All")}
-        </button>
-        {categories.map((c) => (
-          <button
-            key={c}
-            onClick={() => setSelected(selected === c ? null : c)}
-            className={`px-3 py-1 rounded-lg border text-xs font-medium transition-colors ${
-              selected === c
-                ? "bg-[#2962ff] border-[#2962ff] text-white"
-                : isDark
-                  ? "bg-[#1e222d] border-[#2a2e39] text-gray-400 hover:text-white"
-                  : "bg-white border-[#e0e3eb] text-gray-600 hover:text-black"
-            }`}
-          >
-            {t(c)}
-          </button>
-        ))}
+    <div ref={rootRef} data-testid="global-news-feed" className="flex flex-col gap-3">
+      {/* Topic chips: one sliding indicator, not a row of toggled fills */}
+      <div className="ta-fade-x overflow-x-auto">
+        <div className="flex items-center gap-0.5 rounded-lg border border-line bg-ink/60 p-0.5">
+          {topics.map((topic) => {
+            const active = selected === topic.value;
+            return (
+              <button
+                key={topic.value ?? "__all__"}
+                type="button"
+                onClick={() => setSelected(active ? null : topic.value)}
+                className={`relative flex items-center rounded-md px-3 py-1 text-2xs font-semibold transition-colors ${
+                  active ? "text-signal-ink" : "text-muted hover:text-content"
+                }`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="gnf-topic-indicator"
+                    className="absolute inset-0 rounded-md bg-signal"
+                    transition={reduce ? { duration: 0 } : SPRING}
+                  />
+                )}
+                <span className="relative z-10 whitespace-nowrap">{topic.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Status line */}
-      <div className="flex items-center gap-2 text-xs min-h-[18px]">
-        {state === "connecting" && <span className="text-gray-400">{t("Connecting...")}</span>}
+      {/* Status line: a real live badge, not a bare label */}
+      <div className="flex min-h-[18px] items-center gap-2 text-xs">
+        {state === "connecting" && (
+          <span className="ta-eyebrow text-muted">{t("Connecting...")}</span>
+        )}
         {state === "open" && (
-          <span className="text-[10px] px-2 py-0.5 rounded bg-[#089981]/20 text-[#089981] font-bold">
-            LIVE
+          <span className="flex items-center gap-1.5 rounded-full border border-up/25 bg-up/10 px-2 py-0.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-[ta-ping_2s_ease-out_infinite] rounded-full bg-up" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-up" />
+            </span>
+            <span className="ta-eyebrow text-up">LIVE</span>
           </span>
         )}
         {unavailable && (
-          <span className="flex items-center gap-1 text-[#f23645] text-xs">
-            <AlertCircle className="w-3.5 h-3.5" />
+          <span className="flex items-center gap-1 text-xs text-down">
+            <AlertCircle className="h-3.5 w-3.5" />
             {t("News sources unavailable")}
           </span>
         )}
@@ -216,30 +227,36 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
       {/* "N 条新快讯" pill (floats while the user is scrolled down) */}
       {!atTop && pendingCount > 0 && (
         <div className="sticky top-2 z-10 flex justify-center">
-          <button
+          <motion.button
+            type="button"
             onClick={handlePill}
             data-testid="new-items-pill"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#2962ff] text-white text-xs font-semibold shadow-lg hover:bg-[#1e4fd8] transition-colors"
+            initial={reduce ? false : { opacity: 0, y: -10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={reduce ? { duration: 0 } : SPRING}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-1.5 rounded-full bg-signal px-3 py-1 text-xs font-semibold text-signal-ink shadow-float transition-colors hover:bg-signal/90"
           >
-            <ChevronUp className="w-3.5 h-3.5" />
+            <ChevronUp className="h-3.5 w-3.5" />
             <span>
               {pendingCount} {t("New Items")}
             </span>
-          </button>
+          </motion.button>
         </div>
       )}
 
       {/* Waterfall columns */}
       {windowed.length === 0 && !unavailable && (
-        <div className="text-xs text-gray-400 text-center py-6">
+        <div className="py-6 text-center text-xs text-muted">
           {state === "connecting" ? t("Connecting...") : "--"}
         </div>
       )}
-      <div className="flex gap-3 items-start" data-testid="global-news-columns">
+      <div className="flex items-start gap-3" data-testid="global-news-columns">
         {columns.map((col, i) => (
-          <div key={i} className="flex-1 flex flex-col gap-3 min-w-0" data-testid={`column-${i}`}>
+          <div key={i} className="flex min-w-0 flex-1 flex-col gap-3" data-testid={`column-${i}`}>
             {col.map((item) => (
-              <NewsCard key={item.id} item={item} isDark={isDark} onMeasure={measure} />
+              <NewsCard key={item.id} item={item} onMeasure={measure} />
             ))}
           </div>
         ))}
@@ -250,9 +267,10 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
         <div ref={sentinelRef} className="flex justify-center py-2">
           {!ioOk && (
             <button
+              type="button"
               onClick={() => void revealMore()}
               data-testid="load-earlier-button"
-              className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors bg-[#2962ff] border-[#2962ff] text-white hover:bg-[#1e4fd8]"
+              className="rounded-md bg-signal px-3 py-1.5 text-xs font-semibold text-signal-ink transition-colors hover:bg-signal/90"
             >
               {t("Load Earlier")}
             </button>
@@ -260,7 +278,7 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
         </div>
       )}
       {!hasOlder && windowed.length > 0 && (
-        <div className="text-xs text-gray-400 text-center py-2" data-testid="all-loaded">
+        <div className="py-2 text-center text-2xs text-faint" data-testid="all-loaded">
           {t("All Loaded")}
         </div>
       )}
@@ -270,11 +288,9 @@ export const GlobalNewsFeed: React.FC<Props> = ({ theme }) => {
 
 function NewsCard({
   item,
-  isDark,
   onMeasure,
 }: {
   item: GlobalNewsItem;
-  isDark: boolean;
   onMeasure: (id: string, height: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -294,45 +310,47 @@ function NewsCard({
     }
   }, [item.id, onMeasure]);
 
+  const hasContent = !!(item.content && item.content !== item.title);
+
   return (
-    <div
+    <motion.div
       ref={ref}
       data-item-id={item.id}
-      className={`p-4 rounded-xl border flex flex-col gap-2 transition-all hover:border-[#2962ff] ${
-        isDark ? "bg-[#1e222d] border-[#2a2e39]" : "bg-white border-[#e0e3eb]"
-      }`}
+      whileHover={{ y: -2 }}
+      transition={SPRING}
+      className="group flex flex-col gap-2 rounded-xl border border-line bg-surface p-3.5 shadow-e1 transition-[box-shadow,border-color] hover:border-line-strong hover:shadow-e2"
     >
-      <div className="flex items-center justify-between">
-        <span className="text-gray-500 text-[10px]">{formatNewsTime(item.ts)}</span>
-        <div className="flex items-center gap-1.5">
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#4caf50]/20 text-[#4caf50]">
+      <div className="flex items-start justify-between gap-2">
+        <span className="ta-eyebrow ta-num text-faint">{formatNewsTime(item.ts)}</span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="ta-eyebrow rounded border border-line/70 bg-surface-2 px-1.5 py-0.5 text-muted">
             {item.source}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-500/20 text-gray-400">
+          <span className="ta-eyebrow rounded bg-signal/15 px-1.5 py-0.5 text-signal">
             {t(item.category)}
           </span>
         </div>
       </div>
 
-      <h3 className="font-bold text-sm text-white leading-snug">{item.title}</h3>
-      {item.content && item.content !== item.title && (
-        <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{item.content}</p>
+      <h3 className="text-sm font-bold leading-snug text-content">{item.title}</h3>
+      {hasContent && (
+        <p className="whitespace-pre-wrap text-xs leading-relaxed text-muted">{item.content}</p>
       )}
 
       {item.url && (
-        <div className="flex items-center justify-end pt-2 border-t border-gray-500/20 mt-1">
+        <div className="mt-1 flex justify-end border-t border-line/60 pt-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
           <a
             href={item.url}
             target="_blank"
             rel="noreferrer"
-            className="text-gray-400 hover:text-white flex items-center gap-1 text-xs"
+            className="flex items-center gap-1 text-2xs font-semibold text-muted transition-colors hover:text-signal"
           >
-            <Globe className="w-3 h-3" />
+            <Globe className="h-3 w-3" />
             <span>{t("Original Article")}</span>
-            <ExternalLink className="w-3 h-3" />
+            <ExternalLink className="h-3 w-3" />
           </a>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

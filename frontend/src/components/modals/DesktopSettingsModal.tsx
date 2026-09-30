@@ -1,7 +1,11 @@
 import { Monitor, Settings, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type React from "react";
+import { useEffect, useRef } from "react";
 import { t } from "../../lib/i18n";
+import { modalShell, scrim } from "../../lib/motion";
 import type { ThemeMode } from "../../types/trading";
+import { Kbd } from "../ui/kbd";
 
 interface Props {
   isOpen: boolean;
@@ -16,73 +20,107 @@ export const DesktopSettingsModal: React.FC<Props> = ({
   theme,
   onToggleTheme,
 }) => {
-  const isDark = theme === "dark";
+  const reduce = useReducedMotion();
+  const shellRef = useRef<HTMLDivElement>(null);
 
-  if (!isOpen) return null;
+  // Escape closes while the dialog is open.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
 
+  // Move focus into the dialog on open: first field, else the shell itself.
+  useEffect(() => {
+    if (!isOpen) return;
+    const firstField = shellRef.current?.querySelector<HTMLElement>("input, select, textarea");
+    (firstField ?? shellRef.current)?.focus();
+  }, [isOpen]);
+
+  // When closed, AnimatePresence renders nothing (no wrapper is left behind).
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none">
-      <div
-        id="desktop-settings-modal"
-        className={`w-full max-w-xl rounded-xl shadow-2xl border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100 ${
-          isDark
-            ? "bg-[#1e222d] border-[#2a2e39] text-[#d1d4dc]"
-            : "bg-white border-[#e0e3eb] text-[#131722]"
-        }`}
-      >
-        {/* Header */}
-        <div
-          className={`p-3 border-b flex items-center justify-between ${isDark ? "border-[#2a2e39]" : "border-[#e0e3eb]"}`}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="desktop-settings-backdrop"
+          variants={scrim}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 select-none backdrop-blur-sm"
         >
-          <div className="flex items-center gap-2 font-bold text-sm">
-            <Settings className="w-4 h-4 text-[#2962ff]" />
-            <span>{t("Desktop App Settings")}</span>
-          </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-500/20 text-gray-400">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 flex flex-col gap-4 text-xs max-h-[460px] overflow-y-auto">
-          {/* Section: Appearance — the only real, persisted setting. */}
-          <div
-            className={`p-3 rounded-lg border flex flex-col gap-3 ${isDark ? "bg-[#131722]/60 border-[#2a2e39]" : "bg-gray-50 border-[#e0e3eb]"}`}
+          <motion.div
+            key="desktop-settings-shell"
+            ref={shellRef}
+            id="desktop-settings-modal"
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
+            variants={reduce ? scrim : modalShell}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            className="flex w-full max-w-xl flex-col overflow-hidden rounded-xl border border-line bg-surface text-content shadow-float outline-none"
           >
-            <div className="font-bold text-xs text-[#2962ff] uppercase tracking-wider flex items-center gap-1.5">
-              <Monitor className="w-3.5 h-3.5" />
-              <span>{t("Display & Theme")}</span>
+            {/* Header */}
+            <div className="p-3 border-b border-line flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Settings className="w-4 h-4 text-signal" />
+                <span>{t("Desktop App Settings")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Kbd>Esc</Kbd>
+                <button
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="p-1 rounded hover:bg-surface-2 text-muted hover:text-content"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-white">{t("Color Theme")}</div>
-                <div className="text-gray-400 text-[11px]">
-                  {t("Choose between Elegant Dark and Clean Light")}
+            {/* Content */}
+            <div className="p-4 flex flex-col gap-4 text-xs max-h-[460px] overflow-y-auto">
+              {/* Section: Appearance — the only real, persisted setting. */}
+              <div className="p-3 rounded-lg border border-line bg-surface-2 flex flex-col gap-3">
+                <div className="font-bold text-xs text-signal uppercase tracking-wider flex items-center gap-1.5">
+                  <Monitor className="w-3.5 h-3.5" />
+                  <span>{t("Display & Theme")}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-content">{t("Color Theme")}</div>
+                    <div className="text-muted text-[11px]">
+                      {t("Choose between Elegant Dark and Clean Light")}
+                    </div>
+                  </div>
+                  <button
+                    onClick={onToggleTheme}
+                    className="rounded-md bg-signal px-3 py-1 font-semibold text-signal-ink"
+                  >
+                    {theme === "dark" ? "Dark Theme" : "Light Theme"}
+                  </button>
                 </div>
               </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t border-line flex justify-end bg-surface-2">
               <button
-                onClick={onToggleTheme}
-                className="px-3 py-1 rounded bg-[#2962ff] text-white font-semibold"
+                onClick={onClose}
+                className="rounded-md bg-signal px-4 py-1.5 text-xs font-semibold text-signal-ink hover:bg-signal/90"
               >
-                {theme === "dark" ? "Dark Theme" : "Light Theme"}
+                {t("Close")}
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          className={`p-3 border-t flex justify-end ${isDark ? "border-[#2a2e39] bg-[#131722]" : "border-[#e0e3eb] bg-gray-50"}`}
-        >
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 rounded text-xs font-semibold bg-[#2962ff] text-white hover:bg-[#1e53e5]"
-          >
-            {t("Close")}
-          </button>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

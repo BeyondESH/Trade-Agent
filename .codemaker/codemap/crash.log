@@ -1,0 +1,2404 @@
+
+--- runtime crash output attached pid=40636 at 2026-08-12T17:34:57.5742853+08:00 ---
+
+--- runtime crash output attached pid=3344 at 2026-08-12T17:35:54.062223+08:00 ---
+
+--- runtime crash output attached pid=3016 at 2026-08-12T17:35:54.1944282+08:00 ---
+
+--- runtime crash output attached pid=28936 at 2026-08-12T17:35:54.409684+08:00 ---
+
+--- runtime crash output attached pid=17156 at 2026-08-12T17:35:54.6214867+08:00 ---
+
+--- runtime crash output attached pid=46680 at 2026-08-12T17:35:54.6904286+08:00 ---
+
+--- runtime crash output attached pid=43936 at 2026-08-12T17:35:54.7864594+08:00 ---
+
+--- runtime crash output attached pid=12320 at 2026-08-12T17:35:55.0460184+08:00 ---
+
+--- runtime crash output attached pid=47636 at 2026-08-12T17:35:55.2373607+08:00 ---
+
+--- runtime crash output attached pid=45384 at 2026-08-12T17:37:36.0020662+08:00 ---
+
+--- runtime crash output attached pid=15368 at 2026-08-12T17:37:36.5345326+08:00 ---
+
+--- runtime crash output attached pid=37988 at 2026-08-12T17:38:25.97976+08:00 ---
+
+--- runtime crash output attached pid=24076 at 2026-08-12T17:38:42.4814916+08:00 ---
+
+--- runtime crash output attached pid=2528 at 2026-08-12T17:41:09.4224652+08:00 ---
+
+--- runtime crash output attached pid=45716 at 2026-08-12T17:41:10.1074487+08:00 ---
+
+--- runtime crash output attached pid=19424 at 2026-08-12T17:41:39.7127455+08:00 ---
+
+--- runtime crash output attached pid=32036 at 2026-08-12T17:42:45.3761548+08:00 ---
+
+--- runtime crash output attached pid=19120 at 2026-08-12T17:43:45.4602711+08:00 ---
+
+--- runtime crash output attached pid=18848 at 2026-08-12T17:43:48.3844859+08:00 ---
+
+--- runtime crash output attached pid=18716 at 2026-08-12T17:45:27.3530909+08:00 ---
+
+--- runtime crash output attached pid=8716 at 2026-08-12T17:45:27.9841977+08:00 ---
+
+--- runtime crash output attached pid=42980 at 2026-08-12T17:46:13.0709453+08:00 ---
+
+--- runtime crash output attached pid=12000 at 2026-08-12T17:46:17.2549838+08:00 ---
+
+--- runtime crash output attached pid=43956 at 2026-08-12T17:46:22.5136997+08:00 ---
+
+--- runtime crash output attached pid=3828 at 2026-08-12T17:48:19.6290391+08:00 ---
+
+--- runtime crash output attached pid=9080 at 2026-08-12T17:48:20.1534252+08:00 ---
+
+--- runtime crash output attached pid=31624 at 2026-08-12T17:49:15.1493379+08:00 ---
+
+--- runtime crash output attached pid=42276 at 2026-08-12T17:49:15.7573006+08:00 ---
+
+--- runtime crash output attached pid=17224 at 2026-08-12T17:49:39.7935729+08:00 ---
+
+--- runtime crash output attached pid=27312 at 2026-08-12T17:50:06.2981058+08:00 ---
+
+--- runtime crash output attached pid=43956 at 2026-08-12T17:51:31.7616409+08:00 ---
+
+--- runtime crash output attached pid=8288 at 2026-08-12T17:52:33.120582+08:00 ---
+
+--- runtime crash output attached pid=34292 at 2026-08-12T17:53:08.5688729+08:00 ---
+
+--- runtime crash output attached pid=12836 at 2026-08-12T17:53:09.1607702+08:00 ---
+
+--- runtime crash output attached pid=16064 at 2026-08-12T17:53:21.6072155+08:00 ---
+
+--- runtime crash output attached pid=42008 at 2026-08-12T17:55:15.7600122+08:00 ---
+
+--- runtime crash output attached pid=39556 at 2026-08-12T17:55:16.3872074+08:00 ---
+
+--- runtime crash output attached pid=31812 at 2026-08-12T17:56:14.9805637+08:00 ---
+
+--- runtime crash output attached pid=38104 at 2026-08-12T17:56:19.3150541+08:00 ---
+
+--- runtime crash output attached pid=31652 at 2026-08-12T17:57:27.0303738+08:00 ---
+
+--- runtime crash output attached pid=17044 at 2026-08-12T17:57:36.0756881+08:00 ---
+
+--- runtime crash output attached pid=24168 at 2026-08-12T17:59:31.5536822+08:00 ---
+
+--- runtime crash output attached pid=46792 at 2026-08-12T17:59:32.1174052+08:00 ---
+
+--- runtime crash output attached pid=20696 at 2026-08-12T18:00:19.2933512+08:00 ---
+
+--- runtime crash output attached pid=28320 at 2026-08-12T18:00:20.5928071+08:00 ---
+
+--- runtime crash output attached pid=17952 at 2026-08-12T18:00:26.0879921+08:00 ---
+
+--- runtime crash output attached pid=34268 at 2026-08-12T18:00:26.6596742+08:00 ---
+
+--- runtime crash output attached pid=37608 at 2026-08-12T18:02:08.8470087+08:00 ---
+
+--- runtime crash output attached pid=44056 at 2026-08-12T18:02:36.2641028+08:00 ---
+
+--- runtime crash output attached pid=38488 at 2026-08-12T18:03:20.3831074+08:00 ---
+
+--- runtime crash output attached pid=43608 at 2026-08-12T18:03:20.9465677+08:00 ---
+
+--- runtime crash output attached pid=27312 at 2026-08-12T18:03:50.2097145+08:00 ---
+
+--- runtime crash output attached pid=35560 at 2026-08-12T18:06:03.4145032+08:00 ---
+
+--- runtime crash output attached pid=48468 at 2026-08-12T18:07:10.8195483+08:00 ---
+
+--- runtime crash output attached pid=37516 at 2026-08-12T18:07:11.4332956+08:00 ---
+
+--- runtime crash output attached pid=14228 at 2026-08-12T18:07:12.1287104+08:00 ---
+
+--- runtime crash output attached pid=27916 at 2026-08-12T18:08:11.8668252+08:00 ---
+
+--- runtime crash output attached pid=43368 at 2026-08-12T18:08:19.853908+08:00 ---
+
+--- runtime crash output attached pid=6720 at 2026-08-12T18:10:01.8410604+08:00 ---
+
+--- runtime crash output attached pid=27456 at 2026-08-12T18:10:02.4409098+08:00 ---
+
+--- runtime crash output attached pid=14668 at 2026-08-12T18:10:47.0801961+08:00 ---
+
+--- runtime crash output attached pid=9112 at 2026-08-12T18:11:07.9906517+08:00 ---
+
+--- runtime crash output attached pid=33244 at 2026-08-12T18:11:08.5189974+08:00 ---
+
+--- runtime crash output attached pid=33204 at 2026-08-12T18:11:14.9740465+08:00 ---
+
+--- runtime crash output attached pid=40596 at 2026-08-12T18:13:09.6060839+08:00 ---
+
+--- runtime crash output attached pid=26968 at 2026-08-12T18:13:32.1413142+08:00 ---
+
+--- runtime crash output attached pid=6468 at 2026-08-12T18:14:28.0762379+08:00 ---
+
+--- runtime crash output attached pid=30288 at 2026-08-12T18:14:28.6838867+08:00 ---
+
+--- runtime crash output attached pid=9944 at 2026-08-12T18:14:32.7342101+08:00 ---
+
+--- runtime crash output attached pid=39508 at 2026-08-12T18:16:08.476653+08:00 ---
+
+--- runtime crash output attached pid=16588 at 2026-08-12T18:16:19.3629731+08:00 ---
+
+--- runtime crash output attached pid=38536 at 2026-08-12T18:17:04.3099303+08:00 ---
+
+--- runtime crash output attached pid=31276 at 2026-08-12T18:17:04.8846615+08:00 ---
+
+--- runtime crash output attached pid=34564 at 2026-08-12T18:18:22.6850738+08:00 ---
+
+--- runtime crash output attached pid=31932 at 2026-08-12T18:18:24.1905624+08:00 ---
+
+--- runtime crash output attached pid=40512 at 2026-08-12T18:19:07.6556598+08:00 ---
+
+--- runtime crash output attached pid=43616 at 2026-08-12T18:19:51.2195654+08:00 ---
+
+--- runtime crash output attached pid=38620 at 2026-08-12T18:20:58.6526074+08:00 ---
+
+--- runtime crash output attached pid=13720 at 2026-08-12T18:20:59.2230599+08:00 ---
+
+--- runtime crash output attached pid=39604 at 2026-08-12T18:21:11.9573832+08:00 ---
+
+--- runtime crash output attached pid=42448 at 2026-08-12T18:21:54.7110036+08:00 ---
+
+--- runtime crash output attached pid=37652 at 2026-08-12T18:22:12.0541013+08:00 ---
+
+--- runtime crash output attached pid=13352 at 2026-08-12T18:22:12.7535743+08:00 ---
+
+--- runtime crash output attached pid=39592 at 2026-08-12T18:23:47.1919498+08:00 ---
+
+--- runtime crash output attached pid=44180 at 2026-08-12T18:23:53.3541611+08:00 ---
+
+--- runtime crash output attached pid=30316 at 2026-08-12T18:24:02.0153566+08:00 ---
+
+--- runtime crash output attached pid=18408 at 2026-08-12T18:24:43.6438103+08:00 ---
+
+--- runtime crash output attached pid=16132 at 2026-08-12T18:26:31.8309601+08:00 ---
+
+--- runtime crash output attached pid=6508 at 2026-08-12T18:26:32.3594768+08:00 ---
+
+--- runtime crash output attached pid=7812 at 2026-08-12T18:27:02.3422849+08:00 ---
+
+--- runtime crash output attached pid=47924 at 2026-08-12T18:27:43.958112+08:00 ---
+
+--- runtime crash output attached pid=5932 at 2026-08-12T18:27:47.9496136+08:00 ---
+
+--- runtime crash output attached pid=4080 at 2026-08-12T18:27:48.5213363+08:00 ---
+
+--- runtime crash output attached pid=40984 at 2026-08-12T18:28:27.6993141+08:00 ---
+
+--- runtime crash output attached pid=21396 at 2026-08-12T18:28:28.1457513+08:00 ---
+
+--- runtime crash output attached pid=23076 at 2026-08-12T18:28:38.1055076+08:00 ---
+
+--- runtime crash output attached pid=46944 at 2026-08-12T18:28:38.538447+08:00 ---
+
+--- runtime crash output attached pid=3652 at 2026-08-12T18:29:14.182281+08:00 ---
+
+--- runtime crash output attached pid=18008 at 2026-08-12T18:29:32.5308581+08:00 ---
+
+--- runtime crash output attached pid=35576 at 2026-08-12T18:29:33.0647457+08:00 ---
+
+--- runtime crash output attached pid=36056 at 2026-08-12T18:29:40.6583601+08:00 ---
+
+--- runtime crash output attached pid=36836 at 2026-08-12T18:30:07.9767519+08:00 ---
+
+--- runtime crash output attached pid=44344 at 2026-08-12T18:30:08.4075446+08:00 ---
+
+--- runtime crash output attached pid=25396 at 2026-08-12T18:30:41.8580037+08:00 ---
+
+--- runtime crash output attached pid=18500 at 2026-08-12T18:32:11.0935863+08:00 ---
+
+--- runtime crash output attached pid=38400 at 2026-08-12T18:32:14.9236106+08:00 ---
+
+--- runtime crash output attached pid=48452 at 2026-08-12T18:33:40.1257283+08:00 ---
+
+--- runtime crash output attached pid=17992 at 2026-08-12T18:34:03.5653368+08:00 ---
+
+--- runtime crash output attached pid=44964 at 2026-08-12T18:34:53.6631158+08:00 ---
+
+--- runtime crash output attached pid=38480 at 2026-08-12T18:35:16.9625818+08:00 ---
+
+--- runtime crash output attached pid=31440 at 2026-08-12T18:35:17.5635123+08:00 ---
+
+--- runtime crash output attached pid=35876 at 2026-08-12T18:35:41.4880501+08:00 ---
+
+--- runtime crash output attached pid=41468 at 2026-08-12T18:36:52.0305502+08:00 ---
+
+--- runtime crash output attached pid=44644 at 2026-08-12T18:37:15.2285687+08:00 ---
+
+--- runtime crash output attached pid=44012 at 2026-08-12T18:37:43.4414508+08:00 ---
+
+--- runtime crash output attached pid=32452 at 2026-08-12T18:37:54.6817796+08:00 ---
+
+--- runtime crash output attached pid=33228 at 2026-08-12T18:39:01.6691371+08:00 ---
+
+--- runtime crash output attached pid=17244 at 2026-08-12T18:39:58.400903+08:00 ---
+
+--- runtime crash output attached pid=48616 at 2026-08-12T18:40:17.7925169+08:00 ---
+
+--- runtime crash output attached pid=41740 at 2026-08-12T18:41:27.5314404+08:00 ---
+
+--- runtime crash output attached pid=36828 at 2026-08-12T18:42:24.1618835+08:00 ---
+
+--- runtime crash output attached pid=19496 at 2026-08-12T18:42:31.3020508+08:00 ---
+
+--- runtime crash output attached pid=19860 at 2026-08-12T18:42:48.9279603+08:00 ---
+
+--- runtime crash output attached pid=46028 at 2026-08-12T18:44:23.7508909+08:00 ---
+
+--- runtime crash output attached pid=32688 at 2026-08-12T18:44:55.621849+08:00 ---
+
+--- runtime crash output attached pid=17292 at 2026-08-12T18:45:20.6671457+08:00 ---
+
+--- runtime crash output attached pid=38860 at 2026-08-12T18:46:27.946939+08:00 ---
+
+--- runtime crash output attached pid=38780 at 2026-08-12T18:47:20.7165148+08:00 ---
+
+--- runtime crash output attached pid=30464 at 2026-08-12T18:47:43.3794425+08:00 ---
+
+--- runtime crash output attached pid=16396 at 2026-08-12T18:49:18.9890391+08:00 ---
+
+--- runtime crash output attached pid=18012 at 2026-08-12T18:49:50.6974988+08:00 ---
+
+--- runtime crash output attached pid=35308 at 2026-08-12T18:50:04.2566602+08:00 ---
+
+--- runtime crash output attached pid=29144 at 2026-08-12T18:51:31.0650945+08:00 ---
+
+--- runtime crash output attached pid=14228 at 2026-08-12T18:52:15.0658731+08:00 ---
+
+--- runtime crash output attached pid=35936 at 2026-08-12T18:53:19.2946807+08:00 ---
+
+--- runtime crash output attached pid=41172 at 2026-08-12T18:54:07.0728659+08:00 ---
+
+--- runtime crash output attached pid=46560 at 2026-08-12T18:54:26.7840391+08:00 ---
+
+--- runtime crash output attached pid=34088 at 2026-08-12T18:55:22.3201556+08:00 ---
+
+--- runtime crash output attached pid=34696 at 2026-08-12T18:56:02.0868722+08:00 ---
+
+--- runtime crash output attached pid=22944 at 2026-08-12T18:56:45.9362432+08:00 ---
+
+--- runtime crash output attached pid=19880 at 2026-08-12T18:56:55.9174452+08:00 ---
+
+--- runtime crash output attached pid=43612 at 2026-08-12T18:57:44.8929486+08:00 ---
+
+--- runtime crash output attached pid=12252 at 2026-08-12T18:58:49.9557238+08:00 ---
+
+--- runtime crash output attached pid=34956 at 2026-08-12T18:59:15.8453058+08:00 ---
+
+--- runtime crash output attached pid=45788 at 2026-08-12T19:00:02.7139892+08:00 ---
+
+--- runtime crash output attached pid=45316 at 2026-08-12T19:00:40.9143561+08:00 ---
+
+--- runtime crash output attached pid=35500 at 2026-08-12T19:01:53.6700576+08:00 ---
+
+--- runtime crash output attached pid=44964 at 2026-08-12T19:01:55.503762+08:00 ---
+
+--- runtime crash output attached pid=27492 at 2026-08-12T19:02:15.7395948+08:00 ---
+
+--- runtime crash output attached pid=3812 at 2026-08-12T19:03:55.0680868+08:00 ---
+
+--- runtime crash output attached pid=47168 at 2026-08-12T19:04:02.0556904+08:00 ---
+
+--- runtime crash output attached pid=17428 at 2026-08-12T19:05:14.6640379+08:00 ---
+
+--- runtime crash output attached pid=46392 at 2026-08-12T19:05:25.0451702+08:00 ---
+
+--- runtime crash output attached pid=39964 at 2026-08-12T19:06:59.0165214+08:00 ---
+
+--- runtime crash output attached pid=47304 at 2026-08-12T19:08:01.8185144+08:00 ---
+
+--- runtime crash output attached pid=10124 at 2026-08-12T19:08:19.102372+08:00 ---
+
+--- runtime crash output attached pid=42708 at 2026-08-12T19:08:20.4482559+08:00 ---
+
+--- runtime crash output attached pid=47948 at 2026-08-12T19:10:00.1723394+08:00 ---
+
+--- runtime crash output attached pid=42980 at 2026-08-12T19:10:18.2677545+08:00 ---
+
+--- runtime crash output attached pid=40536 at 2026-08-12T19:11:11.8009265+08:00 ---
+
+--- runtime crash output attached pid=3016 at 2026-08-12T19:12:47.2370917+08:00 ---
+
+--- runtime crash output attached pid=47944 at 2026-08-12T19:12:55.0075912+08:00 ---
+
+--- runtime crash output attached pid=22588 at 2026-08-12T19:13:17.6660614+08:00 ---
+
+--- runtime crash output attached pid=24004 at 2026-08-12T19:14:57.6128658+08:00 ---
+
+--- runtime crash output attached pid=28276 at 2026-08-12T19:15:22.280875+08:00 ---
+
+--- runtime crash output attached pid=43960 at 2026-08-12T19:15:56.9725945+08:00 ---
+
+--- runtime crash output attached pid=8560 at 2026-08-12T19:16:24.5309734+08:00 ---
+
+--- runtime crash output attached pid=19584 at 2026-08-12T19:18:04.8519156+08:00 ---
+
+--- runtime crash output attached pid=35312 at 2026-08-12T19:18:23.1706476+08:00 ---
+
+--- runtime crash output attached pid=19064 at 2026-08-12T19:18:26.4572719+08:00 ---
+
+--- runtime crash output attached pid=43324 at 2026-08-12T19:20:10.3907866+08:00 ---
+
+--- runtime crash output attached pid=44736 at 2026-08-12T19:20:24.0357976+08:00 ---
+
+--- runtime crash output attached pid=36592 at 2026-08-12T19:21:17.3491271+08:00 ---
+
+--- runtime crash output attached pid=19844 at 2026-08-12T19:22:27.1772471+08:00 ---
+
+--- runtime crash output attached pid=43756 at 2026-08-12T19:23:00.5899608+08:00 ---
+
+--- runtime crash output attached pid=44036 at 2026-08-12T19:23:23.4110051+08:00 ---
+
+--- runtime crash output attached pid=27600 at 2026-08-12T19:23:34.452896+08:00 ---
+
+--- runtime crash output attached pid=48320 at 2026-08-12T19:25:21.2950515+08:00 ---
+
+--- runtime crash output attached pid=31788 at 2026-08-12T19:25:26.2838696+08:00 ---
+
+--- runtime crash output attached pid=35004 at 2026-08-12T19:25:37.9566851+08:00 ---
+
+--- runtime crash output attached pid=11892 at 2026-08-12T19:26:29.2319108+08:00 ---
+
+--- runtime crash output attached pid=24852 at 2026-08-12T19:26:31.5670327+08:00 ---
+
+--- runtime crash output attached pid=7828 at 2026-08-12T19:26:49.5967971+08:00 ---
+
+--- runtime crash output attached pid=8716 at 2026-08-12T19:26:54.6520524+08:00 ---
+
+--- runtime crash output attached pid=37868 at 2026-08-12T19:27:05.7382622+08:00 ---
+
+--- runtime crash output attached pid=11532 at 2026-08-12T19:27:06.1263961+08:00 ---
+
+--- runtime crash output attached pid=41004 at 2026-08-12T19:27:11.8190216+08:00 ---
+
+--- runtime crash output attached pid=34944 at 2026-08-12T19:27:34.3252841+08:00 ---
+
+--- runtime crash output attached pid=19748 at 2026-08-12T19:27:51.4298763+08:00 ---
+
+--- runtime crash output attached pid=32208 at 2026-08-12T19:27:52.6447407+08:00 ---
+
+--- runtime crash output attached pid=17552 at 2026-08-12T19:29:09.5931317+08:00 ---
+
+--- runtime crash output attached pid=1180 at 2026-08-12T19:30:18.3882886+08:00 ---
+
+--- runtime crash output attached pid=15524 at 2026-08-12T19:30:55.7653657+08:00 ---
+
+--- runtime crash output attached pid=8992 at 2026-08-12T19:31:58.5841896+08:00 ---
+
+--- runtime crash output attached pid=39988 at 2026-08-12T19:32:15.9701266+08:00 ---
+
+--- runtime crash output attached pid=40500 at 2026-08-12T19:32:44.9581286+08:00 ---
+
+--- runtime crash output attached pid=40196 at 2026-08-12T19:33:48.7926643+08:00 ---
+
+--- runtime crash output attached pid=2196 at 2026-08-12T19:34:51.4516621+08:00 ---
+
+--- runtime crash output attached pid=6376 at 2026-08-12T19:34:56.3825214+08:00 ---
+
+--- runtime crash output attached pid=15248 at 2026-08-12T19:36:29.2645915+08:00 ---
+
+--- runtime crash output attached pid=31760 at 2026-08-12T19:37:04.5686709+08:00 ---
+
+--- runtime crash output attached pid=26748 at 2026-08-12T19:37:26.5824282+08:00 ---
+
+--- runtime crash output attached pid=13116 at 2026-08-12T19:37:33.4439409+08:00 ---
+
+--- runtime crash output attached pid=24924 at 2026-08-12T19:38:48.8658473+08:00 ---
+
+--- runtime crash output attached pid=3768 at 2026-08-12T19:38:51.0313798+08:00 ---
+
+--- runtime crash output attached pid=46404 at 2026-08-12T19:40:03.1182148+08:00 ---
+
+--- runtime crash output attached pid=35272 at 2026-08-12T19:40:37.1009084+08:00 ---
+
+--- runtime crash output attached pid=40816 at 2026-08-12T19:41:01.0180238+08:00 ---
+
+--- runtime crash output attached pid=39544 at 2026-08-12T19:41:09.2330528+08:00 ---
+
+--- runtime crash output attached pid=46132 at 2026-08-12T19:42:07.605172+08:00 ---
+
+--- runtime crash output attached pid=34972 at 2026-08-12T19:42:52.7229318+08:00 ---
+
+--- runtime crash output attached pid=44424 at 2026-08-12T19:43:20.3858853+08:00 ---
+
+--- runtime crash output attached pid=26420 at 2026-08-12T19:43:24.0991956+08:00 ---
+
+--- runtime crash output attached pid=25500 at 2026-08-12T19:43:50.1625516+08:00 ---
+
+--- runtime crash output attached pid=47688 at 2026-08-12T19:45:29.0964304+08:00 ---
+
+--- runtime crash output attached pid=2552 at 2026-08-12T19:46:02.745421+08:00 ---
+
+--- runtime crash output attached pid=41308 at 2026-08-12T19:47:29.4055417+08:00 ---
+
+--- runtime crash output attached pid=43684 at 2026-08-12T19:48:33.636559+08:00 ---
+
+--- runtime crash output attached pid=17992 at 2026-08-12T19:48:45.4065697+08:00 ---
+
+--- runtime crash output attached pid=12940 at 2026-08-12T19:49:54.6244632+08:00 ---
+
+--- runtime crash output attached pid=5804 at 2026-08-12T19:51:17.9183938+08:00 ---
+
+--- runtime crash output attached pid=18924 at 2026-08-12T19:51:59.0125155+08:00 ---
+
+--- runtime crash output attached pid=37408 at 2026-08-12T19:52:09.682034+08:00 ---
+
+--- runtime crash output attached pid=45968 at 2026-08-12T19:54:05.3457679+08:00 ---
+
+--- runtime crash output attached pid=31456 at 2026-08-12T19:55:05.1624222+08:00 ---
+
+--- runtime crash output attached pid=28324 at 2026-08-12T19:56:00.9066324+08:00 ---
+
+--- runtime crash output attached pid=8728 at 2026-08-12T19:56:17.1851394+08:00 ---
+
+--- runtime crash output attached pid=47452 at 2026-08-12T19:58:09.8256033+08:00 ---
+
+--- runtime crash output attached pid=38156 at 2026-08-12T19:58:16.0360674+08:00 ---
+
+--- runtime crash output attached pid=15328 at 2026-08-12T19:58:22.148449+08:00 ---
+
+--- runtime crash output attached pid=12468 at 2026-08-12T19:59:23.8938033+08:00 ---
+
+--- runtime crash output attached pid=8404 at 2026-08-12T20:00:07.6241931+08:00 ---
+
+--- runtime crash output attached pid=35164 at 2026-08-12T20:00:12.529587+08:00 ---
+
+--- runtime crash output attached pid=14640 at 2026-08-12T20:01:28.5703414+08:00 ---
+
+--- runtime crash output attached pid=11860 at 2026-08-12T20:02:07.1844269+08:00 ---
+
+--- runtime crash output attached pid=30996 at 2026-08-12T20:02:28.9769674+08:00 ---
+
+--- runtime crash output attached pid=9968 at 2026-08-12T20:04:17.9684949+08:00 ---
+
+--- runtime crash output attached pid=43212 at 2026-08-12T20:04:23.3720502+08:00 ---
+
+--- runtime crash output attached pid=48412 at 2026-08-12T20:04:40.2716204+08:00 ---
+
+--- runtime crash output attached pid=31444 at 2026-08-12T20:05:05.4227827+08:00 ---
+
+--- runtime crash output attached pid=48588 at 2026-08-12T20:06:56.6533684+08:00 ---
+
+--- runtime crash output attached pid=15384 at 2026-08-12T20:07:06.0575947+08:00 ---
+
+--- runtime crash output attached pid=36064 at 2026-08-12T20:07:13.8506209+08:00 ---
+
+--- runtime crash output attached pid=9192 at 2026-08-12T20:09:05.8580548+08:00 ---
+
+--- runtime crash output attached pid=14380 at 2026-08-12T20:09:16.51076+08:00 ---
+
+--- runtime crash output attached pid=44180 at 2026-08-12T20:12:12.3102643+08:00 ---
+
+--- runtime crash output attached pid=37756 at 2026-08-12T20:17:35.6029242+08:00 ---
+
+--- runtime crash output attached pid=42280 at 2026-08-13T08:57:13.3117203+08:00 ---
+
+--- runtime crash output attached pid=26712 at 2026-08-13T08:58:57.0470498+08:00 ---
+
+--- runtime crash output attached pid=34732 at 2026-08-13T08:59:21.0504691+08:00 ---
+
+--- runtime crash output attached pid=11940 at 2026-08-13T08:59:59.1101597+08:00 ---
+
+--- runtime crash output attached pid=24176 at 2026-08-13T08:59:59.205317+08:00 ---
+
+--- runtime crash output attached pid=48716 at 2026-08-13T08:59:59.205317+08:00 ---
+
+--- runtime crash output attached pid=47832 at 2026-08-13T08:59:59.205317+08:00 ---
+
+--- runtime crash output attached pid=19544 at 2026-08-13T08:59:59.7173996+08:00 ---
+
+--- runtime crash output attached pid=19144 at 2026-08-13T08:59:59.8281332+08:00 ---
+
+--- runtime crash output attached pid=32648 at 2026-08-13T08:59:59.9121187+08:00 ---
+
+--- runtime crash output attached pid=41876 at 2026-08-13T08:59:59.9121187+08:00 ---
+
+--- runtime crash output attached pid=38396 at 2026-08-13T09:02:46.6912931+08:00 ---
+
+--- runtime crash output attached pid=32060 at 2026-08-13T09:02:47.2074483+08:00 ---
+
+--- runtime crash output attached pid=12356 at 2026-08-13T09:03:13.8135278+08:00 ---
+
+--- runtime crash output attached pid=43504 at 2026-08-13T09:03:48.1765596+08:00 ---
+
+--- runtime crash output attached pid=39204 at 2026-08-13T09:06:02.2839306+08:00 ---
+
+--- runtime crash output attached pid=41356 at 2026-08-13T09:06:02.7961589+08:00 ---
+
+--- runtime crash output attached pid=5632 at 2026-08-13T09:07:57.7987097+08:00 ---
+
+--- runtime crash output attached pid=5248 at 2026-08-13T09:08:24.1656634+08:00 ---
+
+--- runtime crash output attached pid=20200 at 2026-08-13T09:08:40.6996608+08:00 ---
+
+--- runtime crash output attached pid=34440 at 2026-08-13T09:08:53.3414096+08:00 ---
+
+--- runtime crash output attached pid=18040 at 2026-08-13T09:10:54.0281412+08:00 ---
+
+--- runtime crash output attached pid=12276 at 2026-08-13T09:10:54.5396146+08:00 ---
+
+--- runtime crash output attached pid=44292 at 2026-08-13T09:11:12.8685022+08:00 ---
+
+--- runtime crash output attached pid=12928 at 2026-08-13T09:12:24.0637108+08:00 ---
+
+--- runtime crash output attached pid=27572 at 2026-08-13T09:12:24.5656769+08:00 ---
+
+--- runtime crash output attached pid=19388 at 2026-08-13T09:13:06.9087706+08:00 ---
+
+--- runtime crash output attached pid=47228 at 2026-08-13T09:14:20.1549522+08:00 ---
+
+--- runtime crash output attached pid=35244 at 2026-08-13T09:14:27.0029089+08:00 ---
+
+--- runtime crash output attached pid=43224 at 2026-08-13T09:15:13.1188929+08:00 ---
+
+--- runtime crash output attached pid=19584 at 2026-08-13T09:16:31.0947428+08:00 ---
+
+--- runtime crash output attached pid=12280 at 2026-08-13T09:16:31.664775+08:00 ---
+
+--- runtime crash output attached pid=41936 at 2026-08-13T09:19:15.1980144+08:00 ---
+
+--- runtime crash output attached pid=14752 at 2026-08-13T09:19:15.7751003+08:00 ---
+
+--- runtime crash output attached pid=5180 at 2026-08-13T09:19:24.9926615+08:00 ---
+
+--- runtime crash output attached pid=7768 at 2026-08-13T09:20:16.4901893+08:00 ---
+
+--- runtime crash output attached pid=44040 at 2026-08-13T09:21:26.7453986+08:00 ---
+
+--- runtime crash output attached pid=16476 at 2026-08-13T09:23:33.2567455+08:00 ---
+
+--- runtime crash output attached pid=43468 at 2026-08-13T09:23:33.8462827+08:00 ---
+
+--- runtime crash output attached pid=16616 at 2026-08-13T09:24:36.7671551+08:00 ---
+
+--- runtime crash output attached pid=41468 at 2026-08-13T09:24:37.3385126+08:00 ---
+
+--- runtime crash output attached pid=41312 at 2026-08-13T09:25:52.0650509+08:00 ---
+
+--- runtime crash output attached pid=28232 at 2026-08-13T09:26:09.4194552+08:00 ---
+
+--- runtime crash output attached pid=13860 at 2026-08-13T09:26:11.7325141+08:00 ---
+
+--- runtime crash output attached pid=47888 at 2026-08-13T09:27:48.266983+08:00 ---
+
+--- runtime crash output attached pid=14972 at 2026-08-13T09:28:23.9235169+08:00 ---
+
+--- runtime crash output attached pid=37088 at 2026-08-13T09:29:45.0464157+08:00 ---
+
+--- runtime crash output attached pid=37608 at 2026-08-13T09:29:45.7261893+08:00 ---
+
+--- runtime crash output attached pid=44468 at 2026-08-13T09:30:19.2960979+08:00 ---
+
+--- runtime crash output attached pid=4392 at 2026-08-13T09:30:49.5052876+08:00 ---
+
+--- runtime crash output attached pid=42552 at 2026-08-13T09:32:19.4898692+08:00 ---
+
+--- runtime crash output attached pid=40244 at 2026-08-13T09:32:57.3642644+08:00 ---
+
+--- runtime crash output attached pid=13696 at 2026-08-13T09:33:49.7846828+08:00 ---
+
+--- runtime crash output attached pid=27528 at 2026-08-13T09:34:22.7761705+08:00 ---
+
+--- runtime crash output attached pid=48956 at 2026-08-13T09:35:19.5657471+08:00 ---
+
+--- runtime crash output attached pid=32352 at 2026-08-13T09:35:20.1543757+08:00 ---
+
+--- runtime crash output attached pid=16580 at 2026-08-13T09:35:50.7753105+08:00 ---
+
+--- runtime crash output attached pid=25788 at 2026-08-13T09:38:18.2354343+08:00 ---
+
+--- runtime crash output attached pid=32592 at 2026-08-13T09:38:25.7524083+08:00 ---
+
+--- runtime crash output attached pid=18472 at 2026-08-13T09:39:23.6794173+08:00 ---
+
+--- runtime crash output attached pid=40644 at 2026-08-13T09:39:39.2358801+08:00 ---
+
+--- runtime crash output attached pid=11892 at 2026-08-13T09:41:53.5366717+08:00 ---
+
+--- runtime crash output attached pid=19816 at 2026-08-13T09:42:04.9026609+08:00 ---
+
+--- runtime crash output attached pid=20248 at 2026-08-13T09:43:02.3970764+08:00 ---
+
+--- runtime crash output attached pid=37416 at 2026-08-13T09:43:03.0237611+08:00 ---
+
+--- runtime crash output attached pid=36476 at 2026-08-13T09:44:00.1173831+08:00 ---
+
+--- runtime crash output attached pid=15384 at 2026-08-13T09:45:07.3304736+08:00 ---
+
+--- runtime crash output attached pid=40864 at 2026-08-13T09:45:07.9741558+08:00 ---
+
+--- runtime crash output attached pid=7344 at 2026-08-13T09:47:10.5766766+08:00 ---
+
+--- runtime crash output attached pid=3476 at 2026-08-13T09:47:11.2826516+08:00 ---
+
+--- runtime crash output attached pid=47204 at 2026-08-13T09:47:48.6821461+08:00 ---
+
+--- runtime crash output attached pid=37216 at 2026-08-13T09:49:20.5597796+08:00 ---
+
+--- runtime crash output attached pid=19272 at 2026-08-13T09:49:21.1286178+08:00 ---
+
+--- runtime crash output attached pid=40744 at 2026-08-13T09:49:59.3927595+08:00 ---
+
+--- runtime crash output attached pid=6608 at 2026-08-13T09:50:01.5490535+08:00 ---
+
+--- runtime crash output attached pid=14844 at 2026-08-13T09:51:51.1821215+08:00 ---
+
+--- runtime crash output attached pid=17856 at 2026-08-13T09:52:13.532545+08:00 ---
+
+--- runtime crash output attached pid=44708 at 2026-08-13T09:52:21.3310349+08:00 ---
+
+--- runtime crash output attached pid=34644 at 2026-08-13T09:54:20.7056226+08:00 ---
+
+--- runtime crash output attached pid=23360 at 2026-08-13T09:54:34.4090325+08:00 ---
+
+--- runtime crash output attached pid=11508 at 2026-08-13T09:55:35.4538739+08:00 ---
+
+--- runtime crash output attached pid=36356 at 2026-08-13T09:55:36.0017652+08:00 ---
+
+--- runtime crash output attached pid=22708 at 2026-08-13T09:55:44.3964051+08:00 ---
+
+--- runtime crash output attached pid=34620 at 2026-08-13T09:58:20.3662376+08:00 ---
+
+--- runtime crash output attached pid=13900 at 2026-08-13T09:58:48.2276967+08:00 ---
+
+--- runtime crash output attached pid=32332 at 2026-08-13T09:58:58.1132825+08:00 ---
+
+--- runtime crash output attached pid=48680 at 2026-08-13T09:59:07.313274+08:00 ---
+
+--- runtime crash output attached pid=11584 at 2026-08-13T10:01:34.2900885+08:00 ---
+
+--- runtime crash output attached pid=37516 at 2026-08-13T10:02:01.2394235+08:00 ---
+
+--- runtime crash output attached pid=36504 at 2026-08-13T10:02:15.9999747+08:00 ---
+
+--- runtime crash output attached pid=38860 at 2026-08-13T10:02:16.6640797+08:00 ---
+
+--- runtime crash output attached pid=26592 at 2026-08-13T10:03:24.2043819+08:00 ---
+
+--- runtime crash output attached pid=3852 at 2026-08-13T10:04:36.7658714+08:00 ---
+
+--- runtime crash output attached pid=40180 at 2026-08-13T10:05:34.0206896+08:00 ---
+
+--- runtime crash output attached pid=15008 at 2026-08-13T10:05:35.6912533+08:00 ---
+
+--- runtime crash output attached pid=46948 at 2026-08-13T10:06:10.9855821+08:00 ---
+
+--- runtime crash output attached pid=18028 at 2026-08-13T10:06:28.040362+08:00 ---
+
+--- runtime crash output attached pid=39380 at 2026-08-13T10:08:19.9740564+08:00 ---
+
+--- runtime crash output attached pid=12224 at 2026-08-13T10:08:34.623088+08:00 ---
+
+--- runtime crash output attached pid=36016 at 2026-08-13T10:09:26.3031282+08:00 ---
+
+--- runtime crash output attached pid=3180 at 2026-08-13T10:09:26.8981796+08:00 ---
+
+--- runtime crash output attached pid=39516 at 2026-08-13T10:09:59.6973867+08:00 ---
+
+--- runtime crash output attached pid=2680 at 2026-08-13T10:11:00.1728118+08:00 ---
+
+--- runtime crash output attached pid=12716 at 2026-08-13T10:11:56.9377291+08:00 ---
+
+--- runtime crash output attached pid=13100 at 2026-08-13T10:12:42.612438+08:00 ---
+
+--- runtime crash output attached pid=46880 at 2026-08-13T10:14:21.7791994+08:00 ---
+
+--- runtime crash output attached pid=33060 at 2026-08-13T10:14:39.1484924+08:00 ---
+
+--- runtime crash output attached pid=36852 at 2026-08-13T10:14:40.1075816+08:00 ---
+
+--- runtime crash output attached pid=8308 at 2026-08-13T10:15:09.3779891+08:00 ---
+
+--- runtime crash output attached pid=41680 at 2026-08-13T10:15:11.4925586+08:00 ---
+
+--- runtime crash output attached pid=43384 at 2026-08-13T10:15:20.4910822+08:00 ---
+
+--- runtime crash output attached pid=46732 at 2026-08-13T10:16:42.0369749+08:00 ---
+
+--- runtime crash output attached pid=20200 at 2026-08-13T10:16:54.5591722+08:00 ---
+
+--- runtime crash output attached pid=20512 at 2026-08-13T10:16:59.0992849+08:00 ---
+
+--- runtime crash output attached pid=31848 at 2026-08-13T10:16:59.2972456+08:00 ---
+
+--- runtime crash output attached pid=37472 at 2026-08-13T10:16:59.5122196+08:00 ---
+
+--- runtime crash output attached pid=43396 at 2026-08-13T10:16:59.6773545+08:00 ---
+
+--- runtime crash output attached pid=3040 at 2026-08-13T10:18:50.6936811+08:00 ---
+
+--- runtime crash output attached pid=47888 at 2026-08-13T10:18:50.8960017+08:00 ---
+
+--- runtime crash output attached pid=37096 at 2026-08-13T10:18:51.1152292+08:00 ---
+
+--- runtime crash output attached pid=40944 at 2026-08-13T10:18:51.3368726+08:00 ---
+
+--- runtime crash output attached pid=36844 at 2026-08-13T10:20:14.3514149+08:00 ---
+
+--- runtime crash output attached pid=35616 at 2026-08-13T10:20:15.118796+08:00 ---
+
+--- runtime crash output attached pid=47596 at 2026-08-13T10:21:00.8814753+08:00 ---
+
+--- runtime crash output attached pid=30572 at 2026-08-13T10:21:08.934523+08:00 ---
+
+--- runtime crash output attached pid=45648 at 2026-08-13T10:21:33.0361746+08:00 ---
+
+--- runtime crash output attached pid=41512 at 2026-08-13T10:22:21.5045618+08:00 ---
+
+--- runtime crash output attached pid=26424 at 2026-08-13T10:22:27.8183521+08:00 ---
+
+--- runtime crash output attached pid=14784 at 2026-08-13T10:22:52.3234733+08:00 ---
+
+--- runtime crash output attached pid=4580 at 2026-08-13T10:22:55.2575024+08:00 ---
+
+--- runtime crash output attached pid=28296 at 2026-08-13T10:23:59.873195+08:00 ---
+
+--- runtime crash output attached pid=40500 at 2026-08-13T10:24:09.5921828+08:00 ---
+
+--- runtime crash output attached pid=47816 at 2026-08-13T10:24:21.4798879+08:00 ---
+
+--- runtime crash output attached pid=36424 at 2026-08-13T10:24:22.0881461+08:00 ---
+
+--- runtime crash output attached pid=6500 at 2026-08-13T10:24:29.0941025+08:00 ---
+
+--- runtime crash output attached pid=26860 at 2026-08-13T10:25:30.0844153+08:00 ---
+
+--- runtime crash output attached pid=32664 at 2026-08-13T10:25:35.0428132+08:00 ---
+
+--- runtime crash output attached pid=28628 at 2026-08-13T10:25:41.7512446+08:00 ---
+
+--- runtime crash output attached pid=41320 at 2026-08-13T10:27:13.187869+08:00 ---
+
+--- runtime crash output attached pid=33232 at 2026-08-13T10:27:33.8603174+08:00 ---
+
+--- runtime crash output attached pid=19404 at 2026-08-13T10:27:52.2707444+08:00 ---
+
+--- runtime crash output attached pid=41468 at 2026-08-13T10:28:15.7257032+08:00 ---
+
+--- runtime crash output attached pid=28568 at 2026-08-13T10:28:28.3838966+08:00 ---
+
+--- runtime crash output attached pid=46548 at 2026-08-13T10:28:29.0196677+08:00 ---
+
+--- runtime crash output attached pid=1712 at 2026-08-13T10:29:15.6662009+08:00 ---
+
+--- runtime crash output attached pid=15396 at 2026-08-13T10:29:32.3811409+08:00 ---
+
+--- runtime crash output attached pid=15032 at 2026-08-13T10:30:05.6316309+08:00 ---
+
+--- runtime crash output attached pid=47864 at 2026-08-13T10:30:25.0480206+08:00 ---
+
+--- runtime crash output attached pid=46584 at 2026-08-13T10:30:30.3302562+08:00 ---
+
+--- runtime crash output attached pid=41564 at 2026-08-13T10:31:25.7130963+08:00 ---
+
+--- runtime crash output attached pid=37456 at 2026-08-13T10:31:58.426265+08:00 ---
+
+--- runtime crash output attached pid=19284 at 2026-08-13T10:32:08.6434016+08:00 ---
+
+--- runtime crash output attached pid=22148 at 2026-08-13T10:32:47.1598083+08:00 ---
+
+--- runtime crash output attached pid=35072 at 2026-08-13T10:32:49.0479826+08:00 ---
+
+--- runtime crash output attached pid=44040 at 2026-08-13T10:33:20.948165+08:00 ---
+
+--- runtime crash output attached pid=16312 at 2026-08-13T10:33:21.4931604+08:00 ---
+
+--- runtime crash output attached pid=14844 at 2026-08-13T10:33:53.8907955+08:00 ---
+
+--- runtime crash output attached pid=31848 at 2026-08-13T10:34:22.8743946+08:00 ---
+
+--- runtime crash output attached pid=41540 at 2026-08-13T10:34:28.5772919+08:00 ---
+
+--- runtime crash output attached pid=21144 at 2026-08-13T10:34:57.7955612+08:00 ---
+
+--- runtime crash output attached pid=48820 at 2026-08-13T10:35:34.3636553+08:00 ---
+
+--- runtime crash output attached pid=20504 at 2026-08-13T10:35:41.722471+08:00 ---
+
+--- runtime crash output attached pid=35036 at 2026-08-13T10:37:04.4922755+08:00 ---
+
+--- runtime crash output attached pid=33988 at 2026-08-13T10:37:10.0447464+08:00 ---
+
+--- runtime crash output attached pid=43884 at 2026-08-13T10:38:00.0702881+08:00 ---
+
+--- runtime crash output attached pid=35544 at 2026-08-13T10:38:00.5940571+08:00 ---
+
+--- runtime crash output attached pid=24340 at 2026-08-13T10:38:17.9936525+08:00 ---
+
+--- runtime crash output attached pid=4900 at 2026-08-13T10:38:36.7242462+08:00 ---
+
+--- runtime crash output attached pid=19284 at 2026-08-13T10:39:17.1590707+08:00 ---
+
+--- runtime crash output attached pid=35788 at 2026-08-13T10:39:22.7070545+08:00 ---
+
+--- runtime crash output attached pid=44968 at 2026-08-13T10:39:23.9070977+08:00 ---
+
+--- runtime crash output attached pid=44508 at 2026-08-13T10:40:39.9914571+08:00 ---
+
+--- runtime crash output attached pid=15432 at 2026-08-13T10:41:23.2580148+08:00 ---
+
+--- runtime crash output attached pid=31980 at 2026-08-13T10:41:38.7704609+08:00 ---
+
+--- runtime crash output attached pid=34616 at 2026-08-13T10:42:21.7919708+08:00 ---
+
+--- runtime crash output attached pid=32216 at 2026-08-13T10:42:22.3134872+08:00 ---
+
+--- runtime crash output attached pid=44196 at 2026-08-13T10:42:45.993382+08:00 ---
+
+--- runtime crash output attached pid=19144 at 2026-08-13T10:42:46.3663451+08:00 ---
+
+--- runtime crash output attached pid=34956 at 2026-08-13T10:43:18.7040276+08:00 ---
+
+--- runtime crash output attached pid=43596 at 2026-08-13T10:43:59.4555934+08:00 ---
+
+--- runtime crash output attached pid=3324 at 2026-08-13T10:44:20.4849493+08:00 ---
+
+--- runtime crash output attached pid=45876 at 2026-08-13T10:44:32.7300089+08:00 ---
+
+--- runtime crash output attached pid=30968 at 2026-08-13T10:45:11.7547729+08:00 ---
+
+--- runtime crash output attached pid=8936 at 2026-08-13T10:45:33.6568226+08:00 ---
+
+--- runtime crash output attached pid=31752 at 2026-08-13T10:45:35.4049644+08:00 ---
+
+--- runtime crash output attached pid=27936 at 2026-08-13T10:46:19.8223462+08:00 ---
+
+--- runtime crash output attached pid=36732 at 2026-08-13T10:46:20.4219884+08:00 ---
+
+--- runtime crash output attached pid=9068 at 2026-08-13T10:47:03.3830477+08:00 ---
+
+--- runtime crash output attached pid=30620 at 2026-08-13T10:47:34.7162594+08:00 ---
+
+--- runtime crash output attached pid=37228 at 2026-08-13T10:47:45.2701544+08:00 ---
+
+--- runtime crash output attached pid=30368 at 2026-08-13T10:49:06.5783759+08:00 ---
+
+--- runtime crash output attached pid=19824 at 2026-08-13T10:49:25.3602861+08:00 ---
+
+--- runtime crash output attached pid=25912 at 2026-08-13T10:49:38.5977958+08:00 ---
+
+--- runtime crash output attached pid=23828 at 2026-08-13T10:50:31.544881+08:00 ---
+
+--- runtime crash output attached pid=4164 at 2026-08-13T10:50:42.5238501+08:00 ---
+
+--- runtime crash output attached pid=18572 at 2026-08-13T10:50:55.0836096+08:00 ---
+
+--- runtime crash output attached pid=28384 at 2026-08-13T10:51:34.9841545+08:00 ---
+
+--- runtime crash output attached pid=49028 at 2026-08-13T10:52:03.430171+08:00 ---
+
+--- runtime crash output attached pid=8664 at 2026-08-13T10:52:04.8235519+08:00 ---
+
+--- runtime crash output attached pid=44968 at 2026-08-13T10:53:11.7277552+08:00 ---
+
+--- runtime crash output attached pid=48092 at 2026-08-13T10:53:24.727582+08:00 ---
+
+--- runtime crash output attached pid=4676 at 2026-08-13T10:53:25.3676851+08:00 ---
+
+--- runtime crash output attached pid=33436 at 2026-08-13T10:53:42.0425241+08:00 ---
+
+--- runtime crash output attached pid=19056 at 2026-08-13T10:54:44.8142324+08:00 ---
+
+--- runtime crash output attached pid=49100 at 2026-08-13T10:55:00.1878446+08:00 ---
+
+--- runtime crash output attached pid=28912 at 2026-08-13T10:55:00.7012861+08:00 ---
+
+--- runtime crash output attached pid=15444 at 2026-08-13T10:55:01.7387968+08:00 ---
+
+--- runtime crash output attached pid=6852 at 2026-08-13T10:56:07.9538836+08:00 ---
+
+--- runtime crash output attached pid=38956 at 2026-08-13T10:56:15.6519317+08:00 ---
+
+--- runtime crash output attached pid=14516 at 2026-08-13T10:56:27.2799015+08:00 ---
+
+--- runtime crash output attached pid=34428 at 2026-08-13T10:57:23.1622711+08:00 ---
+
+--- runtime crash output attached pid=15288 at 2026-08-13T10:57:26.187475+08:00 ---
+
+--- runtime crash output attached pid=30604 at 2026-08-13T10:57:59.8750246+08:00 ---
+
+--- runtime crash output attached pid=9400 at 2026-08-13T10:58:00.3934353+08:00 ---
+
+--- runtime crash output attached pid=16808 at 2026-08-13T10:58:54.2838147+08:00 ---
+
+--- runtime crash output attached pid=17952 at 2026-08-13T11:00:21.212257+08:00 ---
+
+--- runtime crash output attached pid=19440 at 2026-08-13T11:00:44.0492881+08:00 ---
+
+--- runtime crash output attached pid=16112 at 2026-08-13T11:01:37.9071172+08:00 ---
+
+--- runtime crash output attached pid=41444 at 2026-08-13T11:03:12.6964064+08:00 ---
+
+--- runtime crash output attached pid=3324 at 2026-08-13T11:03:12.7005796+08:00 ---
+
+--- runtime crash output attached pid=18536 at 2026-08-13T11:03:50.8213654+08:00 ---
+
+--- runtime crash output attached pid=26164 at 2026-08-13T11:03:51.3985122+08:00 ---
+
+--- runtime crash output attached pid=42040 at 2026-08-13T11:05:56.8619441+08:00 ---
+
+--- runtime crash output attached pid=30548 at 2026-08-13T11:06:16.2641076+08:00 ---
+
+--- runtime crash output attached pid=34604 at 2026-08-13T11:07:03.5046287+08:00 ---
+
+--- runtime crash output attached pid=39592 at 2026-08-13T11:07:18.2809524+08:00 ---
+
+--- runtime crash output attached pid=35836 at 2026-08-13T11:08:56.1280623+08:00 ---
+
+--- runtime crash output attached pid=45324 at 2026-08-13T11:09:47.3672564+08:00 ---
+
+--- runtime crash output attached pid=41896 at 2026-08-13T11:09:56.4539754+08:00 ---
+
+--- runtime crash output attached pid=47860 at 2026-08-13T11:11:38.0997908+08:00 ---
+
+--- runtime crash output attached pid=34668 at 2026-08-13T11:11:38.721144+08:00 ---
+
+--- runtime crash output attached pid=19124 at 2026-08-13T11:12:00.2671081+08:00 ---
+
+--- runtime crash output attached pid=31336 at 2026-08-13T11:12:39.9781171+08:00 ---
+
+--- runtime crash output attached pid=4700 at 2026-08-13T11:12:46.9605669+08:00 ---
+
+--- runtime crash output attached pid=46044 at 2026-08-13T11:13:59.5225125+08:00 ---
+
+--- runtime crash output attached pid=44264 at 2026-08-13T11:14:04.4715866+08:00 ---
+
+--- runtime crash output attached pid=22168 at 2026-08-13T11:16:00.4299739+08:00 ---
+
+--- runtime crash output attached pid=7848 at 2026-08-13T11:16:00.9605414+08:00 ---
+
+--- runtime crash output attached pid=46384 at 2026-08-13T11:16:44.5035564+08:00 ---
+
+--- runtime crash output attached pid=45580 at 2026-08-13T11:16:58.8908003+08:00 ---
+
+--- runtime crash output attached pid=37944 at 2026-08-13T11:17:28.3426235+08:00 ---
+
+--- runtime crash output attached pid=47868 at 2026-08-13T11:18:36.7739288+08:00 ---
+
+--- runtime crash output attached pid=2828 at 2026-08-13T11:19:49.5996004+08:00 ---
+
+--- runtime crash output attached pid=40768 at 2026-08-13T11:19:53.6106595+08:00 ---
+
+--- runtime crash output attached pid=17808 at 2026-08-13T11:22:13.6589898+08:00 ---
+
+--- runtime crash output attached pid=36876 at 2026-08-13T11:22:14.2904658+08:00 ---
+
+--- runtime crash output attached pid=32204 at 2026-08-13T11:22:35.2554825+08:00 ---
+
+--- runtime crash output attached pid=41144 at 2026-08-13T11:22:57.1701121+08:00 ---
+
+--- runtime crash output attached pid=6524 at 2026-08-13T11:23:18.0022554+08:00 ---
+
+--- runtime crash output attached pid=47448 at 2026-08-13T11:24:02.5819451+08:00 ---
+
+--- runtime crash output attached pid=26860 at 2026-08-13T11:25:03.0769894+08:00 ---
+
+--- runtime crash output attached pid=30892 at 2026-08-13T11:26:01.645972+08:00 ---
+
+--- runtime crash output attached pid=36840 at 2026-08-13T11:26:02.1902991+08:00 ---
+
+--- runtime crash output attached pid=15272 at 2026-08-13T11:27:10.6332317+08:00 ---
+
+--- runtime crash output attached pid=46428 at 2026-08-13T11:27:55.5655261+08:00 ---
+
+--- runtime crash output attached pid=2800 at 2026-08-13T11:29:29.4255675+08:00 ---
+
+--- runtime crash output attached pid=38776 at 2026-08-13T11:30:06.796965+08:00 ---
+
+--- runtime crash output attached pid=37808 at 2026-08-13T11:30:49.7155897+08:00 ---
+
+--- runtime crash output attached pid=26728 at 2026-08-13T11:31:27.0487065+08:00 ---
+
+runtime stack:
+runtime.throw({0x7ff7654b4f60?, 0xfffffffffffff800?})
+	runtime/panic.go:1229 +0x4d fp=0x326bff790 sp=0x326bff760 pc=0x7ff7648e440d
+runtime.persistentalloc1(0x1200, 0x7ff7679919c0?, 0x7ff7679d5b40)
+	runtime/malloc.go:2431 +0x265 fp=0x326bff7e8 sp=0x326bff790 pc=0x7ff764880bc5
+runtime.persistentalloc.func1()
+	runtime/malloc.go:2384 +0x28 fp=0x326bff818 sp=0x326bff7e8 pc=0x7ff764880948
+runtime.systemstack(0x391da8aac000)
+	runtime/asm_amd64.s:562 +0x49 fp=0x326bff828 sp=0x326bff818 pc=0x7ff7648ea2a9
+
+goroutine 3 gp=0x391da8646b40 m=10 mp=0x391da8901008 [running]:
+runtime.systemstack_switch()
+	runtime/asm_amd64.s:516 +0x8 fp=0x391da864bd38 sp=0x391da864bd28 pc=0x7ff7648ea248
+runtime.persistentalloc(0x800?, 0x40?, 0x7ff7679d5b40?)
+	runtime/malloc.go:2383 +0x45 fp=0x391da864bd80 sp=0x391da864bd38 pc=0x7ff7648808e5
+runtime.(*spanSetBlockAlloc).alloc(0x0?)
+	runtime/mspanset.go:338 +0x49 fp=0x391da864bda8 sp=0x391da864bd80 pc=0x7ff7648a5ca9
+runtime.(*spanSet).push(0x7ff7679a56a0, 0x1dce0fe0d28)
+	runtime/mspanset.go:134 +0x11d fp=0x391da864be10 sp=0x391da864bda8 pc=0x7ff7648a593d
+runtime.(*sweepLocked).sweep(0x7ff7679919c0?, 0x0)
+	runtime/mgcsweep.go:795 +0x8e5 fp=0x391da864bf38 sp=0x391da864be10 pc=0x7ff764898b25
+runtime.sweepone()
+	runtime/mgcsweep.go:396 +0xdd fp=0x391da864bf88 sp=0x391da864bf38 pc=0x7ff764897f5d
+runtime.bgsweep(0x391da8656000)
+	runtime/mgcsweep.go:300 +0xa6 fp=0x391da864bfc8 sp=0x391da864bf88 pc=0x7ff764897ce6
+runtime.gcenable.gowrap1()
+	runtime/mgc.go:214 +0x17 fp=0x391da864bfe0 sp=0x391da864bfc8 pc=0x7ff764889037
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da864bfe8 sp=0x391da864bfe0 pc=0x7ff7648ebf01
+created by runtime.gcenable in goroutine 1
+	runtime/mgc.go:214 +0x66
+
+goroutine 1 gp=0x391da8646000 m=nil [select, 2 minutes]:
+runtime.gopark(0x391da8ad76a8?, 0x2?, 0x8?, 0x0?, 0x391da8ad767c?)
+	runtime/proc.go:462 +0xce fp=0x391da85fd518 sp=0x391da85fd4f8 pc=0x7ff7648e452e
+runtime.selectgo(0x391da85fd6a8, 0x391da8ad7678, 0x1?, 0x0, 0x7ff765383500?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da85fd648 sp=0x391da85fd518 pc=0x7ff7648c3945
+github.com/mark3labs/mcp-go/server.(*StdioServer).readNextLine(0x391da867e140?, {0x7ff765564768, 0x391da867c360}, 0x391da86cc300)
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:510 +0x105 fp=0x391da85fd6d8 sp=0x391da85fd648 pc=0x7ff764f7a5c5
+github.com/mark3labs/mcp-go/server.(*StdioServer).processInputStream(0x391da867e140, {0x7ff765564768, 0x391da867c360}, 0x391da86cc300, {0x7ff76555e5c0, 0x391da8682038})
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:449 +0x93 fp=0x391da85fd790 sp=0x391da85fd6d8 pc=0x7ff764f79e73
+github.com/mark3labs/mcp-go/server.(*StdioServer).Listen(0x391da867e140, {0x7ff7655647a0, 0x391da867e000}, {0x7ff76555e5e0, 0x391da8682030}, {0x7ff76555e5c0, 0x391da8682038})
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:556 +0x514 fp=0x391da85fd8d0 sp=0x391da85fd790 pc=0x7ff764f7abb4
+codemap_builder/internal/mcp.(*Server).ServeStdio(0x7ff76549881f?, {0x7ff7655647a0, 0x391da867e000})
+	codemap_builder/internal/mcp/server.go:453 +0xc5 fp=0x391da85fd928 sp=0x391da85fd8d0 pc=0x7ff764fc2a25
+codemap_builder/cmd/codemap/serve.ServeCmd.func1(0x391da8717300?, {0x7ff7679cfa00?, 0x4?, 0x7ff76548f603?})
+	codemap_builder/cmd/codemap/serve/serve.go:167 +0xda5 fp=0x391da85fdc80 sp=0x391da85fd928 pc=0x7ff765028605
+github.com/spf13/cobra.(*Command).execute(0x391da884ec08, {0x391da869a390, 0x0, 0x0})
+	github.com/spf13/cobra@v1.10.2/command.go:1019 +0xafb fp=0x391da85fde28 sp=0x391da85fdc80 pc=0x7ff764a0011b
+github.com/spf13/cobra.(*Command).ExecuteC(0x391da884e008)
+	github.com/spf13/cobra@v1.10.2/command.go:1148 +0x465 fp=0x391da85fdf18 sp=0x391da85fde28 pc=0x7ff764a00925
+github.com/spf13/cobra.(*Command).Execute(...)
+	github.com/spf13/cobra@v1.10.2/command.go:1071
+main.main()
+	codemap_builder/cmd/codemap/main.go:66 +0x2e5 fp=0x391da85fdf48 sp=0x391da85fdf18 pc=0x7ff76509c4e5
+runtime.main()
+	runtime/proc.go:290 +0x2c7 fp=0x391da85fdfe0 sp=0x391da85fdf48 pc=0x7ff7648b04c7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da85fdfe8 sp=0x391da85fdfe0 pc=0x7ff7648ebf01
+
+goroutine 2 gp=0x391da8646780 m=nil [force gc (idle), 2 minutes]:
+runtime.gopark(0xa53c8938a084?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8649fa8 sp=0x391da8649f88 pc=0x7ff7648e452e
+runtime.goparkunlock(...)
+	runtime/proc.go:468
+runtime.forcegchelper()
+	runtime/proc.go:375 +0xb8 fp=0x391da8649fe0 sp=0x391da8649fa8 pc=0x7ff7648b07b8
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8649fe8 sp=0x391da8649fe0 pc=0x7ff7648ebf01
+created by runtime.init.7 in goroutine 1
+	runtime/proc.go:363 +0x1a
+
+goroutine 4 gp=0x391da8646d20 m=nil [GC scavenge wait, 2 minutes]:
+runtime.gopark(0x10000?, 0x7ff7655565c8?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da865df78 sp=0x391da865df58 pc=0x7ff7648e452e
+runtime.goparkunlock(...)
+	runtime/proc.go:468
+runtime.(*scavengerState).park(0x7ff767985260)
+	runtime/mgcscavenge.go:425 +0x49 fp=0x391da865dfa8 sp=0x391da865df78 pc=0x7ff764895809
+runtime.bgscavenge(0x391da8656000)
+	runtime/mgcscavenge.go:658 +0x59 fp=0x391da865dfc8 sp=0x391da865dfa8 pc=0x7ff764895d99
+runtime.gcenable.gowrap2()
+	runtime/mgc.go:215 +0x17 fp=0x391da865dfe0 sp=0x391da865dfc8 pc=0x7ff764888ff7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da865dfe8 sp=0x391da865dfe0 pc=0x7ff7648ebf01
+created by runtime.gcenable in goroutine 1
+	runtime/mgc.go:215 +0xa5
+
+goroutine 18 gp=0x391da86881e0 m=nil [GOMAXPROCS updater (idle), 2 minutes]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8659f88 sp=0x391da8659f68 pc=0x7ff7648e452e
+runtime.goparkunlock(...)
+	runtime/proc.go:468
+runtime.updateMaxProcsGoroutine()
+	runtime/proc.go:7095 +0xe7 fp=0x391da8659fe0 sp=0x391da8659f88 pc=0x7ff7648bed67
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8659fe8 sp=0x391da8659fe0 pc=0x7ff7648ebf01
+created by runtime.defaultGOMAXPROCSUpdateEnable in goroutine 1
+	runtime/proc.go:7083 +0x37
+
+goroutine 19 gp=0x391da86885a0 m=nil [finalizer wait]:
+runtime.gopark(0x0?, 0x7ff7655547e8?, 0x0?, 0x40?, 0x1000000010?)
+	runtime/proc.go:462 +0xce fp=0x391da865be20 sp=0x391da865be00 pc=0x7ff7648e452e
+runtime.runFinalizers()
+	runtime/mfinal.go:210 +0x107 fp=0x391da865bfe0 sp=0x391da865be20 pc=0x7ff764887fc7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da865bfe8 sp=0x391da865bfe0 pc=0x7ff7648ebf01
+created by runtime.createfing in goroutine 1
+	runtime/mfinal.go:172 +0x3d
+
+goroutine 20 gp=0x391da8688780 m=nil [cleanup wait, 2 minutes]:
+runtime.gopark(0x101000000000000?, 0xa3?, 0x3?, 0x0?, 0x7ff76526cd80?)
+	runtime/proc.go:462 +0xce fp=0x391da864df68 sp=0x391da864df48 pc=0x7ff7648e452e
+runtime.goparkunlock(...)
+	runtime/proc.go:468
+runtime.(*cleanupQueue).dequeue(0x7ff7679855e0)
+	runtime/mcleanup.go:522 +0xd4 fp=0x391da864dfa0 sp=0x391da864df68 pc=0x7ff764884fb4
+runtime.runCleanups()
+	runtime/mcleanup.go:718 +0x45 fp=0x391da864dfe0 sp=0x391da864dfa0 pc=0x7ff764885625
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da864dfe8 sp=0x391da864dfe0 pc=0x7ff7648ebf01
+created by runtime.(*cleanupQueue).createGs in goroutine 1
+	runtime/mcleanup.go:672 +0xa5
+
+goroutine 37 gp=0x391da8688960 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x391da88a3f01?, 0x1?, 0xb8?, 0x3f?, 0x7ff76498d25f?)
+	runtime/proc.go:462 +0xce fp=0x391da88a3f40 sp=0x391da88a3f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da88a3fc8 sp=0x391da88a3f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da88a3fe0 sp=0x391da88a3fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da88a3fe8 sp=0x391da88a3fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 36 gp=0x391da8688b40 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x391da88a5f01?, 0x1?, 0xb8?, 0x5f?, 0x7ff76498d285?)
+	runtime/proc.go:462 +0xce fp=0x391da88a5f40 sp=0x391da88a5f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da88a5fc8 sp=0x391da88a5f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da88a5fe0 sp=0x391da88a5fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da88a5fe8 sp=0x391da88a5fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 35 gp=0x391da8688f00 m=nil [chan receive, 2 minutes]:
+runtime.gopark(0x391da85ca048?, 0x391da8662228?, 0x28?, 0x22?, 0x7ff76555e5e0?)
+	runtime/proc.go:462 +0xce fp=0x391da889fef8 sp=0x391da889fed8 pc=0x7ff7648e452e
+runtime.chanrecv(0x391da893c150, 0x391da889ffb8, 0x1)
+	runtime/chan.go:667 +0x4ae fp=0x391da889ff70 sp=0x391da889fef8 pc=0x7ff7648777ee
+runtime.chanrecv2(0x0?, 0x1?)
+	runtime/chan.go:514 +0x12 fp=0x391da889ff98 sp=0x391da889ff70 pc=0x7ff764877332
+codemap_builder/internal/util.consumeErrorLogs()
+	codemap_builder/internal/util/trace_reporter.go:215 +0x65 fp=0x391da889ffe0 sp=0x391da889ff98 pc=0x7ff764bf9fe5
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da889ffe8 sp=0x391da889ffe0 pc=0x7ff7648ebf01
+created by codemap_builder/internal/util.EnableErrorLogReporting in goroutine 1
+	codemap_builder/internal/util/trace_reporter.go:78 +0x1fb
+
+goroutine 34 gp=0x391da86470e0 m=nil [select]:
+runtime.gopark(0x391da8ac9f28?, 0x2?, 0x60?, 0x20?, 0x391da8ac9ec4?)
+	runtime/proc.go:462 +0xce fp=0x391da8ac9d48 sp=0x391da8ac9d28 pc=0x7ff7648e452e
+runtime.selectgo(0x391da8ac9f28, 0x391da8ac9ec0, 0x1?, 0x0, 0x7ff7654c719a?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da8ac9e78 sp=0x391da8ac9d48 pc=0x7ff7648c3945
+codemap_builder/internal/telemetry.(*httpReporter).consumeWith(0x391da89261c0, {0x7ff7654c719a, 0x2f})
+	codemap_builder/internal/telemetry/telemetry.go:223 +0x151 fp=0x391da8ac9fa0 sp=0x391da8ac9e78 pc=0x7ff764d68991
+codemap_builder/internal/telemetry.(*httpReporter).consume(0x391da89261c0)
+	codemap_builder/internal/telemetry/telemetry.go:197 +0x4c fp=0x391da8ac9fc8 sp=0x391da8ac9fa0 pc=0x7ff764d6880c
+codemap_builder/internal/telemetry.newHTTPReporter.gowrap1()
+	codemap_builder/internal/telemetry/telemetry.go:153 +0x17 fp=0x391da8ac9fe0 sp=0x391da8ac9fc8 pc=0x7ff764d684d7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8ac9fe8 sp=0x391da8ac9fe0 pc=0x7ff7648ebf01
+created by codemap_builder/internal/telemetry.newHTTPReporter in goroutine 1
+	codemap_builder/internal/telemetry/telemetry.go:153 +0x1c5
+
+goroutine 52 gp=0x391da8a0c000 m=nil [chan receive, 2 minutes]:
+runtime.gopark(0x391da8a080d8?, 0x7ff76555e5e0?, 0x40?, 0x20?, 0x391da8a13f50?)
+	runtime/proc.go:462 +0xce fp=0x391da8a13f08 sp=0x391da8a13ee8 pc=0x7ff7648e452e
+runtime.chanrecv(0x391da8a56000, 0x391da8a13fbf, 0x1)
+	runtime/chan.go:667 +0x4ae fp=0x391da8a13f80 sp=0x391da8a13f08 pc=0x7ff7648777ee
+runtime.chanrecv2(0x391da8a3a000?, 0x7ff7648b8b10?)
+	runtime/chan.go:514 +0x12 fp=0x391da8a13fa8 sp=0x391da8a13f80 pc=0x7ff764877332
+gopkg.in/natefinch/lumberjack%2ev2.(*Logger).millRun(...)
+	gopkg.in/natefinch/lumberjack.v2@v2.2.1/lumberjack.go:379
+gopkg.in/natefinch/lumberjack%2ev2.(*Logger).mill.func1.gowrap1()
+	gopkg.in/natefinch/lumberjack.v2@v2.2.1/lumberjack.go:390 +0x45 fp=0x391da8a13fe0 sp=0x391da8a13fa8 pc=0x7ff764a1f365
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a13fe8 sp=0x391da8a13fe0 pc=0x7ff7648ebf01
+created by gopkg.in/natefinch/lumberjack%2ev2.(*Logger).mill.func1 in goroutine 1
+	gopkg.in/natefinch/lumberjack.v2@v2.2.1/lumberjack.go:390 +0x8c
+
+goroutine 53 gp=0x391da8a0c1e0 m=4 mp=0x391da8651808 [syscall, 2 minutes]:
+runtime.notetsleepg(0x7ff7679d04e0, 0xffffffffffffffff)
+	runtime/lock_sema.go:175 +0x31 fp=0x391da8a15fa0 sp=0x391da8a15f68 pc=0x7ff76487d8d1
+os/signal.signal_recv()
+	runtime/sigqueue.go:152 +0x98 fp=0x391da8a15fc0 sp=0x391da8a15fa0 pc=0x7ff7648e6198
+os/signal.loop()
+	os/signal/signal_unix.go:23 +0x13 fp=0x391da8a15fe0 sp=0x391da8a15fc0 pc=0x7ff764bfc0d3
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a15fe8 sp=0x391da8a15fe0 pc=0x7ff7648ebf01
+created by os/signal.Notify.func1.1 in goroutine 1
+	os/signal/signal.go:152 +0x1f
+
+goroutine 38 gp=0x391da89081e0 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a0ff40 sp=0x391da8a0ff20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a0ffc8 sp=0x391da8a0ff40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a0ffe0 sp=0x391da8a0ffc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a0ffe8 sp=0x391da8a0ffe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 39 gp=0x391da89083c0 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a11f40 sp=0x391da8a11f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a11fc8 sp=0x391da8a11f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a11fe0 sp=0x391da8a11fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a11fe8 sp=0x391da8a11fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 40 gp=0x391da89085a0 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da897df40 sp=0x391da897df20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da897dfc8 sp=0x391da897df40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da897dfe0 sp=0x391da897dfc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da897dfe8 sp=0x391da897dfe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 54 gp=0x391da8a0c3c0 m=nil [chan receive, 2 minutes]:
+runtime.gopark(0x40?, 0x40?, 0xeb?, 0xb0?, 0x7ff764bf5e9a?)
+	runtime/proc.go:462 +0xce fp=0x391da8979e98 sp=0x391da8979e78 pc=0x7ff7648e452e
+runtime.chanrecv(0x391da8a08460, 0x0, 0x1)
+	runtime/chan.go:667 +0x4ae fp=0x391da8979f10 sp=0x391da8979e98 pc=0x7ff7648777ee
+runtime.chanrecv1(0x391da8979f20?, 0x391da8979f88?)
+	runtime/chan.go:509 +0x12 fp=0x391da8979f38 sp=0x391da8979f10 pc=0x7ff764877312
+codemap_builder/cmd/codemap/serve.InstallEarlySignalStop.func1()
+	codemap_builder/cmd/codemap/serve/serve.go:238 +0x19 fp=0x391da8979f98 sp=0x391da8979f38 pc=0x7ff765029619
+codemap_builder/internal/util.SafeGo.func1()
+	codemap_builder/internal/util/safe.go:27 +0x7d fp=0x391da8979fe0 sp=0x391da8979f98 pc=0x7ff764bf7fdd
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8979fe8 sp=0x391da8979fe0 pc=0x7ff7648ebf01
+created by codemap_builder/internal/util.SafeGo in goroutine 1
+	codemap_builder/internal/util/safe.go:13 +0x79
+
+goroutine 41 gp=0x391da8908780 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da897ff40 sp=0x391da897ff20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da897ffc8 sp=0x391da897ff40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da897ffe0 sp=0x391da897ffc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da897ffe8 sp=0x391da897ffe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 42 gp=0x391da8908960 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a95f40 sp=0x391da8a95f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a95fc8 sp=0x391da8a95f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a95fe0 sp=0x391da8a95fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a95fe8 sp=0x391da8a95fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 43 gp=0x391da8908b40 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a97f40 sp=0x391da8a97f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a97fc8 sp=0x391da8a97f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a97fe0 sp=0x391da8a97fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a97fe8 sp=0x391da8a97fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 44 gp=0x391da8908d20 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a91f40 sp=0x391da8a91f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a91fc8 sp=0x391da8a91f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a91fe0 sp=0x391da8a91fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a91fe8 sp=0x391da8a91fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 45 gp=0x391da8908f00 m=nil [GC worker (idle)]:
+runtime.gopark(0xa53c89519e90?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a93f40 sp=0x391da8a93f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a93fc8 sp=0x391da8a93f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a93fe0 sp=0x391da8a93fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a93fe8 sp=0x391da8a93fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 46 gp=0x391da89090e0 m=nil [GC worker (idle)]:
+runtime.gopark(0xa53c89519e90?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a9df40 sp=0x391da8a9df20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a9dfc8 sp=0x391da8a9df40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a9dfe0 sp=0x391da8a9dfc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a9dfe8 sp=0x391da8a9dfe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 47 gp=0x391da89092c0 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0xa520987884f4?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a9ff40 sp=0x391da8a9ff20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a9ffc8 sp=0x391da8a9ff40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a9ffe0 sp=0x391da8a9ffc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a9ffe8 sp=0x391da8a9ffe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 48 gp=0x391da89094a0 m=nil [GC worker (idle)]:
+runtime.gopark(0xa53c89519e90?, 0x1?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a99f40 sp=0x391da8a99f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a99fc8 sp=0x391da8a99f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a99fe0 sp=0x391da8a99fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a99fe8 sp=0x391da8a99fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 49 gp=0x391da8909680 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0xa53c89519e90?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8a9bf40 sp=0x391da8a9bf20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8a9bfc8 sp=0x391da8a9bf40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8a9bfe0 sp=0x391da8a9bfc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a9bfe8 sp=0x391da8a9bfe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 66 gp=0x391da8909860 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0x7ff7679d1380?, 0x1?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8aa7f40 sp=0x391da8aa7f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8aa7fc8 sp=0x391da8aa7f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8aa7fe0 sp=0x391da8aa7fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8aa7fe8 sp=0x391da8aa7fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 67 gp=0x391da8909a40 m=nil [GC worker (idle), 2 minutes]:
+runtime.gopark(0xa520987884f4?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x391da8aa9f40 sp=0x391da8aa9f20 pc=0x7ff7648e452e
+runtime.gcBgMarkWorker(0x391da8937e30)
+	runtime/mgc.go:1791 +0xeb fp=0x391da8aa9fc8 sp=0x391da8aa9f40 pc=0x7ff76488bb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x391da8aa9fe0 sp=0x391da8aa9fc8 pc=0x7ff76488ba57
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8aa9fe8 sp=0x391da8aa9fe0 pc=0x7ff7648ebf01
+created by runtime.gcBgMarkStartWorkers in goroutine 52
+	runtime/mgc.go:1695 +0x105
+
+goroutine 70 gp=0x391da8aac3c0 m=nil [chan receive, 2 minutes]:
+runtime.gopark(0x7ff7648f6607?, 0x391da8acdee8?, 0x34?, 0xfc?, 0x40?)
+	runtime/proc.go:462 +0xce fp=0x391da8acde80 sp=0x391da8acde60 pc=0x7ff7648e452e
+runtime.chanrecv(0x391da8a08150, 0x0, 0x1)
+	runtime/chan.go:667 +0x4ae fp=0x391da8acdef8 sp=0x391da8acde80 pc=0x7ff7648777ee
+runtime.chanrecv1(0x7ff7648fc740?, 0x391da8865d68?)
+	runtime/chan.go:509 +0x12 fp=0x391da8acdf20 sp=0x391da8acdef8 pc=0x7ff764877312
+codemap_builder/cmd/codemap/serve.WatchSignals.func1()
+	codemap_builder/cmd/codemap/serve/serve.go:218 +0x38 fp=0x391da8acdf98 sp=0x391da8acdf20 pc=0x7ff7650293d8
+codemap_builder/internal/util.SafeGo.func1()
+	codemap_builder/internal/util/safe.go:27 +0x7d fp=0x391da8acdfe0 sp=0x391da8acdf98 pc=0x7ff764bf7fdd
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8acdfe8 sp=0x391da8acdfe0 pc=0x7ff7648ebf01
+created by codemap_builder/internal/util.SafeGo in goroutine 1
+	codemap_builder/internal/util/safe.go:13 +0x79
+
+goroutine 71 gp=0x391da8a0c780 m=nil [select]:
+runtime.gopark(0x391da884bf50?, 0x2?, 0x0?, 0xe7?, 0x391da884beac?)
+	runtime/proc.go:462 +0xce fp=0x391da884bd30 sp=0x391da884bd10 pc=0x7ff7648e452e
+runtime.selectgo(0x391da884bf50, 0x391da884bea8, 0x391da884bf28?, 0x0, 0x7ff767985140?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da884be60 sp=0x391da884bd30 pc=0x7ff7648c3945
+codemap_builder/cmd/codemap/serve.ServeCmd.func1.RunHeartbeatWatchdog.2()
+	codemap_builder/cmd/codemap/serve/http_proxy.go:136 +0x138 fp=0x391da884bf98 sp=0x391da884be60 pc=0x7ff765028c98
+codemap_builder/internal/util.SafeGo.func1()
+	codemap_builder/internal/util/safe.go:27 +0x7d fp=0x391da884bfe0 sp=0x391da884bf98 pc=0x7ff764bf7fdd
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da884bfe8 sp=0x391da884bfe0 pc=0x7ff7648ebf01
+created by codemap_builder/internal/util.SafeGo in goroutine 1
+	codemap_builder/internal/util/safe.go:13 +0x79
+
+goroutine 72 gp=0x391da8a0c960 m=9 mp=0x391da8900808 [stopping the world]:
+runtime.systemstack_switch()
+	runtime/asm_amd64.s:516 +0x8 fp=0x391da8c02610 sp=0x391da8c02600 pc=0x7ff7648ea248
+runtime.stopTheWorld(0x7)
+	runtime/proc.go:1536 +0xaf fp=0x391da8c02660 sp=0x391da8c02610 pc=0x7ff7648b2e6f
+runtime.ReadMemStats(0x391da8c026e0)
+	runtime/mstats.go:358 +0x25 fp=0x391da8c026c0 sp=0x391da8c02660 pc=0x7ff7648a5dc5
+codemap_builder/internal/telemetry.(*ProcessMemoryTicker).report(0x391da86cc2a0)
+	codemap_builder/internal/telemetry/memory_monitor.go:56 +0x9f fp=0x391da8c03f40 sp=0x391da8c026c0 pc=0x7ff764d6781f
+codemap_builder/internal/telemetry.(*ProcessMemoryTicker).run(0x391da86cc2a0)
+	codemap_builder/internal/telemetry/memory_monitor.go:39 +0x59 fp=0x391da8c03fc8 sp=0x391da8c03f40 pc=0x7ff764d67699
+codemap_builder/internal/telemetry.NewProcessMemoryTicker.gowrap1()
+	codemap_builder/internal/telemetry/memory_monitor.go:30 +0x17 fp=0x391da8c03fe0 sp=0x391da8c03fc8 pc=0x7ff764d67617
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8c03fe8 sp=0x391da8c03fe0 pc=0x7ff7648ebf01
+created by codemap_builder/internal/telemetry.NewProcessMemoryTicker in goroutine 1
+	codemap_builder/internal/telemetry/memory_monitor.go:30 +0x166
+
+goroutine 73 gp=0x391da8a0cb40 m=nil [select, 2 minutes]:
+runtime.gopark(0x391da8911f38?, 0x2?, 0x80?, 0xb?, 0x391da8911f14?)
+	runtime/proc.go:462 +0xce fp=0x391da8a5fda8 sp=0x391da8a5fd88 pc=0x7ff7648e452e
+runtime.selectgo(0x391da8a5ff38, 0x391da8911f10, 0x391da88908d0?, 0x0, 0x391da8682038?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da8a5fed8 sp=0x391da8a5fda8 pc=0x7ff7648c3945
+github.com/mark3labs/mcp-go/server.(*StdioServer).toolCallWorker(0x391da867e140, {0x7ff765564768, 0x391da867c360})
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:473 +0xf3 fp=0x391da8a5ffb8 sp=0x391da8a5fed8 pc=0x7ff764f7a293
+github.com/mark3labs/mcp-go/server.(*StdioServer).Listen.gowrap2()
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x1f fp=0x391da8a5ffe0 sp=0x391da8a5ffb8 pc=0x7ff764f7acff
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a5ffe8 sp=0x391da8a5ffe0 pc=0x7ff7648ebf01
+created by github.com/mark3labs/mcp-go/server.(*StdioServer).Listen in goroutine 1
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x3c5
+
+goroutine 74 gp=0x391da8a0cd20 m=nil [select, 2 minutes]:
+runtime.gopark(0x391da8af3f38?, 0x2?, 0x0?, 0x0?, 0x391da8af3f14?)
+	runtime/proc.go:462 +0xce fp=0x391da8af3da8 sp=0x391da8af3d88 pc=0x7ff7648e452e
+runtime.selectgo(0x391da8af3f38, 0x391da8af3f10, 0x0?, 0x0, 0x0?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da8af3ed8 sp=0x391da8af3da8 pc=0x7ff7648c3945
+github.com/mark3labs/mcp-go/server.(*StdioServer).toolCallWorker(0x391da867e140, {0x7ff765564768, 0x391da867c360})
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:473 +0xf3 fp=0x391da8af3fb8 sp=0x391da8af3ed8 pc=0x7ff764f7a293
+github.com/mark3labs/mcp-go/server.(*StdioServer).Listen.gowrap2()
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x1f fp=0x391da8af3fe0 sp=0x391da8af3fb8 pc=0x7ff764f7acff
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8af3fe8 sp=0x391da8af3fe0 pc=0x7ff7648ebf01
+created by github.com/mark3labs/mcp-go/server.(*StdioServer).Listen in goroutine 1
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x3c5
+
+goroutine 75 gp=0x391da8a0cf00 m=nil [select, 2 minutes]:
+runtime.gopark(0x391da8af5f38?, 0x2?, 0x0?, 0x0?, 0x391da8af5f14?)
+	runtime/proc.go:462 +0xce fp=0x391da8af5da8 sp=0x391da8af5d88 pc=0x7ff7648e452e
+runtime.selectgo(0x391da8af5f38, 0x391da8af5f10, 0x0?, 0x0, 0x0?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da8af5ed8 sp=0x391da8af5da8 pc=0x7ff7648c3945
+github.com/mark3labs/mcp-go/server.(*StdioServer).toolCallWorker(0x391da867e140, {0x7ff765564768, 0x391da867c360})
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:473 +0xf3 fp=0x391da8af5fb8 sp=0x391da8af5ed8 pc=0x7ff764f7a293
+github.com/mark3labs/mcp-go/server.(*StdioServer).Listen.gowrap2()
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x1f fp=0x391da8af5fe0 sp=0x391da8af5fb8 pc=0x7ff764f7acff
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8af5fe8 sp=0x391da8af5fe0 pc=0x7ff7648ebf01
+created by github.com/mark3labs/mcp-go/server.(*StdioServer).Listen in goroutine 1
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x3c5
+
+goroutine 76 gp=0x391da8a0d0e0 m=nil [select, 2 minutes]:
+runtime.gopark(0x391da8aeff38?, 0x2?, 0x0?, 0x0?, 0x391da8aeff14?)
+	runtime/proc.go:462 +0xce fp=0x391da8aefda8 sp=0x391da8aefd88 pc=0x7ff7648e452e
+runtime.selectgo(0x391da8aeff38, 0x391da8aeff10, 0x0?, 0x0, 0x0?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da8aefed8 sp=0x391da8aefda8 pc=0x7ff7648c3945
+github.com/mark3labs/mcp-go/server.(*StdioServer).toolCallWorker(0x391da867e140, {0x7ff765564768, 0x391da867c360})
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:473 +0xf3 fp=0x391da8aeffb8 sp=0x391da8aefed8 pc=0x7ff764f7a293
+github.com/mark3labs/mcp-go/server.(*StdioServer).Listen.gowrap2()
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x1f fp=0x391da8aeffe0 sp=0x391da8aeffb8 pc=0x7ff764f7acff
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8aeffe8 sp=0x391da8aeffe0 pc=0x7ff7648ebf01
+created by github.com/mark3labs/mcp-go/server.(*StdioServer).Listen in goroutine 1
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x3c5
+
+goroutine 77 gp=0x391da8a0d2c0 m=nil [select, 2 minutes]:
+runtime.gopark(0x391da8af1f38?, 0x2?, 0x0?, 0x0?, 0x391da8af1f14?)
+	runtime/proc.go:462 +0xce fp=0x391da8af1da8 sp=0x391da8af1d88 pc=0x7ff7648e452e
+runtime.selectgo(0x391da8af1f38, 0x391da8af1f10, 0x0?, 0x0, 0x0?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da8af1ed8 sp=0x391da8af1da8 pc=0x7ff7648c3945
+github.com/mark3labs/mcp-go/server.(*StdioServer).toolCallWorker(0x391da867e140, {0x7ff765564768, 0x391da867c360})
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:473 +0xf3 fp=0x391da8af1fb8 sp=0x391da8af1ed8 pc=0x7ff764f7a293
+github.com/mark3labs/mcp-go/server.(*StdioServer).Listen.gowrap2()
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x1f fp=0x391da8af1fe0 sp=0x391da8af1fb8 pc=0x7ff764f7acff
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8af1fe8 sp=0x391da8af1fe0 pc=0x7ff7648ebf01
+created by github.com/mark3labs/mcp-go/server.(*StdioServer).Listen in goroutine 1
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:549 +0x3c5
+
+goroutine 78 gp=0x391da8a0d4a0 m=nil [select, 2 minutes]:
+runtime.gopark(0x391da8afbf48?, 0x2?, 0x0?, 0x0?, 0x391da8afbecc?)
+	runtime/proc.go:462 +0xce fp=0x391da8afbd68 sp=0x391da8afbd48 pc=0x7ff7648e452e
+runtime.selectgo(0x391da8afbf48, 0x391da8afbec8, 0x0?, 0x0, 0x0?, 0x1)
+	runtime/select.go:351 +0xaa5 fp=0x391da8afbe98 sp=0x391da8afbd68 pc=0x7ff7648c3945
+github.com/mark3labs/mcp-go/server.(*StdioServer).handleNotifications(0x391da867e140, {0x7ff765564768, 0x391da867c360}, {0x7ff76555e5c0, 0x391da8682038})
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:426 +0xd9 fp=0x391da8afbfa8 sp=0x391da8afbe98 pc=0x7ff764f79c19
+github.com/mark3labs/mcp-go/server.(*StdioServer).Listen.gowrap3()
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:553 +0x27 fp=0x391da8afbfe0 sp=0x391da8afbfa8 pc=0x7ff764f7acc7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8afbfe8 sp=0x391da8afbfe0 pc=0x7ff7648ebf01
+created by github.com/mark3labs/mcp-go/server.(*StdioServer).Listen in goroutine 1
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:553 +0x4e5
+
+goroutine 65 gp=0x391da8a0d680 m=5 mp=0x391da8680008 [syscall, 2 minutes]:
+runtime.cgocall(0x7ff764872a00, 0x391da8680358)
+	runtime/cgocall.go:167 +0x3e fp=0x391da8afda58 sp=0x391da8afd9f0 pc=0x7ff7648e10be
+syscall.syscalln(0x0?, 0x0?, {0x391da8afdad0?, 0x0?, 0x0?})
+	runtime/syscall_windows.go:431 +0x4e fp=0x391da8afda78 sp=0x391da8afda58 pc=0x7ff7648e846e
+syscall.SyscallN(0x0?, {0x391da8afdad0?, 0x7ff7648fa9eb?, 0x391da8afdb10?})
+	syscall/dll_windows.go:99 +0x1e fp=0x391da8afdab0 sp=0x391da8afda78 pc=0x7ff76492081e
+syscall.readFile(0x398, {0x391da8add000?, 0x1000, 0x7ff764951cdf?}, 0x7ff7653670e0?, 0x7ff764951d57?)
+	syscall/zsyscall_windows.go:1030 +0xba fp=0x391da8afdb28 sp=0x391da8afdab0 pc=0x7ff76492a27a
+syscall.ReadFile(...)
+	syscall/syscall_windows.go:510
+internal/poll.(*FD).Read.func1(0x7ff7652ed9c0?)
+	internal/poll/fd_windows.go:572 +0x4a fp=0x391da8afdb70 sp=0x391da8afdb28 pc=0x7ff76495290a
+internal/poll.(*FD).execIO(0x391da86ac000, 0x72, 0x391da8afdcf0)
+	internal/poll/fd_windows.go:290 +0x2c9 fp=0x391da8afdc70 sp=0x391da8afdb70 pc=0x7ff7649518c9
+internal/poll.(*FD).Read(0x391da86ac000, {0x391da8add000, 0x1000, 0x1000})
+	internal/poll/fd_windows.go:571 +0x290 fp=0x391da8afdd38 sp=0x391da8afdc70 pc=0x7ff7649525f0
+os.(*File).read(...)
+	os/file_posix.go:29
+os.(*File).Read(0x391da8682030, {0x391da8add000?, 0x1dce106e1c0?, 0x0?})
+	os/file.go:144 +0x4f fp=0x391da8afdd78 sp=0x391da8afdd38 pc=0x7ff76495972f
+bufio.(*Reader).fill(0x391da86cc300)
+	bufio/bufio.go:113 +0x103 fp=0x391da8afddb0 sp=0x391da8afdd78 pc=0x7ff7649cfd03
+bufio.(*Reader).ReadSlice(0x391da86cc300, 0xa)
+	bufio/bufio.go:377 +0x29 fp=0x391da8afddf8 sp=0x391da8afddb0 pc=0x7ff7649d0789
+bufio.(*Reader).collectFragments(0x391da86cc300, 0xa)
+	bufio/bufio.go:452 +0x85 fp=0x391da8afded8 sp=0x391da8afddf8 pc=0x7ff7649d0ba5
+bufio.(*Reader).ReadString(0x0?, 0x0?)
+	bufio/bufio.go:499 +0x1f fp=0x391da8afdf98 sp=0x391da8afded8 pc=0x7ff7649d0e9f
+github.com/mark3labs/mcp-go/server.(*StdioServer).readNextLine.func1()
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:506 +0x25 fp=0x391da8afdfe0 sp=0x391da8afdf98 pc=0x7ff764f7a665
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8afdfe8 sp=0x391da8afdfe0 pc=0x7ff7648ebf01
+created by github.com/mark3labs/mcp-go/server.(*StdioServer).readNextLine in goroutine 1
+	github.com/mark3labs/mcp-go@v0.44.1/server/stdio.go:505 +0x9e
+
+goroutine 63 gp=0x391da8689680 m=nil [IO wait, 2 minutes]:
+runtime.gopark(0x1?, 0x391da88476d8?, 0xdc?, 0x76?, 0x391da85de270?)
+	runtime/proc.go:462 +0xce fp=0x391da8a6d638 sp=0x391da8a6d618 pc=0x7ff7648e452e
+runtime.netpollblock(0x391da85de270?, 0xa88476dc?, 0x1d?)
+	runtime/netpoll.go:575 +0xf7 fp=0x391da8a6d670 sp=0x391da8a6d638 pc=0x7ff7648a7437
+internal/poll.runtime_pollWait(0x1dce104b000, 0x72)
+	runtime/netpoll.go:351 +0x85 fp=0x391da8a6d690 sp=0x391da8a6d670 pc=0x7ff7648e3665
+internal/poll.(*pollDesc).wait(0x391da85de270?, 0x7ff764874a26?, 0x0)
+	internal/poll/fd_poll_runtime.go:84 +0x27 fp=0x391da8a6d6b8 sp=0x391da8a6d690 pc=0x7ff764950607
+internal/poll.(*FD).waitIO(0x7ff7652ed9c0?, 0x43f23a3905babedb?)
+	internal/poll/fd_windows.go:214 +0x4c fp=0x391da8a6d700 sp=0x391da8a6d6b8 pc=0x7ff76495130c
+internal/poll.(*FD).execIO(0x391da87a2000, 0x72, 0x391da8847880)
+	internal/poll/fd_windows.go:297 +0x365 fp=0x391da8a6d800 sp=0x391da8a6d700 pc=0x7ff764951965
+internal/poll.(*FD).Read(0x391da87a2000, {0x391da8783800, 0x1800, 0x1800})
+	internal/poll/fd_windows.go:586 +0x20e fp=0x391da8a6d8c8 sp=0x391da8a6d800 pc=0x7ff76495256e
+net.(*netFD).Read(0x391da87a2000, {0x391da8783800?, 0x391da87cc1c0?, 0xd?})
+	net/fd_posix.go:68 +0x25 fp=0x391da8a6d910 sp=0x391da8a6d8c8 pc=0x7ff7649b6085
+net.(*conn).Read(0x391da8682168, {0x391da8783800?, 0x1dcdbdaa310?, 0x1dcdbdb55e8?})
+	net/net.go:196 +0x45 fp=0x391da8a6d958 sp=0x391da8a6d910 pc=0x7ff7649c1345
+crypto/tls.(*atLeastReader).Read(0x391da85ca438, {0x391da8783800?, 0x391da8689680?, 0x391da8847a48?})
+	crypto/tls/conn.go:815 +0x3b fp=0x391da8a6d9a0 sp=0x391da8a6d958 pc=0x7ff764afe2db
+bytes.(*Buffer).ReadFrom(0x391da87cc2a8, {0x7ff7655601e0, 0x391da85ca438})
+	bytes/buffer.go:229 +0x98 fp=0x391da8a6d9f8 sp=0x391da8a6d9a0 pc=0x7ff764983338
+crypto/tls.(*Conn).readFromUntil(0x391da87cc008, {0x1dce10f4e00, 0x391da8682168}, 0x391da8847c08?)
+	crypto/tls/conn.go:837 +0xde fp=0x391da8a6da30 sp=0x391da8a6d9f8 pc=0x7ff764afe4be
+crypto/tls.(*Conn).readRecordOrCCS(0x391da87cc008, 0x0)
+	crypto/tls/conn.go:626 +0x3db fp=0x391da8a6dc18 sp=0x391da8a6da30 pc=0x7ff764afb59b
+crypto/tls.(*Conn).readRecord(...)
+	crypto/tls/conn.go:588
+crypto/tls.(*Conn).Read(0x391da87cc008, {0x391da88a7000, 0x1000, 0x7ff764b76d00?})
+	crypto/tls/conn.go:1393 +0x145 fp=0x391da8a6dc80 sp=0x391da8a6dc18 pc=0x7ff764b01ca5
+bufio.(*Reader).Read(0x391da8665e00, {0x391da87a2744, 0x9, 0x7ff764b91f8e?})
+	bufio/bufio.go:245 +0x197 fp=0x391da8a6dcb8 sp=0x391da8a6dc80 pc=0x7ff7649d0237
+io.ReadAtLeast({0x7ff76555e6a0, 0x391da8665e00}, {0x391da87a2744, 0x9, 0x9}, 0x9)
+	io/io.go:335 +0x8e fp=0x391da8a6dd00 sp=0x391da8a6dcb8 pc=0x7ff76491926e
+io.ReadFull(...)
+	io/io.go:354
+net/http.http2readFrameHeader({0x391da87a2744, 0x9, 0x391d00000003?}, {0x7ff76555e6a0?, 0x391da8665e00?})
+	net/http/h2_bundle.go:1805 +0x65 fp=0x391da8a6dd50 sp=0x391da8a6dd00 pc=0x7ff764b6ec45
+net/http.(*http2Framer).ReadFrameHeader(0x391da87a2700)
+	net/http/h2_bundle.go:2071 +0x6b fp=0x391da8a6ddd8 sp=0x391da8a6dd50 pc=0x7ff764b6f24b
+net/http.(*http2Framer).ReadFrame(0x391da87a2700)
+	net/http/h2_bundle.go:2130 +0x18 fp=0x391da8a6de18 sp=0x391da8a6ddd8 pc=0x7ff764b6fa18
+net/http.(*http2clientConnReadLoop).run(0x391da8a6dfa8)
+	net/http/h2_bundle.go:9550 +0xca fp=0x391da8a6df60 sp=0x391da8a6de18 pc=0x7ff764b8f0ea
+net/http.(*http2ClientConn).readLoop(0x391da870ae00)
+	net/http/h2_bundle.go:9419 +0x52 fp=0x391da8a6dfc8 sp=0x391da8a6df60 pc=0x7ff764b8e4d2
+net/http.(*http2Transport).newClientConn.gowrap1()
+	net/http/h2_bundle.go:8171 +0x17 fp=0x391da8a6dfe0 sp=0x391da8a6dfc8 pc=0x7ff764b88db7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x391da8a6dfe8 sp=0x391da8a6dfe0 pc=0x7ff7648ebf01
+created by net/http.(*http2Transport).newClientConn in goroutine 62
+	net/http/h2_bundle.go:8171 +0xda5
+
+--- runtime crash output attached pid=33304 at 2026-08-13T11:31:36.8486688+08:00 ---
+
+--- runtime crash output attached pid=14036 at 2026-08-13T11:34:25.4680357+08:00 ---
+
+--- runtime crash output attached pid=27488 at 2026-08-13T11:34:27.9451139+08:00 ---
+
+--- runtime crash output attached pid=27872 at 2026-08-13T11:34:40.8419452+08:00 ---
+
+--- runtime crash output attached pid=23064 at 2026-08-13T11:35:16.1822406+08:00 ---
+
+--- runtime crash output attached pid=13048 at 2026-08-13T11:35:16.2405257+08:00 ---
+
+--- runtime crash output attached pid=13944 at 2026-08-13T11:35:16.2405257+08:00 ---
+
+--- runtime crash output attached pid=12856 at 2026-08-13T11:35:16.2405257+08:00 ---
+
+--- runtime crash output attached pid=36032 at 2026-08-13T11:36:31.3919888+08:00 ---
+
+--- runtime crash output attached pid=35588 at 2026-08-13T11:37:20.5756785+08:00 ---
+
+--- runtime crash output attached pid=20956 at 2026-08-13T11:37:31.5860766+08:00 ---
+
+--- runtime crash output attached pid=25876 at 2026-08-13T11:39:08.8968706+08:00 ---
+
+--- runtime crash output attached pid=37560 at 2026-08-13T11:39:10.1451322+08:00 ---
+
+--- runtime crash output attached pid=13372 at 2026-08-13T11:39:33.393888+08:00 ---
+
+--- runtime crash output attached pid=34936 at 2026-08-13T11:39:42.3752628+08:00 ---
+
+--- runtime crash output attached pid=8864 at 2026-08-13T11:40:42.2848356+08:00 ---
+
+--- runtime crash output attached pid=15372 at 2026-08-13T11:40:45.7242061+08:00 ---
+
+--- runtime crash output attached pid=38448 at 2026-08-13T11:41:01.5649313+08:00 ---
+
+--- runtime crash output attached pid=38800 at 2026-08-13T11:41:17.1681112+08:00 ---
+
+--- runtime crash output attached pid=11104 at 2026-08-13T11:42:21.3273814+08:00 ---
+
+--- runtime crash output attached pid=12380 at 2026-08-13T11:43:10.7559135+08:00 ---
+
+--- runtime crash output attached pid=38604 at 2026-08-13T11:43:39.277828+08:00 ---
+
+--- runtime crash output attached pid=16988 at 2026-08-13T11:43:55.520341+08:00 ---
+
+--- runtime crash output attached pid=38336 at 2026-08-13T11:44:13.0644815+08:00 ---
+
+--- runtime crash output attached pid=34868 at 2026-08-13T11:45:15.3714215+08:00 ---
+
+--- runtime crash output attached pid=11408 at 2026-08-13T11:45:30.8605642+08:00 ---
+
+--- runtime crash output attached pid=34992 at 2026-08-13T11:45:48.5289999+08:00 ---
+
+--- runtime crash output attached pid=36528 at 2026-08-13T11:47:19.5759836+08:00 ---
+
+--- runtime crash output attached pid=24268 at 2026-08-13T11:47:59.9843895+08:00 ---
+
+--- runtime crash output attached pid=2736 at 2026-08-13T11:48:23.3787389+08:00 ---
+
+--- runtime crash output attached pid=27556 at 2026-08-13T11:48:41.2565031+08:00 ---
+
+--- runtime crash output attached pid=4660 at 2026-08-13T11:49:42.2674567+08:00 ---
+
+--- runtime crash output attached pid=16672 at 2026-08-13T11:49:46.8225096+08:00 ---
+
+--- runtime crash output attached pid=35848 at 2026-08-13T11:49:49.8131443+08:00 ---
+
+--- runtime crash output attached pid=36488 at 2026-08-13T11:51:12.9832472+08:00 ---
+
+--- runtime crash output attached pid=6092 at 2026-08-13T11:51:15.4896764+08:00 ---
+
+--- runtime crash output attached pid=38460 at 2026-08-13T11:51:15.6641847+08:00 ---
+
+--- runtime crash output attached pid=35980 at 2026-08-13T11:51:50.8809372+08:00 ---
+
+--- runtime crash output attached pid=3060 at 2026-08-13T11:52:31.0180806+08:00 ---
+
+--- runtime crash output attached pid=35568 at 2026-08-13T11:52:45.1175282+08:00 ---
+
+--- runtime crash output attached pid=3944 at 2026-08-13T11:52:48.7930828+08:00 ---
+
+--- runtime crash output attached pid=25076 at 2026-08-13T11:54:06.0597507+08:00 ---
+
+--- runtime crash output attached pid=37580 at 2026-08-13T11:54:11.9609165+08:00 ---
+
+--- runtime crash output attached pid=22280 at 2026-08-13T11:54:54.1627216+08:00 ---
+
+--- runtime crash output attached pid=38604 at 2026-08-13T11:54:56.6364586+08:00 ---
+
+--- runtime crash output attached pid=23360 at 2026-08-13T11:55:28.0755044+08:00 ---
+
+--- runtime crash output attached pid=36720 at 2026-08-13T14:00:04.7351382+08:00 ---
+
+--- runtime crash output attached pid=36416 at 2026-08-13T14:00:06.1572532+08:00 ---
+
+--- runtime crash output attached pid=37988 at 2026-08-13T14:12:04.3481163+08:00 ---
+
+--- runtime crash output attached pid=17876 at 2026-08-13T14:12:04.4287473+08:00 ---
+
+--- runtime crash output attached pid=12540 at 2026-08-13T14:12:04.4340861+08:00 ---
+
+--- runtime crash output attached pid=38916 at 2026-08-13T14:12:04.4340861+08:00 ---
+
+--- runtime crash output attached pid=41784 at 2026-08-13T14:13:29.274064+08:00 ---
+
+--- runtime crash output attached pid=35308 at 2026-08-13T14:13:51.9925825+08:00 ---
+
+--- runtime crash output attached pid=5340 at 2026-08-13T14:14:10.9930102+08:00 ---
+
+--- runtime crash output attached pid=39684 at 2026-08-13T14:14:26.8250904+08:00 ---
+
+--- runtime crash output attached pid=14288 at 2026-08-13T14:15:20.7311695+08:00 ---
+
+--- runtime crash output attached pid=38844 at 2026-08-13T14:15:27.3899666+08:00 ---
+
+--- runtime crash output attached pid=38424 at 2026-08-13T14:15:33.5018607+08:00 ---
+
+--- runtime crash output attached pid=37420 at 2026-08-13T14:16:06.1870142+08:00 ---
+
+--- runtime crash output attached pid=28328 at 2026-08-13T14:16:45.692102+08:00 ---
+
+--- runtime crash output attached pid=36120 at 2026-08-13T14:16:52.9797543+08:00 ---
+
+--- runtime crash output attached pid=8612 at 2026-08-13T14:16:58.9963249+08:00 ---
+
+--- runtime crash output attached pid=41844 at 2026-08-13T14:17:49.2880191+08:00 ---
+
+--- runtime crash output attached pid=30176 at 2026-08-13T14:18:02.1061584+08:00 ---
+
+--- runtime crash output attached pid=31152 at 2026-08-13T14:18:53.5107794+08:00 ---
+
+--- runtime crash output attached pid=2388 at 2026-08-13T14:19:07.9222699+08:00 ---
+
+--- runtime crash output attached pid=35916 at 2026-08-13T14:19:44.0724213+08:00 ---
+
+--- runtime crash output attached pid=35392 at 2026-08-13T14:19:56.7065035+08:00 ---
+
+--- runtime crash output attached pid=13600 at 2026-08-13T14:20:26.1032448+08:00 ---
+
+--- runtime crash output attached pid=40600 at 2026-08-13T14:20:51.3773598+08:00 ---
+
+--- runtime crash output attached pid=41908 at 2026-08-13T14:21:32.418924+08:00 ---
+
+--- runtime crash output attached pid=17960 at 2026-08-13T14:22:06.2320934+08:00 ---
+
+--- runtime crash output attached pid=28076 at 2026-08-13T14:22:18.3992208+08:00 ---
+
+--- runtime crash output attached pid=38968 at 2026-08-13T14:22:26.6222738+08:00 ---
+
+--- runtime crash output attached pid=28896 at 2026-08-13T14:22:59.1343219+08:00 ---
+
+--- runtime crash output attached pid=39644 at 2026-08-13T14:23:46.9539859+08:00 ---
+
+--- runtime crash output attached pid=39904 at 2026-08-13T14:23:53.6850853+08:00 ---
+
+--- runtime crash output attached pid=32184 at 2026-08-13T14:25:06.7660097+08:00 ---
+
+--- runtime crash output attached pid=36228 at 2026-08-13T14:25:20.0774138+08:00 ---
+
+--- runtime crash output attached pid=41856 at 2026-08-13T14:25:36.1901089+08:00 ---
+
+--- runtime crash output attached pid=20116 at 2026-08-13T14:26:29.1528106+08:00 ---
+
+--- runtime crash output attached pid=36040 at 2026-08-13T14:26:59.0334158+08:00 ---
+
+--- runtime crash output attached pid=28608 at 2026-08-13T14:27:15.1527636+08:00 ---
+
+--- runtime crash output attached pid=17912 at 2026-08-13T14:27:19.303486+08:00 ---
+
+--- runtime crash output attached pid=38008 at 2026-08-13T14:27:59.7393525+08:00 ---
+
+--- runtime crash output attached pid=39896 at 2026-08-13T14:28:25.7820132+08:00 ---
+
+--- runtime crash output attached pid=28012 at 2026-08-13T14:28:55.5690436+08:00 ---
+
+--- runtime crash output attached pid=41404 at 2026-08-13T14:29:44.7967109+08:00 ---
+
+--- runtime crash output attached pid=27780 at 2026-08-13T14:29:44.9397907+08:00 ---
+
+--- runtime crash output attached pid=22600 at 2026-08-13T14:30:13.3231393+08:00 ---
+
+--- runtime crash output attached pid=36136 at 2026-08-13T14:30:25.6693624+08:00 ---
+
+--- runtime crash output attached pid=41580 at 2026-08-13T14:31:38.0247953+08:00 ---
+
+--- runtime crash output attached pid=13080 at 2026-08-13T14:32:16.6183439+08:00 ---
+
+--- runtime crash output attached pid=12772 at 2026-08-13T14:32:51.3052474+08:00 ---
+
+--- runtime crash output attached pid=5844 at 2026-08-13T14:33:24.6634354+08:00 ---
+
+--- runtime crash output attached pid=19428 at 2026-08-13T14:33:35.7784453+08:00 ---
+
+--- runtime crash output attached pid=19412 at 2026-08-13T14:34:04.6458472+08:00 ---
+
+--- runtime crash output attached pid=39512 at 2026-08-13T14:34:42.6506286+08:00 ---
+
+--- runtime crash output attached pid=39980 at 2026-08-13T14:35:27.4611614+08:00 ---
+
+--- runtime crash output attached pid=5340 at 2026-08-13T14:36:25.1663328+08:00 ---
+
+--- runtime crash output attached pid=35852 at 2026-08-13T14:37:53.7376785+08:00 ---
+
+--- runtime crash output attached pid=23696 at 2026-08-13T14:38:04.6708826+08:00 ---
+
+--- runtime crash output attached pid=10348 at 2026-08-13T14:39:23.4634689+08:00 ---
+
+--- runtime crash output attached pid=28640 at 2026-08-13T14:39:37.6059141+08:00 ---
+
+--- runtime crash output attached pid=40852 at 2026-08-13T14:40:38.2631676+08:00 ---
+
+--- runtime crash output attached pid=39916 at 2026-08-13T14:41:03.713096+08:00 ---
+
+--- runtime crash output attached pid=29604 at 2026-08-13T14:41:04.9766372+08:00 ---
+
+--- runtime crash output attached pid=34964 at 2026-08-13T14:41:35.3427779+08:00 ---
+
+--- runtime crash output attached pid=8284 at 2026-08-13T14:42:09.8494855+08:00 ---
+
+--- runtime crash output attached pid=28200 at 2026-08-13T14:42:32.2925473+08:00 ---
+
+--- runtime crash output attached pid=20300 at 2026-08-13T14:43:40.1044556+08:00 ---
+
+--- runtime crash output attached pid=41684 at 2026-08-13T14:43:45.0726326+08:00 ---
+
+--- runtime crash output attached pid=17460 at 2026-08-13T14:43:53.5536905+08:00 ---
+
+--- runtime crash output attached pid=16160 at 2026-08-13T14:43:57.1640771+08:00 ---
+
+--- runtime crash output attached pid=24364 at 2026-08-13T14:45:01.90395+08:00 ---
+
+--- runtime crash output attached pid=19416 at 2026-08-13T14:45:12.137746+08:00 ---
+
+--- runtime crash output attached pid=26492 at 2026-08-13T14:45:13.4756986+08:00 ---
+
+--- runtime crash output attached pid=1684 at 2026-08-13T14:45:36.8057351+08:00 ---
+
+--- runtime crash output attached pid=28496 at 2026-08-13T14:46:17.7280322+08:00 ---
+
+--- runtime crash output attached pid=17556 at 2026-08-13T14:46:27.9034752+08:00 ---
+
+--- runtime crash output attached pid=41544 at 2026-08-13T14:46:41.0004772+08:00 ---
+
+--- runtime crash output attached pid=40984 at 2026-08-13T14:47:02.3896206+08:00 ---
+
+--- runtime crash output attached pid=10476 at 2026-08-13T14:47:16.3442748+08:00 ---
+
+--- runtime crash output attached pid=9388 at 2026-08-13T14:47:45.0041091+08:00 ---
+
+--- runtime crash output attached pid=38408 at 2026-08-13T14:48:25.5902233+08:00 ---
+
+--- runtime crash output attached pid=3344 at 2026-08-13T14:48:51.0925673+08:00 ---
+
+--- runtime crash output attached pid=38136 at 2026-08-13T14:49:18.3637753+08:00 ---
+
+--- runtime crash output attached pid=1684 at 2026-08-13T14:49:36.3482074+08:00 ---
+
+--- runtime crash output attached pid=41468 at 2026-08-13T14:49:36.8689493+08:00 ---
+
+--- runtime crash output attached pid=42128 at 2026-08-13T14:50:56.4689409+08:00 ---
+
+--- runtime crash output attached pid=41112 at 2026-08-13T14:51:10.9514694+08:00 ---
+
+--- runtime crash output attached pid=7800 at 2026-08-13T14:52:20.5143393+08:00 ---
+
+--- runtime crash output attached pid=42416 at 2026-08-13T14:52:25.8369021+08:00 ---
+
+--- runtime crash output attached pid=35100 at 2026-08-13T14:52:39.2341352+08:00 ---
+
+--- runtime crash output attached pid=30396 at 2026-08-13T14:53:04.2331885+08:00 ---
+
+--- runtime crash output attached pid=41936 at 2026-08-13T14:53:59.0724384+08:00 ---
+
+--- runtime crash output attached pid=34400 at 2026-08-13T14:54:36.1899448+08:00 ---
+
+--- runtime crash output attached pid=41880 at 2026-08-13T14:54:46.2918016+08:00 ---
+
+--- runtime crash output attached pid=40572 at 2026-08-13T14:54:55.5401772+08:00 ---
+
+--- runtime crash output attached pid=12896 at 2026-08-13T14:55:15.1462346+08:00 ---
+
+--- runtime crash output attached pid=18328 at 2026-08-13T14:56:19.9126919+08:00 ---
+
+--- runtime crash output attached pid=14232 at 2026-08-13T14:56:32.6404983+08:00 ---
+
+--- runtime crash output attached pid=43004 at 2026-08-13T14:57:23.3587247+08:00 ---
+
+--- runtime crash output attached pid=1684 at 2026-08-13T14:57:36.9495746+08:00 ---
+
+--- runtime crash output attached pid=39396 at 2026-08-13T14:58:10.0484503+08:00 ---
+
+--- runtime crash output attached pid=36668 at 2026-08-13T14:58:41.9881453+08:00 ---
+
+--- runtime crash output attached pid=27912 at 2026-08-13T14:58:44.0347028+08:00 ---
+
+--- runtime crash output attached pid=36240 at 2026-08-13T14:58:46.40367+08:00 ---
+
+--- runtime crash output attached pid=29436 at 2026-08-13T15:00:05.9256641+08:00 ---
+
+--- runtime crash output attached pid=42224 at 2026-08-13T15:00:15.616182+08:00 ---
+
+--- runtime crash output attached pid=36780 at 2026-08-13T15:00:59.6053571+08:00 ---
+
+--- runtime crash output attached pid=42360 at 2026-08-13T15:01:04.2291659+08:00 ---
+
+--- runtime crash output attached pid=41912 at 2026-08-13T15:01:39.5916205+08:00 ---
+
+--- runtime crash output attached pid=36824 at 2026-08-13T15:01:41.0699859+08:00 ---
+
+--- runtime crash output attached pid=40852 at 2026-08-13T15:02:51.3323797+08:00 ---
+
+--- runtime crash output attached pid=29644 at 2026-08-13T15:02:58.4965692+08:00 ---
+
+--- runtime crash output attached pid=42536 at 2026-08-13T15:03:00.1503992+08:00 ---
+
+--- runtime crash output attached pid=32968 at 2026-08-13T15:03:24.8278652+08:00 ---
+
+--- runtime crash output attached pid=39080 at 2026-08-13T15:04:10.0710208+08:00 ---
+
+--- runtime crash output attached pid=1348 at 2026-08-13T15:04:29.1120025+08:00 ---
+
+--- runtime crash output attached pid=40000 at 2026-08-13T15:04:32.6605295+08:00 ---
+
+--- runtime crash output attached pid=42092 at 2026-08-13T15:05:25.7598559+08:00 ---
+
+--- runtime crash output attached pid=10980 at 2026-08-13T15:05:29.4631363+08:00 ---
+
+--- runtime crash output attached pid=19696 at 2026-08-13T15:08:23.9076561+08:00 ---
+
+--- runtime crash output attached pid=40460 at 2026-08-13T15:08:24.1005094+08:00 ---
+
+--- runtime crash output attached pid=42704 at 2026-08-13T15:08:24.3129322+08:00 ---
+
+--- runtime crash output attached pid=17460 at 2026-08-13T15:08:54.079767+08:00 ---
+
+--- runtime crash output attached pid=37164 at 2026-08-13T15:10:09.9358026+08:00 ---
+
+--- runtime crash output attached pid=21972 at 2026-08-13T15:10:31.3795347+08:00 ---
+
+--- runtime crash output attached pid=7812 at 2026-08-13T15:11:09.6228283+08:00 ---
+
+--- runtime crash output attached pid=7776 at 2026-08-13T15:11:15.7006708+08:00 ---
+
+--- runtime crash output attached pid=39760 at 2026-08-13T15:11:32.5404592+08:00 ---
+
+--- runtime crash output attached pid=41580 at 2026-08-13T15:12:09.1556401+08:00 ---
+
+--- runtime crash output attached pid=8748 at 2026-08-13T15:12:53.9679171+08:00 ---
+
+--- runtime crash output attached pid=10892 at 2026-08-13T15:13:16.9018793+08:00 ---
+
+--- runtime crash output attached pid=19428 at 2026-08-13T15:14:19.9926339+08:00 ---
+
+--- runtime crash output attached pid=36324 at 2026-08-13T15:14:39.8108833+08:00 ---
+
+--- runtime crash output attached pid=28480 at 2026-08-13T15:16:24.7703486+08:00 ---
+
+--- runtime crash output attached pid=39256 at 2026-08-13T15:16:27.1010594+08:00 ---
+
+--- runtime crash output attached pid=20660 at 2026-08-13T15:17:37.0809877+08:00 ---
+
+--- runtime crash output attached pid=34956 at 2026-08-13T15:18:18.5455979+08:00 ---
+
+--- runtime crash output attached pid=392 at 2026-08-13T15:19:08.623367+08:00 ---
+
+--- runtime crash output attached pid=36240 at 2026-08-13T15:20:09.8259585+08:00 ---
+
+--- runtime crash output attached pid=41856 at 2026-08-13T15:21:39.4864083+08:00 ---
+
+--- runtime crash output attached pid=42368 at 2026-08-13T15:22:08.1026619+08:00 ---
+
+--- runtime crash output attached pid=42416 at 2026-08-13T15:23:08.5232462+08:00 ---
+
+--- runtime crash output attached pid=39468 at 2026-08-13T15:25:03.5357168+08:00 ---
+
+--- runtime crash output attached pid=39876 at 2026-08-13T15:25:21.3921648+08:00 ---
+
+--- runtime crash output attached pid=42828 at 2026-08-13T15:25:24.1304375+08:00 ---
+
+--- runtime crash output attached pid=30252 at 2026-08-13T15:25:56.566561+08:00 ---
+
+--- runtime crash output attached pid=41520 at 2026-08-13T15:27:17.7283585+08:00 ---
+
+--- runtime crash output attached pid=42144 at 2026-08-13T15:27:47.5047035+08:00 ---
+
+--- runtime crash output attached pid=41156 at 2026-08-13T15:28:12.5705528+08:00 ---
+
+--- runtime crash output attached pid=35444 at 2026-08-13T15:28:48.5343535+08:00 ---
+
+--- runtime crash output attached pid=7340 at 2026-08-13T15:30:36.9933172+08:00 ---
+
+--- runtime crash output attached pid=30584 at 2026-08-13T15:30:39.9950861+08:00 ---
+
+--- runtime crash output attached pid=28404 at 2026-08-13T15:30:54.5383989+08:00 ---
+
+--- runtime crash output attached pid=4108 at 2026-08-13T15:33:33.5154906+08:00 ---
+
+--- runtime crash output attached pid=37796 at 2026-08-13T15:34:02.5131943+08:00 ---
+
+--- runtime crash output attached pid=42264 at 2026-08-13T15:34:13.8717644+08:00 ---
+
+--- runtime crash output attached pid=38332 at 2026-08-13T15:35:28.8116059+08:00 ---
+
+--- runtime crash output attached pid=34432 at 2026-08-13T15:36:35.8698496+08:00 ---
+
+--- runtime crash output attached pid=41540 at 2026-08-13T15:37:49.8010526+08:00 ---
+
+--- runtime crash output attached pid=41352 at 2026-08-13T15:38:44.5294469+08:00 ---
+
+--- runtime crash output attached pid=36344 at 2026-08-13T15:38:51.8510241+08:00 ---
+
+--- runtime crash output attached pid=32068 at 2026-08-13T15:39:23.8247397+08:00 ---
+
+--- runtime crash output attached pid=17328 at 2026-08-13T15:41:01.7119127+08:00 ---
+
+--- runtime crash output attached pid=22916 at 2026-08-13T15:41:16.0469629+08:00 ---
+
+--- runtime crash output attached pid=42576 at 2026-08-13T15:41:58.2292204+08:00 ---
+
+--- runtime crash output attached pid=37420 at 2026-08-13T15:42:05.2165375+08:00 ---
+
+--- runtime crash output attached pid=3076 at 2026-08-13T15:44:19.8189318+08:00 ---
+
+--- runtime crash output attached pid=41520 at 2026-08-13T15:45:06.5755772+08:00 ---
+
+--- runtime crash output attached pid=34996 at 2026-08-13T15:45:38.3837594+08:00 ---
+
+--- runtime crash output attached pid=13192 at 2026-08-13T15:45:46.8266699+08:00 ---
+
+--- runtime crash output attached pid=38988 at 2026-08-13T15:47:01.6970935+08:00 ---
+
+--- runtime crash output attached pid=15924 at 2026-08-13T15:47:20.1252462+08:00 ---
+
+--- runtime crash output attached pid=17632 at 2026-08-13T15:48:59.9721327+08:00 ---
+
+--- runtime crash output attached pid=42788 at 2026-08-13T15:49:01.6802179+08:00 ---
+
+--- runtime crash output attached pid=5472 at 2026-08-13T15:49:26.3728014+08:00 ---
+
+--- runtime crash output attached pid=41436 at 2026-08-13T15:49:39.0840239+08:00 ---
+
+--- runtime crash output attached pid=28404 at 2026-08-13T15:51:32.3697191+08:00 ---
+
+--- runtime crash output attached pid=43692 at 2026-08-13T15:53:08.9338589+08:00 ---
+
+--- runtime crash output attached pid=42728 at 2026-08-13T15:53:30.5338942+08:00 ---
+
+--- runtime crash output attached pid=35212 at 2026-08-13T15:53:35.7890829+08:00 ---
+
+--- runtime crash output attached pid=38044 at 2026-08-13T15:53:43.1899528+08:00 ---
+
+--- runtime crash output attached pid=23820 at 2026-08-13T15:55:33.5402677+08:00 ---
+
+--- runtime crash output attached pid=43448 at 2026-08-13T15:55:42.0954053+08:00 ---
+
+--- runtime crash output attached pid=43864 at 2026-08-13T15:58:37.8829152+08:00 ---
+
+--- runtime crash output attached pid=37404 at 2026-08-13T15:58:50.2699284+08:00 ---
+
+--- runtime crash output attached pid=23820 at 2026-08-13T15:59:25.6727329+08:00 ---
+
+--- runtime crash output attached pid=39388 at 2026-08-13T16:00:29.5251942+08:00 ---
+
+--- runtime crash output attached pid=37880 at 2026-08-13T16:02:20.0689904+08:00 ---
+
+--- runtime crash output attached pid=42744 at 2026-08-13T16:02:37.7389618+08:00 ---
+
+--- runtime crash output attached pid=39408 at 2026-08-13T16:02:42.5342719+08:00 ---
+
+--- runtime crash output attached pid=28040 at 2026-08-13T16:02:54.0524388+08:00 ---
+
+--- runtime crash output attached pid=40984 at 2026-08-13T16:05:24.283766+08:00 ---
+
+--- runtime crash output attached pid=24524 at 2026-08-13T16:06:34.7378162+08:00 ---
+
+--- runtime crash output attached pid=38108 at 2026-08-13T16:06:55.1340616+08:00 ---
+
+--- runtime crash output attached pid=35400 at 2026-08-13T16:07:26.9152155+08:00 ---
+
+--- runtime crash output attached pid=42924 at 2026-08-13T16:09:08.2900028+08:00 ---
+
+--- runtime crash output attached pid=39148 at 2026-08-13T16:10:01.7196918+08:00 ---
+
+--- runtime crash output attached pid=41728 at 2026-08-13T16:10:14.9100786+08:00 ---
+
+--- runtime crash output attached pid=43232 at 2026-08-13T16:11:41.9700427+08:00 ---
+
+--- runtime crash output attached pid=44708 at 2026-08-13T16:12:54.252842+08:00 ---
+
+--- runtime crash output attached pid=42280 at 2026-08-13T16:13:16.6126464+08:00 ---
+
+--- runtime crash output attached pid=26364 at 2026-08-13T16:13:29.2271806+08:00 ---
+
+--- runtime crash output attached pid=27688 at 2026-08-13T16:15:33.2915915+08:00 ---
+
+--- runtime crash output attached pid=5056 at 2026-08-13T16:17:31.0068167+08:00 ---
+
+--- runtime crash output attached pid=2100 at 2026-08-13T16:17:35.2383916+08:00 ---
+
+--- runtime crash output attached pid=5672 at 2026-08-13T16:17:59.3558086+08:00 ---
+
+--- runtime crash output attached pid=26984 at 2026-08-13T16:22:02.9943445+08:00 ---
+
+--- runtime crash output attached pid=42432 at 2026-08-13T16:28:20.0127383+08:00 ---
+
+--- runtime crash output attached pid=38040 at 2026-08-13T17:19:06.5086868+08:00 ---
+
+--- runtime crash output attached pid=42736 at 2026-08-14T10:19:24.6780392+08:00 ---
+
+--- runtime crash output attached pid=45900 at 2026-08-14T10:19:50.4511088+08:00 ---
+
+--- runtime crash output attached pid=47044 at 2026-08-14T10:21:53.9565709+08:00 ---
+
+--- runtime crash output attached pid=30224 at 2026-08-14T10:23:49.8639788+08:00 ---
+
+--- runtime crash output attached pid=18124 at 2026-08-14T10:28:56.2884555+08:00 ---
+
+--- runtime crash output attached pid=22612 at 2026-08-14T10:29:13.0258835+08:00 ---
+
+--- runtime crash output attached pid=23408 at 2026-08-14T11:58:33.5569932+08:00 ---
+
+--- runtime crash output attached pid=19604 at 2026-08-14T15:29:10.3035215+08:00 ---
+
+--- runtime crash output attached pid=43468 at 2026-08-14T15:48:04.9756491+08:00 ---
+
+--- runtime crash output attached pid=21792 at 2026-08-14T17:00:27.305131+08:00 ---
+
+--- runtime crash output attached pid=44372 at 2026-08-14T17:29:50.6977052+08:00 ---
+
+--- runtime crash output attached pid=41660 at 2026-08-14T18:02:21.1575915+08:00 ---
+
+--- runtime crash output attached pid=44380 at 2026-08-14T18:28:05.7999334+08:00 ---
+
+--- runtime crash output attached pid=36460 at 2026-08-14T19:02:34.6057171+08:00 ---
+
+--- runtime crash output attached pid=17628 at 2026-08-17T08:36:04.7044308+08:00 ---
+
+--- runtime crash output attached pid=11504 at 2026-08-17T09:37:26.4261014+08:00 ---
+
+--- runtime crash output attached pid=10132 at 2026-08-17T10:37:50.0997046+08:00 ---
+
+--- runtime crash output attached pid=49856 at 2026-08-17T11:40:26.4300522+08:00 ---
+
+--- runtime crash output attached pid=18784 at 2026-08-17T12:41:40.066475+08:00 ---
+
+--- runtime crash output attached pid=59464 at 2026-08-17T13:43:30.1733121+08:00 ---
+
+--- runtime crash output attached pid=39796 at 2026-08-17T14:55:55.1834855+08:00 ---
+
+--- runtime crash output attached pid=48400 at 2026-08-17T15:28:25.8094542+08:00 ---
+
+--- runtime crash output attached pid=42192 at 2026-08-17T15:28:26.1620133+08:00 ---
+
+--- runtime crash output attached pid=59160 at 2026-08-17T16:05:33.3527963+08:00 ---
+
+--- runtime crash output attached pid=2368 at 2026-08-17T16:06:26.0719592+08:00 ---
+
+--- runtime crash output attached pid=60724 at 2026-08-17T16:06:41.1350136+08:00 ---
+
+--- runtime crash output attached pid=23852 at 2026-08-17T16:17:03.7009453+08:00 ---
+
+--- runtime crash output attached pid=33256 at 2026-08-17T16:17:04.2897568+08:00 ---
+
+--- runtime crash output attached pid=43436 at 2026-08-17T16:24:58.8052625+08:00 ---
+
+--- runtime crash output attached pid=41816 at 2026-08-17T16:39:16.4519972+08:00 ---
+
+--- runtime crash output attached pid=52540 at 2026-08-17T16:47:08.9076023+08:00 ---
+
+--- runtime crash output attached pid=20208 at 2026-08-17T16:47:38.6729886+08:00 ---
+
+--- runtime crash output attached pid=27384 at 2026-08-17T17:04:26.5810423+08:00 ---
+
+--- runtime crash output attached pid=53540 at 2026-08-17T17:04:27.1789679+08:00 ---
+
+--- runtime crash output attached pid=43444 at 2026-08-17T17:14:15.5284109+08:00 ---
+
+--- runtime crash output attached pid=38808 at 2026-08-17T18:40:30.5912739+08:00 ---
+
+--- runtime crash output attached pid=15704 at 2026-08-17T18:54:07.2881591+08:00 ---
+
+--- runtime crash output attached pid=63848 at 2026-08-17T19:54:37.1354601+08:00 ---
+
+--- runtime crash output attached pid=64916 at 2026-08-18T09:03:52.8234185+08:00 ---
+
+--- runtime crash output attached pid=65668 at 2026-08-18T11:53:33.1147969+08:00 ---
+
+--- runtime crash output attached pid=16916 at 2026-08-18T13:51:53.166524+08:00 ---
+
+--- runtime crash output attached pid=16476 at 2026-08-18T14:52:23.0744043+08:00 ---
+
+--- runtime crash output attached pid=50984 at 2026-08-18T16:06:20.967257+08:00 ---
+
+--- runtime crash output attached pid=58992 at 2026-08-18T17:22:51.7775731+08:00 ---
+
+--- runtime crash output attached pid=60588 at 2026-08-18T18:49:52.7211879+08:00 ---
+
+--- runtime crash output attached pid=71172 at 2026-08-19T09:28:25.6226941+08:00 ---
+
+--- runtime crash output attached pid=27768 at 2026-08-19T11:52:16.1708859+08:00 ---
+
+--- runtime crash output attached pid=3364 at 2026-08-19T12:55:00.2861699+08:00 ---
+
+--- runtime crash output attached pid=79404 at 2026-08-19T14:09:28.3685722+08:00 ---
+
+--- runtime crash output attached pid=72340 at 2026-08-19T15:25:05.9046289+08:00 ---
+
+--- runtime crash output attached pid=24604 at 2026-08-19T17:01:59.1297275+08:00 ---
+
+--- runtime crash output attached pid=78448 at 2026-08-19T17:02:00.1377914+08:00 ---
+
+--- runtime crash output attached pid=74144 at 2026-08-19T18:05:09.0459436+08:00 ---
+
+--- runtime crash output attached pid=46128 at 2026-08-19T18:05:09.9337566+08:00 ---
+
+--- runtime crash output attached pid=55696 at 2026-08-19T19:30:18.8593876+08:00 ---
+
+--- runtime crash output attached pid=18884 at 2026-08-19T19:30:19.9106483+08:00 ---
+
+--- runtime crash output attached pid=76216 at 2026-08-20T10:41:34.6765763+08:00 ---
+
+--- runtime crash output attached pid=32368 at 2026-08-20T12:41:54.4043207+08:00 ---
+
+--- runtime crash output attached pid=72564 at 2026-08-20T15:15:04.4277347+08:00 ---
+
+--- runtime crash output attached pid=60824 at 2026-08-20T16:53:54.4767766+08:00 ---
+
+--- runtime crash output attached pid=71012 at 2026-08-20T18:04:37.0732336+08:00 ---
+
+--- runtime crash output attached pid=50068 at 2026-08-20T18:04:38.1210588+08:00 ---
+
+--- runtime crash output attached pid=14272 at 2026-08-21T09:10:37.1660205+08:00 ---
+
+--- runtime crash output attached pid=24196 at 2026-08-21T09:12:42.8759407+08:00 ---
+
+--- runtime crash output attached pid=78164 at 2026-08-21T09:12:50.65227+08:00 ---
+
+--- runtime crash output attached pid=32348 at 2026-08-21T11:26:21.6933261+08:00 ---
+
+--- runtime crash output attached pid=32700 at 2026-08-21T13:13:13.7373072+08:00 ---
+
+--- runtime crash output attached pid=7292 at 2026-08-21T15:39:16.673014+08:00 ---
+
+--- runtime crash output attached pid=16764 at 2026-08-21T16:39:51.188999+08:00 ---
+
+--- runtime crash output attached pid=60796 at 2026-08-21T19:36:13.2562844+08:00 ---
+
+--- runtime crash output attached pid=2128 at 2026-08-26T09:36:01.1236521+08:00 ---
+
+--- runtime crash output attached pid=81792 at 2026-09-20T15:31:38.1797116+08:00 ---
+
+--- runtime crash output attached pid=60228 at 2026-09-20T15:31:39.6228363+08:00 ---
+
+--- runtime crash output attached pid=47952 at 2026-09-20T16:39:31.2153589+08:00 ---
+
+--- runtime crash output attached pid=66636 at 2026-09-20T18:56:10.8745204+08:00 ---
+
+--- runtime crash output attached pid=83652 at 2026-09-20T20:09:00.6733083+08:00 ---
+
+--- runtime crash output attached pid=69796 at 2026-09-20T21:09:30.5202141+08:00 ---
+
+--- runtime crash output attached pid=75308 at 2026-09-21T10:07:43.4346273+08:00 ---
+
+--- runtime crash output attached pid=9480 at 2026-09-21T10:07:45.0593738+08:00 ---
+
+--- runtime crash output attached pid=46452 at 2026-09-21T18:20:14.159011+08:00 ---
+
+--- runtime crash output attached pid=42896 at 2026-09-21T18:20:15.5792701+08:00 ---
+
+--- runtime crash output attached pid=57988 at 2026-09-23T09:18:20.2305049+08:00 ---
+
+--- runtime crash output attached pid=38096 at 2026-09-23T15:17:43.9798246+08:00 ---
+
+--- runtime crash output attached pid=88484 at 2026-09-23T16:41:13.0433852+08:00 ---
+
+--- runtime crash output attached pid=63988 at 2026-09-27T16:51:27.5123357+08:00 ---
+
+--- runtime crash output attached pid=80596 at 2026-09-27T16:51:36.0099577+08:00 ---
+
+--- runtime crash output attached pid=69432 at 2026-09-27T16:53:03.9234979+08:00 ---
+
+--- runtime crash output attached pid=67560 at 2026-09-27T16:53:06.1872052+08:00 ---
+
+--- runtime crash output attached pid=97832 at 2026-09-28T00:22:29.0361896+08:00 ---
+
+--- runtime crash output attached pid=69064 at 2026-09-28T00:22:33.3906106+08:00 ---
+
+--- runtime crash output attached pid=97608 at 2026-09-28T09:31:58.8898374+08:00 ---
+
+--- runtime crash output attached pid=27824 at 2026-09-28T12:29:58.5390335+08:00 ---
+
+--- runtime crash output attached pid=93216 at 2026-09-28T12:30:45.439933+08:00 ---
+
+--- runtime crash output attached pid=21436 at 2026-09-28T12:30:45.9411428+08:00 ---
+
+--- runtime crash output attached pid=51680 at 2026-09-28T12:30:46.5587832+08:00 ---
+
+--- runtime crash output attached pid=60092 at 2026-09-28T12:30:47.3992146+08:00 ---
+
+--- runtime crash output attached pid=83456 at 2026-09-28T12:30:48.4024749+08:00 ---
+
+--- runtime crash output attached pid=51664 at 2026-09-28T12:30:48.8295739+08:00 ---
+
+--- runtime crash output attached pid=89416 at 2026-09-28T12:30:49.3780123+08:00 ---
+
+--- runtime crash output attached pid=88972 at 2026-09-28T12:30:50.2151837+08:00 ---
+
+--- runtime crash output attached pid=61584 at 2026-09-28T12:35:30.2079726+08:00 ---
+
+--- runtime crash output attached pid=83212 at 2026-09-28T12:35:32.5157289+08:00 ---
+
+--- runtime crash output attached pid=71420 at 2026-09-28T12:39:52.3418953+08:00 ---
+
+--- runtime crash output attached pid=39532 at 2026-09-28T12:40:13.3075793+08:00 ---
+
+--- runtime crash output attached pid=96204 at 2026-09-28T12:43:11.1515456+08:00 ---
+
+--- runtime crash output attached pid=80772 at 2026-09-28T12:44:27.4254812+08:00 ---
+
+--- runtime crash output attached pid=54832 at 2026-09-28T12:47:12.0355898+08:00 ---
+
+--- runtime crash output attached pid=50536 at 2026-09-28T12:48:38.8531475+08:00 ---
+
+--- runtime crash output attached pid=97924 at 2026-09-28T12:48:39.5973394+08:00 ---
+
+--- runtime crash output attached pid=72128 at 2026-09-28T12:48:41.1056574+08:00 ---
+
+--- runtime crash output attached pid=76848 at 2026-09-28T12:51:08.3744276+08:00 ---
+
+--- runtime crash output attached pid=93096 at 2026-09-28T12:51:40.2915056+08:00 ---
+
+--- runtime crash output attached pid=97684 at 2026-09-28T13:01:40.1872864+08:00 ---
+
+--- runtime crash output attached pid=25248 at 2026-09-28T13:13:16.7373416+08:00 ---
+
+--- runtime crash output attached pid=100852 at 2026-09-28T13:17:17.6500205+08:00 ---
+
+--- runtime crash output attached pid=13324 at 2026-09-28T13:18:46.5757359+08:00 ---
+
+--- runtime crash output attached pid=48648 at 2026-09-28T13:18:48.8527153+08:00 ---
+
+--- runtime crash output attached pid=22420 at 2026-09-28T13:18:49.0852282+08:00 ---
+
+--- runtime crash output attached pid=72616 at 2026-09-28T13:18:49.9145622+08:00 ---
+
+--- runtime crash output attached pid=48112 at 2026-09-28T13:21:45.9271965+08:00 ---
+
+--- runtime crash output attached pid=53976 at 2026-09-28T13:27:15.4306044+08:00 ---
+
+--- runtime crash output attached pid=26868 at 2026-09-28T13:29:42.646683+08:00 ---
+
+--- runtime crash output attached pid=86212 at 2026-09-28T13:31:57.8676806+08:00 ---
+
+--- runtime crash output attached pid=76184 at 2026-09-28T13:31:58.4948916+08:00 ---
+
+--- runtime crash output attached pid=92028 at 2026-09-28T13:32:01.010063+08:00 ---
+
+--- runtime crash output attached pid=44080 at 2026-09-28T13:36:03.2624243+08:00 ---
+
+--- runtime crash output attached pid=35880 at 2026-09-28T13:48:35.5959214+08:00 ---
+
+--- runtime crash output attached pid=71960 at 2026-09-28T13:49:58.7090952+08:00 ---
+
+--- runtime crash output attached pid=85412 at 2026-09-28T13:50:00.9027049+08:00 ---
+
+--- runtime crash output attached pid=72316 at 2026-09-28T14:17:10.418638+08:00 ---
+
+--- runtime crash output attached pid=90060 at 2026-09-29T09:28:14.2363028+08:00 ---
+
+--- runtime crash output attached pid=81140 at 2026-09-29T09:28:15.9548093+08:00 ---
+
+--- runtime crash output attached pid=72936 at 2026-09-29T12:11:38.6906383+08:00 ---
+
+--- runtime crash output attached pid=9884 at 2026-09-29T16:06:28.8321452+08:00 ---
+
+--- runtime crash output attached pid=34516 at 2026-09-29T19:47:18.2695748+08:00 ---
+
+--- runtime crash output attached pid=73500 at 2026-09-30T12:27:07.244958+08:00 ---
