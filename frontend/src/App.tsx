@@ -1,5 +1,6 @@
 import type { Period, SymbolInfo as ProSymbolInfo } from "@klinecharts/pro";
-import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type React from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { periodFromTimeframe, periodToTimeframe } from "./api/datafeed";
 import type { SeriesRef } from "./api/types";
 import { INITIAL_CALENDAR } from "./data/marketData";

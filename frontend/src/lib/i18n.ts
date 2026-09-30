@@ -343,8 +343,6 @@ export const zh = {
   "Select a proposal to view details": "选择一条研报查看详情",
 } as const;
 
-export type I18nKey = keyof typeof zh;
-
 export function t(key: string): string {
   return (zh as Record<string, string>)[key] ?? key;
 }

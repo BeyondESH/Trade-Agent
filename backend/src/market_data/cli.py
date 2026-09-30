@@ -141,15 +141,10 @@ def main() -> None:
             f"=== {series.relative_path()} | rows={len(df)} | close={df['close'].iloc[-1]:.2f} ==="
         )
         print(
-            "MACD dif={:.2f} dea={:.2f} hist={:.2f} | KDJ k={:.1f} d={:.1f} j={:.1f}".format(
-                ind["dif"], ind["dea"], ind["macd_hist"], ind["kdj_k"], ind["kdj_d"], ind["kdj_j"]
-            )
-        )
-        print(
-            "BOLL [{:.2f}, {:.2f}, {:.2f}] | VEGAS144={:.2f} VEGAS169={:.2f}".format(
-                ind["boll_lower"],
-                ind["boll_mid"],
-                ind["boll_upper"],
+            "KDJ k={:.1f} d={:.1f} j={:.1f} | VEGAS144={:.2f} VEGAS169={:.2f}".format(
+                ind["kdj_k"],
+                ind["kdj_d"],
+                ind["kdj_j"],
                 ind["vegas_ema144"],
                 ind["vegas_ema169"],
             )

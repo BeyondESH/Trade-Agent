@@ -45,7 +45,6 @@ export interface Snapshot {
   price?: number;
   portfolio?: { equity: number; positions: string[] };
   levels?: Level[];
-  macd_hist?: number | null;
   last_candle?: {
     open_time: number;
     open: number;

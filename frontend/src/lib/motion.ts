@@ -26,13 +26,6 @@ export const scrim: Variants = {
   exit: { opacity: 0, transition: { duration: 0.12, ease: "easeIn" } },
 };
 
-/** Anchored overlay: menus, popovers, dropdowns. Settles down and in. */
-export const popover: Variants = {
-  hidden: { opacity: 0, y: -6, scale: 0.97 },
-  show: { opacity: 1, y: 0, scale: 1, transition: SPRING_SNAPPY },
-  exit: { opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.11, ease: "easeIn" } },
-};
-
 /** Centred modal shell. */
 export const modalShell: Variants = {
   hidden: { opacity: 0, y: 10, scale: 0.98 },

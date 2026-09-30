@@ -10,15 +10,6 @@ from dataclasses import dataclass
 
 OHLCV_COLUMNS: list[str] = ["open_time", "open", "high", "low", "close", "volume"]
 
-# Bitget market categories (product lines) supported by the hub.
-MARKET_CATEGORIES: list[str] = [
-    "SPOT",
-    "USDT-FUTURES",
-]
-
-# Bitget instrument symbol types.
-SYMBOL_TYPES: list[str] = ["crypto", "metal", "stock", "commodity"]
-
 # Category -> Bitget v2 ticker endpoint base (v3 instruments covers all).
 _CATEGORY_TICKER_API: dict[str, str] = {
     "SPOT": "https://api.bitget.com/api/v2/spot/market/tickers",
@@ -126,21 +117,6 @@ _REALTIME_ONLY_TIMEFRAMES: frozenset[str] = frozenset({"1s"})
 def is_realtime_only_timeframe(timeframe: str) -> bool:
     """True when the level has no REST history (real-time push only)."""
     return _normalize_timeframe(timeframe) in _REALTIME_ONLY_TIMEFRAMES
-
-
-# All valid persistence-level timeframes, newest first (realtime-only excluded).
-VALID_TIMEFRAMES: list[str] = [
-    tf
-    for tf, _ in sorted(_TIMEFRAME_STEP_MS.items(), key=lambda kv: kv[1], reverse=True)
-    if tf not in _REALTIME_ONLY_TIMEFRAMES
-]
-
-
-def validate_timeframe(timeframe: str) -> None:
-    """Raise ValueError for timeframes outside the valid historical set."""
-    norm = _normalize_timeframe(timeframe)
-    if norm not in _TIMEFRAME_STEP_MS or norm in _REALTIME_ONLY_TIMEFRAMES:
-        raise ValueError(f"Unsupported timeframe: {timeframe!r}")
 
 
 def timeframe_step_ms(timeframe: str) -> int:

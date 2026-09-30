@@ -23,8 +23,6 @@ def _collect(df: pd.DataFrame) -> list[tuple[float, str]]:
     out: list[tuple[float, str]] = []
     ind = indicators.compute(df).iloc[-1]
     for col, label in (
-        ("boll_upper", "boll"),
-        ("boll_lower", "boll"),
         ("vegas_ema144", "vegas"),
         ("vegas_ema169", "vegas"),
     ):

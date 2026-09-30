@@ -59,9 +59,9 @@ Trade-Agent 是一个全栈的加密货币行情研究与交易终端：
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Python ≥ 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · vectorbt（指标计算）· pydantic-settings · akshare |
+| 后端 | Python ≥ 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · pydantic-settings · akshare |
 | 数据接入 | Bitget Agent MCP（stdio）· Bitget 公共 WebSocket · REST v2/v3 |
-| 前端 | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Recharts · Radix UI · motion · lucide-react · 自托管 Google Sans Flex / Noto Sans SC |
+| 前端 | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Radix UI · motion · lucide-react · 自托管 Google Sans Flex / Noto Sans SC |
 | 测试 | pytest（三层测试）· Vitest + Testing Library · Playwright（E2E） |
 | 工程 | uv / pip · npm · OpenSpec 规格驱动开发 · GPL-3.0 |
 
@@ -70,7 +70,7 @@ Trade-Agent 是一个全栈的加密货币行情研究与交易终端：
 ```
 ┌────────────────────── 浏览器 · React 19 + Vite ──────────────────────┐
 │  SuperCharts │ Markets │ Screener │ Heatmaps │ Community │ News       │
-│  klinecharts-pro · Recharts · i18n(中文) · Tailwind v4 · dark/light  │
+│  klinecharts-pro · i18n(中文) · Tailwind v4 · dark/light             │
 └───────────────────────┬─────────────────────────┬──────────────────┘
                         │ /api (vite proxy)       │ /ws
 ┌───────────────────────▼─────────────────────────▼──────────────────┐

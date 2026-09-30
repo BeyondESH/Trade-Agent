@@ -357,15 +357,9 @@ def create_app(
             raise HTTPException(status_code=422, detail=f"insufficient data (rows={len(df)})")
         ind = indicators.compute(df).iloc[-1]
         keys = [
-            "dif",
-            "dea",
-            "macd_hist",
             "kdj_k",
             "kdj_d",
             "kdj_j",
-            "boll_lower",
-            "boll_mid",
-            "boll_upper",
             "vegas_ema144",
             "vegas_ema169",
         ]
@@ -671,10 +665,6 @@ def create_app(
         snap = {"price": price, "last_candle": bar}
         if len(df) >= 30:
             snap["levels"] = _levels_json(levels.build_levels(df, top_n=5))
-            ind = indicators.compute(df).iloc[-1]
-            snap["macd_hist"] = (
-                None if ind["macd_hist"] != ind["macd_hist"] else float(ind["macd_hist"])
-            )
         return snap
 
     @app.websocket("/ws")

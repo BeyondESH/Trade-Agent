@@ -71,21 +71,15 @@ def _technical_tools(store: ParquetStore) -> list[BaseTool]:
     def get_indicators(
         symbol: str, timeframe: str, category: str = DEFAULT_CATEGORY
     ) -> dict[str, Any]:
-        """Return the latest MACD/KDJ/BOLL/VEGAS indicator values for a series."""
+        """Return the latest KDJ/VEGAS indicator values for a series."""
         df = store.read(Series(category, symbol, timeframe))
         if len(df) < 30:
             return {"error": f"insufficient data (rows={len(df)}, need >=30)"}
         row = indicators.compute(df).iloc[-1]
         keys = (
-            "dif",
-            "dea",
-            "macd_hist",
             "kdj_k",
             "kdj_d",
             "kdj_j",
-            "boll_lower",
-            "boll_mid",
-            "boll_upper",
             "vegas_ema144",
             "vegas_ema169",
         )

@@ -24,10 +24,6 @@ export function setNotifyEnabled(enabled: boolean): void {
   }
 }
 
-export function notifyPermission(): NotifyPermission {
-  return isNotifySupported() ? Notification.permission : "unsupported";
-}
-
 /**
  * Ask the browser for notification permission. MUST be invoked from a user
  * gesture (the AlertsPanel toggle); never called on mount.

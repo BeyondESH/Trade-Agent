@@ -59,9 +59,9 @@ The project is developed spec-first with [OpenSpec](https://github.com/Fission-A
 
 | Layer | Technology |
 |---|---|
-| Backend | Python >= 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · vectorbt (indicator computation) · pydantic-settings · akshare |
+| Backend | Python >= 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · pydantic-settings · akshare |
 | Data access | Bitget Agent MCP (stdio) · Bitget public WebSocket · REST v2/v3 |
-| Frontend | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Recharts · Radix UI · motion · lucide-react · self-hosted Google Sans Flex / Noto Sans SC |
+| Frontend | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Radix UI · motion · lucide-react · self-hosted Google Sans Flex / Noto Sans SC |
 | Testing | pytest (three-layer suite) · Vitest + Testing Library · Playwright (E2E) |
 | Engineering | uv / pip · npm · OpenSpec spec-first development · GPL-3.0 |
 
@@ -70,7 +70,7 @@ The project is developed spec-first with [OpenSpec](https://github.com/Fission-A
 ```
 ┌────────────────────── Browser · React 19 + Vite ──────────────────────┐
 │  SuperCharts │ Markets │ Screener │ Heatmaps │ Community │ News       │
-│  klinecharts-pro · Recharts · i18n(zh-CN) · Tailwind v4 · dark/light │
+│  klinecharts-pro · i18n(zh-CN) · Tailwind v4 · dark/light            │
 └───────────────────────┬─────────────────────────┬──────────────────┘
                         │ /api (vite proxy)       │ /ws
 ┌───────────────────────▼─────────────────────────▼──────────────────┐

@@ -53,7 +53,7 @@ def test_technical_tools_reuse_existing_modules(toolset: ResearchTools) -> None:
         {"symbol": "BTCUSDT", "timeframe": "1h"}
     )
     assert "error" not in indicators
-    assert indicators["dif"] is not None and indicators["boll_mid"] is not None
+    assert indicators["kdj_j"] is not None and indicators["vegas_ema144"] is not None
 
     levels = _by_name(toolset.technical, "get_levels").invoke(
         {"symbol": "BTCUSDT", "timeframe": "1h"}

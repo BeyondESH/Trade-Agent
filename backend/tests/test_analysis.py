@@ -42,19 +42,6 @@ def test_ema_constant() -> None:
     assert abs(indicators.ema(s, 5).iloc[-1] - 100.0) < 1e-9
 
 
-def test_macd_uptrend_positive() -> None:
-    df = _df(list(range(1, 61)))
-    out = indicators.macd(df["close"])
-    assert out["dif"].iloc[-1] > 0, "uptrend should give positive DIF"
-
-
-def test_bollinger_constant() -> None:
-    df = _df([100.0] * 30)
-    b = indicators.bollinger(df["close"]).iloc[-1]
-    assert abs(b["boll_mid"] - 100.0) < 1e-9
-    assert abs(b["boll_upper"] - b["boll_mid"]) < 1e-9  # std == 0
-
-
 def test_kdj_in_range() -> None:
     df = _df(list(range(1, 61)))
     k = indicators.kdj(df["high"], df["low"], df["close"]).iloc[-1]
@@ -70,13 +57,7 @@ def test_fib_midpoint() -> None:
 def test_insufficient_data_no_error() -> None:
     df = _df([100.0, 101.0, 102.0])
     out = indicators.compute(df)  # must not raise
-    assert np.isnan(out["boll_mid"].iloc[-1])  # not enough for 20-window
-
-
-def test_rsi_atr_insufficient_nan() -> None:
-    df = _df([100.0, 101.0, 102.0])
-    assert np.isnan(indicators.rsi(df["close"], 14).iloc[-1])
-    assert np.isnan(indicators.atr(df["high"], df["low"], df["close"], 14).iloc[-1])
+    assert np.isnan(out["kdj_j"].iloc[-1])  # not enough for 9-window
 
 
 def test_indicators_deterministic() -> None:
@@ -90,16 +71,9 @@ def test_indicator_no_lookahead() -> None:
     """A value at bar t must be identical whether or not future bars exist."""
     full = _df(list(range(1, 81)))
     prefix = full.iloc[:40]
-    for col in ("boll_mid", "boll_upper", "rsi", "atr"):
-        if col == "rsi":
-            v_full = indicators.rsi(full["close"], 14).iloc[39]
-            v_prefix = indicators.rsi(prefix["close"], 14).iloc[39]
-        elif col == "atr":
-            v_full = indicators.atr(full["high"], full["low"], full["close"], 14).iloc[39]
-            v_prefix = indicators.atr(prefix["high"], prefix["low"], prefix["close"], 14).iloc[39]
-        else:
-            v_full = indicators.compute(full)[col].iloc[39]
-            v_prefix = indicators.compute(prefix)[col].iloc[39]
+    for col in ("kdj_k", "kdj_j", "vegas_ema144"):
+        v_full = indicators.compute(full)[col].iloc[39]
+        v_prefix = indicators.compute(prefix)[col].iloc[39]
         assert v_full == v_prefix or (np.isnan(v_full) and np.isnan(v_prefix))
 
 
