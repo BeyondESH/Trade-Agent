@@ -1,32 +1,29 @@
-.codemap/
-.codemaker/codemap/
-.codemaker/codeindex/
-.codemaker/rules/codemap.mdc
-.codemaker/mcps.json
-.codemaker/hooks.json
-.claude/skills/codemap-*/
-.claude/skills/code-index-*/
-.claude/settings.local.json
-opencode.json
-.mcp.json
-.codex/
-.agents/skills/codemap-*/
-.agents/skills/code-index-*/
-.cursor/
+﻿# .codemap/
+# .codemaker/codemap/
+# .codemaker/codeindex/
+# .codemaker/rules/codemap.mdc
+# .codemaker/mcps.json
+# .codemaker/hooks.json
+# .claude/skills/codemap-*/
+# .claude/skills/code-index-*/
+# .claude/settings.local.json
+# opencode.json
+# .mcp.json
+# .codex/
+# .agents/skills/codemap-*/
+# .agents/skills/code-index-*/
+# .cursor/
 
-# Local agent workspace (never shared).
-.omo/
+# # Local agent workspace (never shared).
+# .omo/
 
-# Playwright MCP tool artifacts (console logs / page snapshots).
-.playwright-mcp/
+# # Build / export artifacts must not be tracked (e.g. generated AP config dumps).
+# build_ap_cmh.json
 
-# Build / export artifacts must not be tracked (e.g. generated AP config dumps).
-build_ap_cmh.json
-
-# Test & lint tool caches and coverage output (backend pytest-cov, frontend vitest).
-.pytest_cache/
-.ruff_cache/
-.coverage
-coverage.json
-htmlcov/
-coverage/
+# # Test & lint tool caches and coverage output (backend pytest-cov, frontend vitest).
+# .pytest_cache/
+# .ruff_cache/
+# .coverage
+# coverage.json
+# htmlcov/
+# coverage/

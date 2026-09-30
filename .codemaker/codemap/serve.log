@@ -11753,3 +11753,5 @@
 [daemon] 2026/09/30 14:51:48.189645 [trace_id=2931895220de4486] [proxy] db-idle-check: storeIdler=true timeout=1h0m0s idleClosed=false busy=false ready=true lastDBUse=14:12:17
 [daemon] 2026/09/30 14:52:48.187386 [trace_id=2931895220de4486] [proxy] db-idle-check: storeIdler=true timeout=1h0m0s idleClosed=false busy=false ready=true lastDBUse=14:12:17
 [daemon] 2026/09/30 14:53:48.185001 [trace_id=2931895220de4486] [proxy] db-idle-check: storeIdler=true timeout=1h0m0s idleClosed=false busy=false ready=true lastDBUse=14:12:17
+[daemon] 2026/09/30 14:54:48.182770 [trace_id=2931895220de4486] [proxy] db-idle-check: storeIdler=true timeout=1h0m0s idleClosed=false busy=false ready=true lastDBUse=14:12:17
+[daemon] 2026/09/30 14:55:48.180827 [trace_id=2931895220de4486] [proxy] db-idle-check: storeIdler=true timeout=1h0m0s idleClosed=false busy=false ready=true lastDBUse=14:12:17
