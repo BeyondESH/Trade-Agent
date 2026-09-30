@@ -8,6 +8,64 @@
 
 这是一次**刻意的架构变更**，与旧的 bind-mount 设计不同。
 
+## 始终在线（always-on）栈
+
+本环境默认以「**始终在线**」方式运行：`docker compose up -d`（或 `scripts/dev-sync.sh up`）
+一次性拉起三个长期服务，浏览器直接打开即可，**无需手动起后端 / 前端**。
+
+| 服务 | 作用 | 发布端口 | 说明 |
+|---|---|---|---|
+| `dev` | 交互式工具箱（shell / exec / 测试 / sync） | 无 | 不对外服务；`docker compose up -d dev` 可**只**起它 |
+| `backend` | FastAPI / uvicorn | **8181** | `http://127.0.0.1:8181`（`/health`、`/api`、`/ws`） |
+| `frontend` | vite dev server | **5173** | `http://127.0.0.1:5173`，HMR 正常（无轮询） |
+
+三者**共用同一个镜像 `trade-dev:latest` 与同一组卷**（`trade-workspace` → `/workspace`、
+`trade-data` → `/workspace/backend/data`），因此后端 / 前端跑的就是你 `sync` 进去的**同一份**
+工作副本，`dev` 里的 `git` / 测试与浏览器里看到的代码始终一致。
+
+- **默认全部启动**（没有使用 compose profile）：符合「项目一直在，我只打开浏览器」的诉求。
+- **只想跑 `dev`**（测试 / exec，不起服务器）：`docker compose up -d dev`。
+- **端口**：`8181` / `5173` 现在发布在 `backend` / `frontend` 上；`dev` **不再发布端口**
+  （两个容器不能绑定同一宿主端口，而 `dev` 从不对外服务）。
+- `backend` / `frontend` 启动前会**等待** `/workspace/backend/.venv` 或
+  `frontend/node_modules` 就绪（最多 300s，随后以清晰报错退出并提示执行
+  `scripts/dev-sync.sh sync`），因此在全新卷上先 `up` 后 `sync` 也不会「莫名其妙地崩」。
+- `backend` 默认带 `MD_SCHEDULE_INTERVAL_SECONDS=0`（关闭定时增量落盘，避免常驻容器持续对外
+  轮询 / 写卷）；需要周期性落盘时把它改成正整数即可。
+
+### 自动恢复链（已具备，无需额外配置）
+
+容器随发行版 / `dockerd` 重启而恢复的链路在本环境**已经是既成事实**，不需要创建任何
+Windows 计划任务或开机自启项：
+
+```
+WSL 发行版启动（用户自行启动 WSL）
+  └─ systemd 启动 docker.service   # /etc/wsl.conf 的 systemd=true，docker 已 enabled
+       └─ 带 restart: unless-stopped 的容器自动恢复
+```
+
+- `/etc/wsl.conf` 已配置 `systemd=true`，且 `systemctl is-enabled docker` → `enabled`、
+  `systemctl is-active docker` → `active`，因此**发行版一启动，`dockerd` 就随之起来**。
+- 只要 WSL 在跑，带 `restart: unless-stopped` 的容器就会在 `dockerd` 重启后自动恢复。
+- **WSL 发行版本人由用户自行启动**；本环境**不注册**任何 Windows 计划任务 / 自启项。
+
+### `restart: unless-stopped` 的含义
+
+- **会**在 `dockerd` / WSL 发行版重启后**自动恢复**——这是「始终在线」的关键。
+- **不会**在你**主动**停掉某个服务后把它拉起来——主动 `docker compose stop` 之后它就保持停止。
+
+```bash
+docker compose stop               # 主动停（保持停止，重启策略不会再拉起）
+docker compose start              # 主动起
+docker compose restart backend    # 重启单个服务
+docker compose ps                 # 查看状态
+```
+
+> ⚠️ **`docker kill <name>` 不等同于一次「崩溃」**：Docker 会把它当作**主动停止**
+> （标记 manually-stopped），`unless-stopped` 因此**不会**重启该容器（moby/moby#11065、#41302）。
+> 若要验证「容器崩溃会自动恢复」，请在容器**内部**发信号（`docker exec <name> kill <pid>`），
+> daemon 不会拦截，容器会按策略自动重启。
+
 ## 为什么（旧设计的问题）
 
 旧设计把仓库 bind-mount 进容器（9p/virtiofs 挂载），后果：
@@ -44,7 +102,7 @@
 | `trade-workspace` → `/workspace` | **named volume（ext4）** | **原生工作副本**，git / 测试在此运行 |
 | `trade-data` → `/workspace/backend/data` | **named volume** | 后端数据目录，与宿主 parquet 隔离 |
 
-- 端口：**8181**（后端 API）· **5173**（vite dev）。
+- 端口：**8181**（后端 API，发布在 `backend` 服务）· **5173**（vite dev，发布在 `frontend` 服务）。
 - 用户：**uid 1000 / gid 1000**（与 WSL 宿主一致；镜像已把两个卷挂载点预置为 `1000:1000`，
   空卷首次挂载会继承该归属）。
 - 环境变量：`DEV_SERVER_HOST=0.0.0.0`、`LANG=C.UTF-8`、`LC_ALL=C.UTF-8`、
@@ -75,6 +133,11 @@ wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev
 wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh shell'
 ```
 
+启动完成后直接打开（`backend` / `frontend` 已常驻）：
+
+- 前端：**http://127.0.0.1:5173**
+- 后端：**http://127.0.0.1:8181/health**
+
 日常流程（宿主 → 容器，单向）：
 
 1. 在 **Windows / WSL 宿主**编辑源码；
@@ -102,8 +165,8 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 | `shell` | 进入容器交互 bash |
 | `down` | 停止并删除容器（**保留卷**） |
 | `logs` | 跟随容器日志 |
-| `backend` | 容器内启动后端（`MD_SCHEDULE_INTERVAL_SECONDS=0`） |
-| `frontend` | 容器内启动 vite dev server |
+| `backend` | 临时在 `dev` 容器内起后端（**会与常驻 `backend` 抢 8181**；先 `docker compose stop backend`） |
+| `frontend` | 临时在 `dev` 容器内起 vite（**会与常驻 `frontend` 抢 5173**；先 `docker compose stop frontend`） |
 | `test-backend` | 容器内后端 pytest（`not integrity and not live and not online`） |
 | `test-frontend` | 容器内前端 vitest |
 | `hub-e2e` | 容器内 `agent_hub-main` e2e |
@@ -127,6 +190,13 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 - **`--delete` 不会删除被排除的目标路径**，这正是 `backend/.env` 能存活的原因。
 - **`--full`**：强制重装依赖（`npm ci` / `uv sync` / `pnpm install --frozen-lockfile`）；
   默认只做增量同步 + 「目录为空才装」的幂等初始化。
+- **`skip-worktree`**：`sync` 结束后，会把一批**被排除但已被 git 跟踪**的路径（见脚本的
+  `SKIP_WORKTREE_DIRS` / `SKIP_WORKTREE_FILES`：`frontend/coverage`、`backend/data`、
+  `.codemaker`、`.omo`、`.agents`、`.claude`、`.codex`、`.playwright-mcp`、`.pnpm-store`、
+  `.codegraph`、`.codemap`、`backend/.coverage` …）打上 `skip-worktree` bit，使容器内
+  `git status` **不再把它们误报为「已删除」**（否则会有数百条 ` D` 行）。该步骤只设置这一个
+  bit，**绝不 stage / commit / checkout / reset / clean**，且可重复执行（幂等）；对被正常同步的
+  路径毫无影响，容器内对它们的真实改动仍会照常显示为 ` M`。
 - 结束时打印一行汇总：`transferred=<n> file(s), bytes=<n>, deleted=<n>`。
 
 ### 首次运行初始化（幂等）
@@ -159,15 +229,19 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 
 ## 在容器内运行与测试
 
+> `backend` / `frontend` 默认**已经常驻运行**（见「始终在线栈」）。`test-backend` /
+> `test-frontend` / `hub-e2e` 只是往 `dev` 容器里 `exec` 测试进程，**不受影响**；只有
+> `backend` / `frontend` 这两个「手动起服务」子命令会与常驻服务抢占端口，需先
+> `docker compose stop backend|frontend`。
+
 ```bash
-# 后端
-scripts/dev-sync.sh backend          # uvicorn :8181
+# 测试（推荐；无需动常驻服务）
 scripts/dev-sync.sh test-backend     # pytest -q -m "not integrity and not live and not online"
-# 前端
-scripts/dev-sync.sh frontend         # vite dev :5173
 scripts/dev-sync.sh test-frontend    # vitest run
-# agent_hub-main
 scripts/dev-sync.sh hub-e2e          # pnpm e2e
+# 临时手动起服务（会与常驻服务抢端口，需先 stop）
+scripts/dev-sync.sh backend          # uvicorn :8181
+scripts/dev-sync.sh frontend         # vite dev :5173
 ```
 
 等价的原始命令：

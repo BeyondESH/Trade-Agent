@@ -181,23 +181,76 @@ EXCLUDES=(
   --exclude=.ruff_cache/
   --exclude=.mypy_cache/
   --exclude=/frontend/dist/
-  --exclude=/frontend/coverage/
-  --exclude=.coverage
-  --exclude=/backend/data/
   --exclude=/backend/.env
-  --exclude=/.codemaker/
-  --exclude=/.omo/
-  --exclude=/.agents/
-  --exclude=/.claude/
-  --exclude=/.codex/
-  --exclude=/.playwright-mcp/
-  --exclude=/.playwright/
-  # Host-only caches/indexes; same rationale as the tool-state dirs above.
-  --exclude=/.pnpm-store/
-  --exclude=/.codegraph/
-  --exclude=/.codemap/
   --exclude=*.log
 )
+
+# Excluded paths that MAY still be TRACKED in git (host tool state, local build
+# output, the per-container coverage file, ...). Because they never land in the
+# container, git would otherwise report every tracked file under them as deleted
+# (` D` rows), which makes `git status` useless inside the container. After each
+# sync they get a `skip-worktree` bit, so git stops reporting them while still
+# knowing the index tracks them.
+#
+# SINGLE SOURCE OF TRUTH: these two arrays drive BOTH the rsync `--exclude`s
+# (emitted below) and the skip-worktree candidates — the list is never written
+# twice. Paths are stored WITHOUT a leading slash so `git ls-files` accepts them
+# as repo-relative pathspecs. Directories get a trailing `/` in the rsync pattern,
+# plain files do not.
+SKIP_WORKTREE_DIRS=(
+  frontend/coverage
+  backend/data
+  .codemaker
+  .omo
+  .agents
+  .claude
+  .codex
+  .playwright-mcp
+  .playwright
+  .pnpm-store
+  .codegraph
+  .codemap
+)
+SKIP_WORKTREE_FILES=(
+  backend/.coverage
+)
+for _ex in "${SKIP_WORKTREE_DIRS[@]}"; do
+  EXCLUDES+=("--exclude=/${_ex}/")
+done
+for _ex in "${SKIP_WORKTREE_FILES[@]}"; do
+  EXCLUDES+=("--exclude=/${_ex}")
+done
+
+# Mark the excluded-but-tracked paths as `skip-worktree`, so `git status` inside
+# the container stays usable. Sets ONLY the skip-worktree bit — it never stages,
+# commits, checks out, resets, cleans, or switches branch. Idempotent: git
+# errors when the bit is already set, which is expected and silenced explicitly
+# below. Safe no-op when /workspace/.git is absent or a path is untracked.
+mark_skip_worktree() {
+  if [ ! -d "$DST/.git" ]; then
+    echo "[dev-sync] skip-worktree: $DST/.git absent — nothing to mark."
+    return 0
+  fi
+  local -a candidates=("${SKIP_WORKTREE_DIRS[@]}" "${SKIP_WORKTREE_FILES[@]}")
+  if [ "${#candidates[@]}" -eq 0 ]; then
+    echo "[dev-sync] skip-worktree: no candidate paths."
+    return 0
+  fi
+  local total=0 path n
+  for path in "${candidates[@]}"; do
+    n="$(git -C "$DST" ls-files -- "$path" | wc -l | tr -d '[:space:]')"
+    if [ "$n" -eq 0 ]; then
+      continue
+    fi
+    # `2>/dev/null || true` silences ONLY git's "already skip-worktree" error on
+    # an idempotent re-run; it never hides a real failure of the pipeline.
+    git -C "$DST" ls-files -z -- "$path" \
+      | xargs -0 -r git -C "$DST" update-index --skip-worktree -- 2>/dev/null || true
+    total=$((total + n))
+  done
+  echo "[dev-sync] skip-worktree: marked ${total} tracked file(s) across ${#candidates[@]} excluded path(s)."
+}
+
 
 do_sync() {
   local full=0 arg
@@ -239,6 +292,10 @@ do_sync() {
     echo "[dev-sync] seeding trade-data volume from $SRC/backend/data (one-time)"
     rsync -a "$SRC/backend/data/" "$DST/backend/data/"
   fi
+
+  # Keep `git status` usable: excluded-but-tracked paths never land in the
+  # container, so mark them skip-worktree (never stages/commits/checks out).
+  mark_skip_worktree
 
   # --- dependency installs (idempotent; forced by --full) -------------------
   if [ "$full" = 1 ] || [ ! -d "$DST/frontend/node_modules" ] || [ -z "$(ls -A "$DST/frontend/node_modules" 2>/dev/null)" ]; then

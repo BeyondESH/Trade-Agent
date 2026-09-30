@@ -155,16 +155,25 @@ bind-mount 进 9p 挂载，容器内 `git` 会 **SIGBUS / Bus error**、pytest �
 新设计下 git 正常、pytest 实测 **69.5 s**（pytest 自报；端到端 74.4 s）。
 
 ```bash
-# 构建 + 启动 + 首次同步，然后进入容器
+# 构建 + 启动（dev / backend / frontend 三个服务）+ 首次同步
 wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh up'
+# 进入 `dev` 工具箱容器（可选）
 wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh shell'
 ```
 
-日常流程：**宿主编辑 → `scripts/dev-sync.sh sync` → 容器内运行 / 测试**（单向：宿主 → 容器）。
-容器名 `dev`，工作目录 `/workspace`（命名卷，ext4），暴露 `8181`（后端 API）/ `5173`（前端）；
+**始终在线**：三个服务共用 `trade-dev:latest` 镜像与同一组命名卷——`dev`（无端口，shell /
+测试 / sync）、`backend`（**8181** → http://127.0.0.1:8181）、`frontend`（**5173** →
+http://127.0.0.1:5173），全部带 `restart: unless-stopped`。日常：**宿主编辑 →
+`scripts/dev-sync.sh sync` → 浏览器直接看**（单向：宿主 → 容器）；只想起工具箱用
+`docker compose up -d dev`。
+
+**自动恢复**：WSL 发行版由用户自行启动；`/etc/wsl.conf` 的 `systemd=true` 会让 `dockerd`
+随发行版启动（`docker.service` 已 enabled），因此带 `restart: unless-stopped` 的容器会在
+`dockerd` / 发行版重启后自动恢复——**本环境不注册任何 Windows 计划任务 / 自启项**。
+
 `scripts/dev-sync.sh` 另提供 `sync / up / shell / down / logs / backend / frontend /
-test-backend / test-frontend / hub-e2e / doctor` 子命令。完整说明（同步语义、`.git` 双工作副本
-注意事项、`backend/data` 与 `backend/.env`、命名卷、镜像来源）见
+test-backend / test-frontend / hub-e2e / doctor` 子命令。完整说明（始终在线栈、自启链、
+同步语义、`.git` 双工作副本注意事项、`backend/data` 与 `backend/.env`、命名卷、镜像来源）见
 **[docs/docker-dev.md](docs/docker-dev.md)**。
 
 > ⚠️ **`docker compose down -v` 会删除 `trade-workspace` 卷，等于销毁整个工作副本**——请只用
