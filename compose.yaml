@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
 # Docker Compose dev environment for Trade-Agent — NATIVE WORKING COPY model,
-# ALWAYS-ON stack.
+# ALWAYS-ON stack, ONE container.
 #
 # The repository is NOT bind-mounted. The container keeps its own working copy
 # on ext4 inside the `trade-workspace` named volume; the Windows tree is
@@ -12,22 +12,29 @@
 # `git` crash with SIGBUS (git memory-maps its pack file; 9p cannot reliably
 # back the page fault) and slowed pytest to 462-547 s (vs ~104 s on the host).
 #
-# SERVICES
-#   dev       interactive toolbox (shell / exec / tests / sync). No published
-#             ports; run it alone with `docker compose up -d dev`.
-#   backend   FastAPI/uvicorn on 0.0.0.0:8181, published as 8181:8181.
-#   frontend  vite dev server on 0.0.0.0:5173, published as 5173:5173.
+# ONE SERVICE (`dev`)
+#   A single container is both the interactive toolbox (shell / exec / tests /
+#   sync) AND the resident stack: `docker/entrypoint.sh` starts FastAPI/uvicorn
+#   on 0.0.0.0:8181 and the vite dev server on 0.0.0.0:5173 as background
+#   children, prefixing their output `[backend]` / `[frontend]` so
+#   `docker compose logs -f` is readable. Both host ports therefore live on this
+#   one container (8181:8181 AND 5173:5173) — one container can bind both.
 #
-# All three share the `trade-dev:latest` image and the `trade-workspace` /
-# `trade-data` volumes, so `backend` and `frontend` serve the SAME synced
-# working copy the developer edits into. They start by default (no compose
-# profile) because the intent is "the project is always up, I just open the
-# browser"; use `docker compose up -d dev` for a dev-only (no servers) stack.
+#   Set `SERVICES=0` to start NEITHER server and keep the container as a pure
+#   toolbox for `exec` / tests:
+#       SERVICES=0 docker compose up -d
+#   Default is `SERVICES=1` (servers on). See docker/entrypoint.sh.
 #
-# AUTOSTART: every service carries `restart: unless-stopped`, so the stack
-# resumes after a dockerd / WSL-distro restart — but a service you stopped on
-# purpose stays stopped. WSL itself is started by the user; docker.service is
-# already enabled in systemd, so nothing else is required.
+# The container uses the `trade_agent_img` image and the `trade-workspace` /
+# `trade-data` volumes, so the servers run the SAME synced working copy the
+# developer edits into.
+#
+# AUTOSTART: the service carries `restart: unless-stopped`, so the stack
+# resumes after a dockerd / WSL-distro restart — but a container you stopped on
+# purpose stays stopped. ⚠️ `docker kill <name>` counts as a DELIBERATE stop
+# (Docker marks the container manually-stopped), so `unless-stopped` will NOT
+# bring it back. WSL itself is started by the user; docker.service is already
+# enabled in systemd, so nothing else is required.
 #
 # Docker Engine lives INSIDE WSL, not on Windows. Run everything from WSL:
 #   wsl.exe -d Ubuntu-26.04 -- bash -lc \
@@ -45,24 +52,26 @@ name: trade
 
 services:
   # -------------------------------------------------------------------------
-  # dev — the interactive working container (shell / exec / tests / sync).
-  # It serves no traffic; the long-running servers are `backend`/`frontend`.
+  # dev — the whole stack: toolbox + resident backend (8181) + frontend (5173).
   # -------------------------------------------------------------------------
   dev:
     build:
       context: .
       dockerfile: Dockerfile
-    image: trade-dev:latest
-    init: true          # reap orphaned children (vite / uvicorn / node spawn subprocesses)
+    image: trade_agent_img
+    init: true          # tini reaps orphaned children (vite / uvicorn / node)
     tty: true           # let `docker compose exec dev bash` be interactive
     stdin_open: true
-    # Come back after a dockerd/distro restart, but stay down if stopped by hand.
+    # Come back after a dockerd/distro restart, but stay down if stopped by hand
+    # (`docker kill` also counts as a deliberate stop — see the header).
     restart: unless-stopped
     working_dir: /workspace
     # Match the WSL host uid/gid (1000:1000). The named volumes are pre-owned by
     # 1000 in the image, so uid 1000 can write the working copy directly.
     user: "1000:1000"
-    command: ["sleep", "infinity"]
+    # The supervisor waits for the synced working copy, then starts the resident
+    # backend + frontend (unless SERVICES=0) and keeps the container alive.
+    entrypoint: ["/usr/local/bin/dev-entrypoint.sh"]
     environment:
       # Bind vite to 0.0.0.0 so the Windows browser can reach the published port.
       DEV_SERVER_HOST: "0.0.0.0"
@@ -71,6 +80,16 @@ services:
       # uv's default hardlink install fails across filesystems; keep copy mode.
       UV_LINK_MODE: "copy"
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      # 0 disables the incremental-persistence scheduler in this always-on dev
+      # stack: no continuous background ingestion / external REST polling while
+      # the container idles. Set to a positive number of seconds to enable it.
+      MD_SCHEDULE_INTERVAL_SECONDS: "0"
+      # 1 = start backend + frontend inside this container (default).
+      # 0 = toolbox-only (no servers; container stays alive for exec/tests).
+      SERVICES: "${SERVICES:-1}"
+    ports:
+      - "8181:8181"     # backend API   -> http://127.0.0.1:8181
+      - "5173:5173"     # vite dev server -> http://127.0.0.1:5173
     volumes:
       # READ-ONLY mirror of the Windows source tree — the sync SOURCE only.
       # Nothing ever writes here; the repo itself is never bind-mounted.
@@ -83,98 +102,6 @@ services:
       # Backend data has its own volume: the container never writes the host's
       # parquet store, and `--delete` syncs never touch it.
       - trade-data:/workspace/backend/data
-    # NOTE: the 8181/5173 port publications now live on the dedicated `backend`
-    # and `frontend` services. Two containers cannot bind the same host port,
-    # and `dev` never serves traffic — so it publishes nothing.
-
-  # -------------------------------------------------------------------------
-  # backend — FastAPI/uvicorn, always-on. Reachable at http://127.0.0.1:8181.
-  # Shares the image + volumes above, so it runs the synced working copy.
-  # -------------------------------------------------------------------------
-  backend:
-    # Shares the image built by `dev` (single build, single image). Always start
-    # the stack with `--build` (e.g. `docker compose up -d --build`), which
-    # builds `dev` first; `backend`/`frontend` then use that image.
-    image: trade-dev:latest
-    init: true
-    restart: unless-stopped
-    working_dir: /workspace/backend
-    user: "1000:1000"
-    environment:
-      DEV_SERVER_HOST: "0.0.0.0"
-      LANG: "C.UTF-8"
-      LC_ALL: "C.UTF-8"
-      UV_LINK_MODE: "copy"
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
-      # 0 disables the incremental-persistence scheduler in this always-on dev
-      # stack: no continuous background ingestion / external REST polling while
-      # the container idles (matches scripts/dev-sync.sh's `backend` subcommand).
-      # Set to a positive number of seconds to enable periodic ingestion.
-      MD_SCHEDULE_INTERVAL_SECONDS: "0"
-    volumes:
-      - trade-workspace:/workspace
-      - trade-data:/workspace/backend/data
-    ports:
-      - "8181:8181"     # backend API
-    # Wait for the sync/install to have happened instead of crash-looping on a
-    # fresh volume; fail with a clear message if .venv never appears.
-    command:
-      - bash
-      - -lc
-      - |
-        waited=0
-        while [ ! -x .venv/bin/python ]; do
-          if [ "$$waited" -ge 300 ]; then
-            echo "[backend] ERROR: /workspace/backend/.venv is missing after 300s." >&2
-            echo "[backend]        Populate the working copy: scripts/dev-sync.sh sync" >&2
-            exit 1
-          fi
-          echo "[backend] waiting for backend/.venv (run: scripts/dev-sync.sh sync) ..." >&2
-          sleep 5
-          waited=$$((waited + 5))
-        done
-        exec .venv/bin/python -m uvicorn market_data.webapi:create_app --factory \
-          --host 0.0.0.0 --port 8181
-
-  # -------------------------------------------------------------------------
-  # frontend — vite dev server, always-on. Reachable at http://127.0.0.1:5173.
-  # HMR works without polling: the working copy is native ext4, so inotify is
-  # live (CHOKIDAR_USEPOLLING is deliberately NOT set).
-  # -------------------------------------------------------------------------
-  frontend:
-    image: trade-dev:latest
-    init: true
-    restart: unless-stopped
-    working_dir: /workspace/frontend
-    user: "1000:1000"
-    environment:
-      DEV_SERVER_HOST: "0.0.0.0"
-      LANG: "C.UTF-8"
-      LC_ALL: "C.UTF-8"
-      UV_LINK_MODE: "copy"
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
-    volumes:
-      - trade-workspace:/workspace
-      # Mounted for parity with `dev`/`backend`; the frontend never writes it.
-      - trade-data:/workspace/backend/data
-    ports:
-      - "5173:5173"     # vite dev server
-    command:
-      - bash
-      - -lc
-      - |
-        waited=0
-        while [ ! -x node_modules/.bin/vite ]; do
-          if [ "$$waited" -ge 300 ]; then
-            echo "[frontend] ERROR: /workspace/frontend/node_modules is missing after 300s." >&2
-            echo "[frontend]        Populate the working copy: scripts/dev-sync.sh sync" >&2
-            exit 1
-          fi
-          echo "[frontend] waiting for frontend/node_modules (run: scripts/dev-sync.sh sync) ..." >&2
-          sleep 5
-          waited=$$((waited + 5))
-        done
-        exec npm run dev -- --host 0.0.0.0 --port 5173
 
 volumes:
   # Explicit `name:` pins the real Docker volume names (instead of the

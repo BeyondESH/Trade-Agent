@@ -30,8 +30,8 @@
 #   scripts/dev-sync.sh shell           interactive bash inside the container
 #   scripts/dev-sync.sh down            stop+remove the container (volumes kept)
 #   scripts/dev-sync.sh logs            follow container logs
-#   scripts/dev-sync.sh backend         run the FastAPI backend in-container
-#   scripts/dev-sync.sh frontend        run the vite dev server in-container
+#   scripts/dev-sync.sh backend         follow the resident backend logs
+#   scripts/dev-sync.sh frontend        follow the resident frontend logs
 #   scripts/dev-sync.sh test-backend    backend pytest inside the container
 #   scripts/dev-sync.sh test-frontend   frontend vitest inside the container
 #   scripts/dev-sync.sh hub-e2e         agent_hub-main e2e inside the container
@@ -86,12 +86,15 @@ if [ "$MODE" = host ]; then
     echo "repo root         : $ROOT"
     echo "TRADE_SRC (host)  : $SRC_HOST"
     echo "compose file      : $ROOT/compose.yaml"
-    echo "backend port      : $BACKEND_PORT"
-    echo "frontend port     : $FRONTEND_PORT"
+    echo "compose service   : dev            (ONE container: toolbox + resident servers)"
+    echo "image             : trade_agent_img"
+    echo "backend port      : $BACKEND_PORT   -> http://127.0.0.1:$BACKEND_PORT  (published on dev)"
+    echo "frontend port     : $FRONTEND_PORT   -> http://127.0.0.1:$FRONTEND_PORT  (published on dev)"
     echo "workspace volume  : $WORKSPACE_VOLUME  -> /workspace        (native ext4 working copy)"
     echo "data volume       : $DATA_VOLUME       -> /workspace/backend/data"
     echo "sync source       : /src-ro            (read-only bind of $SRC_HOST)"
     echo "sync command      : scripts/dev-sync.sh sync   (host -> container, one-way)"
+    echo "server mode       : SERVICES=1 (default, servers on) | SERVICES=0 (toolbox only)"
     if container_up; then
       echo "stack             : UP"
     else
@@ -122,12 +125,17 @@ if [ "$MODE" = host ]; then
       dc logs -f --tail=200
       ;;
     backend)
+      # The backend is ALREADY resident inside this container (entrypoint,
+      # SERVICES=1). Starting another uvicorn would collide on :8181, so this
+      # subcommand now FOLLOWS the resident backend's logs instead.
       require_up
-      dc exec dev bash -lc 'cd /workspace/backend && MD_SCHEDULE_INTERVAL_SECONDS=0 .venv/bin/python -m uvicorn market_data.webapi:create_app --factory --host 0.0.0.0 --port 8181'
+      dc logs -f --tail=200 dev | grep --line-buffered '\[backend\]' || true
       ;;
     frontend)
+      # Same as `backend`: the resident vite server owns :5173, so this follows
+      # its logs rather than starting a second dev server.
       require_up
-      dc exec dev bash -lc 'cd /workspace/frontend && npm run dev -- --host 0.0.0.0 --port 5173'
+      dc logs -f --tail=200 dev | grep --line-buffered '\[frontend\]' || true
       ;;
     test-backend)
       shift

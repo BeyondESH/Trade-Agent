@@ -8,7 +8,12 @@
 # This file only governs what the Docker *CLI* sends to the daemon as build
 # context. Excluding everything keeps the context tiny and guarantees no host
 # artifact (node_modules, .venv, backend/data, tool state, ...) can ever leak
-# into an image layer. Order matters: the last matching pattern wins, so
-# `!Dockerfile` re-includes the one file the build requires.
+# into an image layer. Order matters: the last matching pattern wins, so the
+# `!` exceptions re-include the only files the build requires: the Dockerfile
+# and the supervisor script it COPYs (docker/entrypoint.sh). The `docker`
+# directory itself must be re-included before its file (a file cannot be
+# re-included while its parent stays excluded).
 **
 !Dockerfile
+!docker
+!docker/entrypoint.sh

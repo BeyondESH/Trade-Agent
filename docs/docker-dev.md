@@ -8,30 +8,37 @@
 
 这是一次**刻意的架构变更**，与旧的 bind-mount 设计不同。
 
-## 始终在线（always-on）栈
+## 始终在线（always-on）栈 · 单容器
 
 本环境默认以「**始终在线**」方式运行：`docker compose up -d`（或 `scripts/dev-sync.sh up`）
-一次性拉起三个长期服务，浏览器直接打开即可，**无需手动起后端 / 前端**。
+拉起**一个**长期容器 `dev`，它同时是**交互式工具箱**和**常驻服务器**——容器入口脚本
+`docker/entrypoint.sh` 在后台启动 FastAPI/uvicorn 与 vite dev server，并把两路输出分别加上
+`[backend]` / `[frontend]` 前缀，浏览器直接打开即可，**无需手动起后端 / 前端**。
 
-| 服务 | 作用 | 发布端口 | 说明 |
+| 服务 | 容器 | 作用 | 发布端口 |
 |---|---|---|---|
-| `dev` | 交互式工具箱（shell / exec / 测试 / sync） | 无 | 不对外服务；`docker compose up -d dev` 可**只**起它 |
-| `backend` | FastAPI / uvicorn | **8181** | `http://127.0.0.1:8181`（`/health`、`/api`、`/ws`） |
-| `frontend` | vite dev server | **5173** | `http://127.0.0.1:5173`，HMR 正常（无轮询） |
+| `dev` | `trade-dev-1` | 工具箱（shell / exec / 测试 / sync）**＋** 常驻 backend / frontend | **8181** 与 **5173** |
 
-三者**共用同一个镜像 `trade-dev:latest` 与同一组卷**（`trade-workspace` → `/workspace`、
-`trade-data` → `/workspace/backend/data`），因此后端 / 前端跑的就是你 `sync` 进去的**同一份**
-工作副本，`dev` 里的 `git` / 测试与浏览器里看到的代码始终一致。
-
-- **默认全部启动**（没有使用 compose profile）：符合「项目一直在，我只打开浏览器」的诉求。
-- **只想跑 `dev`**（测试 / exec，不起服务器）：`docker compose up -d dev`。
-- **端口**：`8181` / `5173` 现在发布在 `backend` / `frontend` 上；`dev` **不再发布端口**
-  （两个容器不能绑定同一宿主端口，而 `dev` 从不对外服务）。
-- `backend` / `frontend` 启动前会**等待** `/workspace/backend/.venv` 或
-  `frontend/node_modules` 就绪（最多 300s，随后以清晰报错退出并提示执行
-  `scripts/dev-sync.sh sync`），因此在全新卷上先 `up` 后 `sync` 也不会「莫名其妙地崩」。
-- `backend` 默认带 `MD_SCHEDULE_INTERVAL_SECONDS=0`（关闭定时增量落盘，避免常驻容器持续对外
-  轮询 / 写卷）；需要周期性落盘时把它改成正整数即可。
+- **一个容器、一个镜像、一组卷**：镜像 `trade_agent_img`；卷 `trade-workspace` → `/workspace`、
+  `trade-data` → `/workspace/backend/data`。后端 / 前端跑的就是你 `sync` 进去的**同一份**
+  工作副本，容器里的 `git` / 测试与浏览器里看到的代码始终一致。
+- **两个端口都在同一个容器上**（一个容器可以同时绑定 8181 与 5173）：
+  - 后端：**http://127.0.0.1:8181**（`/health`、`/api`、`/ws`）
+  - 前端：**http://127.0.0.1:5173**，HMR 正常（工作副本在 ext4，inotify 生效，无轮询）
+- **readable 合并日志**：`docker compose logs -f` 里两路输出各有前缀（`[backend]` / `[frontend]`）。
+  只想看一路：`scripts/dev-sync.sh backend` / `scripts/dev-sync.sh frontend`。
+- **`SERVICES=0` 工具箱模式**：`SERVICES=0 docker compose up -d` → **不起任何服务器**，容器只做
+  `exec` / 测试（无进程监听 8181/5173），但仍保持存活。恢复常驻：`docker compose up -d`
+  （`SERVICES` 默认 `1`，环境值变化会触发容器重建）。
+- **入口脚本的等待行为**：启动服务器前，它会轮询直到 `backend/.venv/bin/python` **且**
+  `frontend/node_modules/.bin/vite` 存在（最多 `SERVICES_WAIT_SECONDS`，默认 **300s**）；超时则
+  打印**明确可操作**的报错（提示执行 `scripts/dev-sync.sh sync`）并以**非 0** 退出——不会静默
+  崩溃循环。因此在全新卷上先 `up` 后 `sync` 也不会「莫名其妙地崩」。
+- **子进程崩溃自愈**：若 backend 或 frontend 进程退出，入口脚本会打印日志并在
+  `SERVICES_RESTART_DELAY`（默认 **3s**）后**重启**它；容器**不会**因某个子进程退出而退出，
+  「始终在线」得以维持（每一轮都打印，绝非静默）。
+- 后端默认带 `MD_SCHEDULE_INTERVAL_SECONDS=0`（关闭定时增量落盘，避免常驻容器持续对外轮询 /
+  写卷）；需要周期性落盘时把它改成正整数即可。
 
 ### 自动恢复链（已具备，无需额外配置）
 
@@ -52,12 +59,12 @@ WSL 发行版启动（用户自行启动 WSL）
 ### `restart: unless-stopped` 的含义
 
 - **会**在 `dockerd` / WSL 发行版重启后**自动恢复**——这是「始终在线」的关键。
-- **不会**在你**主动**停掉某个服务后把它拉起来——主动 `docker compose stop` 之后它就保持停止。
+- **不会**在你**主动**停掉容器后把它拉起来——主动 `docker compose stop` 之后它就保持停止。
 
 ```bash
 docker compose stop               # 主动停（保持停止，重启策略不会再拉起）
 docker compose start              # 主动起
-docker compose restart backend    # 重启单个服务
+docker compose restart dev        # 重启这唯一的容器（会重启 backend 与 frontend）
 docker compose ps                 # 查看状态
 ```
 
@@ -96,17 +103,21 @@ docker compose ps                 # 查看状态
 
 ## 挂载与卷（锁定设计）
 
-| 挂载 | 类型 | 说明 |
+| 项目 | 值 | 说明 |
 |---|---|---|
+| 镜像 | **`trade_agent_img`** | 只含工具链，**不 COPY 仓库** |
+| 容器 | **`trade-dev-1`**（服务名 `dev`） | 唯一容器：工具箱 + 常驻服务器 |
 | `/mnt/d/work/project/trade` → `/src-ro` | **bind（`read_only: true`）** | 单向同步的**源**，容器永不写入 |
 | `trade-workspace` → `/workspace` | **named volume（ext4）** | **原生工作副本**，git / 测试在此运行 |
 | `trade-data` → `/workspace/backend/data` | **named volume** | 后端数据目录，与宿主 parquet 隔离 |
 
-- 端口：**8181**（后端 API，发布在 `backend` 服务）· **5173**（vite dev，发布在 `frontend` 服务）。
+- 端口：**8181**（后端 API）· **5173**（vite dev）——**两者都发布在唯一的 `dev` 容器上**。
 - 用户：**uid 1000 / gid 1000**（与 WSL 宿主一致；镜像已把两个卷挂载点预置为 `1000:1000`，
   空卷首次挂载会继承该归属）。
 - 环境变量：`DEV_SERVER_HOST=0.0.0.0`、`LANG=C.UTF-8`、`LC_ALL=C.UTF-8`、
-  `UV_LINK_MODE=copy`、`COREPACK_ENABLE_DOWNLOAD_PROMPT=0`。
+  `UV_LINK_MODE=copy`、`COREPACK_ENABLE_DOWNLOAD_PROMPT=0`、`MD_SCHEDULE_INTERVAL_SECONDS=0`、
+  `SERVICES=1`（默认；`0` = 仅工具箱）。入口脚本还读 `SERVICES_WAIT_SECONDS`（默认 300）与
+  `SERVICES_RESTART_DELAY`（默认 3）。
 
 > **容器内不再需要 `CHOKIDAR_USEPOLLING`**：工作副本在 ext4 上，inotify 正常，vite HMR
 > 无需轮询（`frontend/vite.config.ts` 的轮询逻辑仍保留，但默认关闭）。
@@ -126,14 +137,14 @@ docker compose down -v       # 危险：删除 trade-workspace → 工作副本�
 ## 快速开始
 
 ```bash
-# 1) 构建 + 启动 + 首次同步（在 WSL 内执行）
+# 1) 构建 + 启动（唯一容器，自动起 backend/frontend）+ 首次同步（在 WSL 内执行）
 wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh up'
 
-# 2) 进入容器
+# 2) 进入容器（可选）
 wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh shell'
 ```
 
-启动完成后直接打开（`backend` / `frontend` 已常驻）：
+启动完成后直接打开（backend / frontend 已常驻在同一容器）：
 
 - 前端：**http://127.0.0.1:5173**
 - 后端：**http://127.0.0.1:8181/health**
@@ -141,7 +152,8 @@ wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev
 日常流程（宿主 → 容器，单向）：
 
 1. 在 **Windows / WSL 宿主**编辑源码；
-2. `scripts/dev-sync.sh sync` —— 把改动同步进容器；
+2. `scripts/dev-sync.sh sync` —— 把改动同步进容器（前端 HMR 即时生效；后端改动后
+   `docker compose restart dev` 即可）；
 3. `docker compose exec dev bash` —— 进容器内运行 / 测试。
 
 ```
@@ -164,13 +176,18 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 | `up [--full]` | `docker compose up -d --build`，随后 `sync` |
 | `shell` | 进入容器交互 bash |
 | `down` | 停止并删除容器（**保留卷**） |
-| `logs` | 跟随容器日志 |
-| `backend` | 临时在 `dev` 容器内起后端（**会与常驻 `backend` 抢 8181**；先 `docker compose stop backend`） |
-| `frontend` | 临时在 `dev` 容器内起 vite（**会与常驻 `frontend` 抢 5173**；先 `docker compose stop frontend`） |
+| `logs` | 跟随唯一容器的合并日志（两路前缀） |
+| `backend` | **跟随常驻后端日志**（过滤 `[backend]`；不再手动起进程，避免与常驻服务抢 8181） |
+| `frontend` | **跟随常驻前端日志**（过滤 `[frontend]`；不再手动起进程，避免与常驻服务抢 5173） |
 | `test-backend` | 容器内后端 pytest（`not integrity and not live and not online`） |
 | `test-frontend` | 容器内前端 vitest |
 | `hub-e2e` | 容器内 `agent_hub-main` e2e |
-| `doctor` | 打印宿主路径 / 端口 / 卷名 / 栈状态 |
+| `doctor` | 打印宿主路径 / 端口 / 卷名 / 唯一容器状态 |
+
+> **`backend` / `frontend` 已改为「看常驻服务的日志」**：服务器现在由容器入口脚本常驻启动，
+> 同一个容器、同一个端口，再起第二个 uvicorn/vite 必然冲突。因此这两个子命令只做**日志跟随**
+> （`docker compose logs -f dev | grep '\[backend\]'` 等），开发者无法用它们误起第二个进程。
+> 要重启常驻服务用 `docker compose restart dev`。
 
 ### 同步语义
 
@@ -207,6 +224,8 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 - `agent_hub-main/node_modules` 为空 → `pnpm install --frozen-lockfile`；
 - `trade-data` 卷为空且 `/src-ro/backend/data` 存在 → 一次性 rsync 进去。
 
+> 入口脚本本身**绝不安装依赖**——安装只由 `dev-sync.sh` 做，因此容器重启是幂等、无副作用的。
+
 ## `.git` 的重要说明：两份独立工作副本
 
 容器里的 git 与宿主的 git **共享历史，但是两份独立的工作副本**：
@@ -224,24 +243,23 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 - **`backend/.env`** 不在 git 里、且被同步**排除**；首次同步时若容器内缺失，会从
   `/src-ro/backend/.env` **一次性拷贝**一份。因为被排除，后续任何 `sync`（含 `--delete`）
   都不会删除或覆盖它。
-- 启动后端时用 `scripts/dev-sync.sh backend`（内部带 `MD_SCHEDULE_INTERVAL_SECONDS=0`），
+- 后端由入口脚本常驻启动，compose 里已带 `MD_SCHEDULE_INTERVAL_SECONDS=0`，
   避免容器去写宿主 parquet。
 
 ## 在容器内运行与测试
 
-> `backend` / `frontend` 默认**已经常驻运行**（见「始终在线栈」）。`test-backend` /
-> `test-frontend` / `hub-e2e` 只是往 `dev` 容器里 `exec` 测试进程，**不受影响**；只有
-> `backend` / `frontend` 这两个「手动起服务」子命令会与常驻服务抢占端口，需先
-> `docker compose stop backend|frontend`。
+> backend / frontend 默认**已经常驻运行**（同一容器内，入口脚本拉起）。`test-backend` /
+> `test-frontend` / `hub-e2e` 只是往容器里 `exec` 测试进程，**不受影响**。曾经的
+> 「手动起服务」子命令 `backend` / `frontend` 已改为**日志跟随**，不会再抢端口。
 
 ```bash
 # 测试（推荐；无需动常驻服务）
 scripts/dev-sync.sh test-backend     # pytest -q -m "not integrity and not live and not online"
 scripts/dev-sync.sh test-frontend    # vitest run
 scripts/dev-sync.sh hub-e2e          # pnpm e2e
-# 临时手动起服务（会与常驻服务抢端口，需先 stop）
-scripts/dev-sync.sh backend          # uvicorn :8181
-scripts/dev-sync.sh frontend         # vite dev :5173
+# 看常驻服务日志（合并看就 docker compose logs -f）
+scripts/dev-sync.sh backend          # 只看 [backend]
+scripts/dev-sync.sh frontend         # 只看 [frontend]
 ```
 
 等价的原始命令：
@@ -249,6 +267,7 @@ scripts/dev-sync.sh frontend         # vite dev :5173
 ```bash
 docker compose exec dev bash -lc 'cd /workspace/backend && .venv/bin/python -m pytest -q -m "not integrity and not live and not online"'
 docker compose exec dev bash -lc 'cd /workspace/frontend && npx vitest run'
+docker compose logs -f               # 合并日志（带 [backend]/[frontend] 前缀）
 ```
 
 ## agent_hub-main 的 pnpm 工作流
@@ -286,19 +305,25 @@ docker compose build
 未使用 `# syntax=docker/dockerfile:1`（该指令会强行从 docker.io 拉 build frontend，本环境会
 失败；本项目也未使用任何 BuildKit-only 语法）。
 
-> 镜像**不 COPY 仓库**：代码全部由 `scripts/dev-sync.sh` 经 rsync 进入 `trade-workspace` 卷。
-> `.dockerignore` 因此把整个仓库排除、只留 `Dockerfile`——它只约束 **build context 的传输**，
+> 镜像**不 COPY 仓库的代码**：代码全部由 `scripts/dev-sync.sh` 经 rsync 进入 `trade-workspace`
+> 卷。构建时只 COPY 一个文件——监督脚本 `docker/entrypoint.sh`（装到
+> `/usr/local/bin/dev-entrypoint.sh`）。`.dockerignore` 因此把整个仓库排除，
+> 只放行 `Dockerfile` 与 `docker/entrypoint.sh`——它只约束 **build context 的传输**，
 > 与运行时容器内容无关。
 
 ## 故障排查
 
 ```bash
-scripts/dev-sync.sh doctor      # 宿主路径 / 端口 / 卷名 / 栈是否 UP
+scripts/dev-sync.sh doctor      # 宿主路径 / 端口 / 卷名 / 唯一容器是否 UP
 docker compose config           # 渲染后的完整 compose 配置
-docker compose logs dev         # 容器日志
+docker compose logs dev         # 唯一容器日志（两路带前缀）
 docker compose ps               # 容器状态（空 = 未启动）
 ```
 
 - `scripts/dev-sync.sh sync` 报 “container is not running” → 先 `scripts/dev-sync.sh up`。
+- 日志里出现 `[entrypoint] ERROR: the synced working copy is not ready after 300s` →
+  在宿主执行 `scripts/dev-sync.sh sync` 填充工作副本（容器会以非 0 退出并（按
+  `unless-stopped`）重试）。
+- 只想起工具箱、不起服务器 → `SERVICES=0 docker compose up -d`；恢复 → `docker compose up -d`。
 - 若 `docker compose up` 报端口被占用，确认是在 **WSL 内**执行（WSL 为 NAT 网络，与 Windows
   主机端口相互独立）。

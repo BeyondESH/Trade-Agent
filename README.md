@@ -148,33 +148,36 @@ market-data analyze --symbol BTCUSDT --timeframe 1h
 ### 4. 可选：Docker 开发容器
 
 仓库附带一套基于 Docker Compose 的 Debian 开发环境（`compose.yaml` / `Dockerfile` /
-`scripts/dev-sync.sh`），采用**原生工作副本（native working copy）**模型：**仓库不再
-bind-mount 进容器**，容器在 ext4 命名卷里维护自己的**工作副本**，Windows 侧仓库只读挂载为
-`/src-ro` 作为**单向 rsync** 源；git / pytest / vitest / pnpm 全部在容器内运行。旧设计把仓库
-bind-mount 进 9p 挂载，容器内 `git` 会 **SIGBUS / Bus error**、pytest 慢到 **462–547 s**，
-新设计下 git 正常、pytest 实测 **69.5 s**（pytest 自报；端到端 74.4 s）。
+`docker/entrypoint.sh` / `scripts/dev-sync.sh`），采用**原生工作副本（native working
+copy）**模型：**仓库不再 bind-mount 进容器**，容器在 ext4 命名卷里维护自己的**工作副本**，
+Windows 侧仓库只读挂载为 `/src-ro` 作为**单向 rsync** 源；git / pytest / vitest / pnpm 全部在
+容器内运行。旧设计把仓库 bind-mount 进 9p 挂载，容器内 `git` 会 **SIGBUS / Bus error**、pytest
+慢到 **462–547 s**，新设计下 git 正常、pytest 实测 **69.5 s**（pytest 自报；端到端 74.4 s）。
 
 ```bash
-# 构建 + 启动（dev / backend / frontend 三个服务）+ 首次同步
+# 构建 + 启动（唯一容器，自动常驻 backend/frontend）+ 首次同步
 wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh up'
-# 进入 `dev` 工具箱容器（可选）
+# 进入容器（可选）
 wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh shell'
 ```
 
-**始终在线**：三个服务共用 `trade-dev:latest` 镜像与同一组命名卷——`dev`（无端口，shell /
-测试 / sync）、`backend`（**8181** → http://127.0.0.1:8181）、`frontend`（**5173** →
-http://127.0.0.1:5173），全部带 `restart: unless-stopped`。日常：**宿主编辑 →
-`scripts/dev-sync.sh sync` → 浏览器直接看**（单向：宿主 → 容器）；只想起工具箱用
-`docker compose up -d dev`。
+**始终在线 · 单容器**：整栈现在只需**一个**容器 `dev`（`trade-dev-1`），使用镜像
+**`trade_agent_img`** 与同一组命名卷。入口脚本 `docker/entrypoint.sh` 在同一容器内常驻拉起
+backend（**8181** → http://127.0.0.1:8181）与 frontend（**5173** → http://127.0.0.1:5173），
+**两个端口都发布在这一个容器上**，两路日志分别带 `[backend]` / `[frontend]` 前缀
+（`docker compose logs -f` 即可读）。容器带 `restart: unless-stopped`。日常：**宿主编辑 →
+`scripts/dev-sync.sh sync` → 浏览器直接看**（单向：宿主 → 容器）；只想起工具箱（不起服务器）用
+`SERVICES=0 docker compose up -d`。
 
 **自动恢复**：WSL 发行版由用户自行启动；`/etc/wsl.conf` 的 `systemd=true` 会让 `dockerd`
 随发行版启动（`docker.service` 已 enabled），因此带 `restart: unless-stopped` 的容器会在
 `dockerd` / 发行版重启后自动恢复——**本环境不注册任何 Windows 计划任务 / 自启项**。
 
 `scripts/dev-sync.sh` 另提供 `sync / up / shell / down / logs / backend / frontend /
-test-backend / test-frontend / hub-e2e / doctor` 子命令。完整说明（始终在线栈、自启链、
-同步语义、`.git` 双工作副本注意事项、`backend/data` 与 `backend/.env`、命名卷、镜像来源）见
-**[docs/docker-dev.md](docs/docker-dev.md)**。
+test-backend / test-frontend / hub-e2e / doctor` 子命令（`backend` / `frontend` 现在只**跟随
+常驻服务日志**，不会另起进程抢端口）。完整说明（单容器始终在线栈、入口脚本等待/自愈行为、
+`SERVICES=0` 工具箱模式、自启链、同步语义、`.git` 双工作副本注意事项、`backend/data` 与
+`backend/.env`、命名卷、镜像来源）见 **[docs/docker-dev.md](docs/docker-dev.md)**。
 
 > ⚠️ **`docker compose down -v` 会删除 `trade-workspace` 卷，等于销毁整个工作副本**——请只用
 > `docker compose down`。

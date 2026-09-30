@@ -116,6 +116,15 @@ RUN set -eux; \
     install -d /workspace/backend/data; \
     chown -R 1000:1000 /workspace
 
+# --- Entrypoint: supervises backend + frontend inside the single container ----
+# The stack is ONE container that both serves (uvicorn :8181, vite :5173) and
+# stays usable as a toolbox. The script waits for the synced working copy,
+# streams each server's output with a `[backend]` / `[frontend]` prefix, and
+# forwards stop signals. See docker/entrypoint.sh. Baked in as root then made
+# world-executable; the container still runs as uid 1000.
+COPY docker/entrypoint.sh /usr/local/bin/dev-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/dev-entrypoint.sh
+
 # Compose overrides user/workdir/command; these are sane defaults for `docker run`.
 WORKDIR /workspace
 CMD ["sleep", "infinity"]
