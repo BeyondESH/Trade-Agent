@@ -75,6 +75,14 @@ services:
     environment:
       # Bind vite to 0.0.0.0 so the Windows browser can reach the published port.
       DEV_SERVER_HOST: "0.0.0.0"
+      # Port the vite dev/preview proxy forwards /api + /ws to: the RESIDENT
+      # backend in this container (:8181) — NOT E2E_BACKEND_PORT. Those are
+      # different concerns: E2E_BACKEND_PORT is the port the Playwright suite
+      # starts its OWN backend on (frontend/playwright.config.ts) and must not
+      # collide with the backend docker/entrypoint.sh already supervises here.
+      # Host/test behaviour is untouched: when DEV_BACKEND_PORT is unset the
+      # proxy falls back to E2E_BACKEND_PORT ?? 8000. See frontend/vite.config.ts.
+      DEV_BACKEND_PORT: "8181"
       LANG: "C.UTF-8"
       LC_ALL: "C.UTF-8"
       # uv's default hardlink install fails across filesystems; keep copy mode.

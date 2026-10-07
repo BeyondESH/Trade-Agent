@@ -5,8 +5,20 @@ import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import budgets from "./perf-budgets.json";
 
-const BACKEND = `http://127.0.0.1:${process.env.E2E_BACKEND_PORT ?? 8000}`;
-const BACKEND_WS = `ws://127.0.0.1:${process.env.E2E_BACKEND_PORT ?? 8000}`;
+/**
+ * Backend the dev/preview proxy forwards `/api` + `/ws` to. This is a
+ * DEVELOPMENT concern and is deliberately SEPARATE from `E2E_BACKEND_PORT`:
+ * `playwright.config.ts` reads `E2E_BACKEND_PORT` to decide on which port the
+ * E2E suite starts its OWN backend (`market_data.cli serve --port …`). In the
+ * always-on dev container the resident backend listens on :8181, which is NOT
+ * the E2E port — driving the proxy off `E2E_BACKEND_PORT` would make
+ * `npm run test:e2e` collide with the backend `docker/entrypoint.sh` already
+ * supervises. The container therefore sets ONLY `DEV_BACKEND_PORT`. When that
+ * is unset (host, tests) the resolution is unchanged: `E2E_BACKEND_PORT ?? 8000`.
+ */
+const BACKEND_PORT = process.env.DEV_BACKEND_PORT ?? process.env.E2E_BACKEND_PORT ?? 8000;
+const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
+const BACKEND_WS = `ws://127.0.0.1:${BACKEND_PORT}`;
 
 /** Bind the dev server to 0.0.0.0 inside a container so the host browser can reach it. */
 const DEV_SERVER_HOST = process.env.DEV_SERVER_HOST ?? "127.0.0.1";

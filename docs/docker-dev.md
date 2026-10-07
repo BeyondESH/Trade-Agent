@@ -40,6 +40,28 @@
 - 后端默认带 `MD_SCHEDULE_INTERVAL_SECONDS=0`（关闭定时增量落盘，避免常驻容器持续对外轮询 /
   写卷）；需要周期性落盘时把它改成正整数即可。
 
+### dev 代理端口 vs E2E 端口（`DEV_BACKEND_PORT`）
+
+vite 的 dev/preview 代理（`/api`、`/ws`）**必须**转发到本容器常驻后端（**8181**），否则页面能加载
+但**拿不到任何数据**。历史上这两件事曾被同一个变量 `E2E_BACKEND_PORT` 承担，造成冲突：
+
+| 关注点 | 变量 | 含义 |
+|---|---|---|
+| 前端 dev/preview **代理后端** | **`DEV_BACKEND_PORT`**（本容器 = `8181`） | 代理把 `/api`、`/ws` 转发到哪个端口 |
+| **Playwright E2E** 自起后端端口 | `E2E_BACKEND_PORT`（缺省 `8000`） | `frontend/playwright.config.ts` 用它决定 `market_data.cli serve --port …` 起在哪个端口 |
+
+若在本容器里把 `E2E_BACKEND_PORT=8181`，`npm run test:e2e` 会试图在 **8181 再起一个后端**，
+与入口脚本已常驻监督的那个**抢端口**。因此容器**只设置 `DEV_BACKEND_PORT=8181`**，
+`E2E_BACKEND_PORT` 保持未设置：代理走到 8181，而 E2E 的端口语义原样保留。
+
+`frontend/vite.config.ts` 的解析顺序是 `DEV_BACKEND_PORT ?? E2E_BACKEND_PORT ?? 8000`——在宿主 /
+E2E 上二者都未设置（或 `E2E_BACKEND_PORT` 照旧可覆盖）时行为**与以前完全一致**，改动是**加法**。
+
+> 本容器内一般不直接跑 `npm run test:e2e`：`frontend/playwright.config.ts` 的后端 webServer 命令写死
+> 了 Windows 的 `backend/.venv/Scripts/python.exe`，在 Linux 容器里不存在。E2E 请在 **Windows 宿主**
+> 上运行（设计如此，可用 `E2E_BACKEND_PORT` / `E2E_FRONTEND_PORT` 换端口）。容器内跑单测用
+> `scripts/dev-sync.sh test-frontend` 即可。
+
 ### 自动恢复链（已具备，无需额外配置）
 
 容器随发行版 / `dockerd` 重启而恢复的链路在本环境**已经是既成事实**，不需要创建任何
@@ -114,10 +136,12 @@ docker compose ps                 # 查看状态
 - 端口：**8181**（后端 API）· **5173**（vite dev）——**两者都发布在唯一的 `dev` 容器上**。
 - 用户：**uid 1000 / gid 1000**（与 WSL 宿主一致；镜像已把两个卷挂载点预置为 `1000:1000`，
   空卷首次挂载会继承该归属）。
-- 环境变量：`DEV_SERVER_HOST=0.0.0.0`、`LANG=C.UTF-8`、`LC_ALL=C.UTF-8`、
-  `UV_LINK_MODE=copy`、`COREPACK_ENABLE_DOWNLOAD_PROMPT=0`、`MD_SCHEDULE_INTERVAL_SECONDS=0`、
-  `SERVICES=1`（默认；`0` = 仅工具箱）。入口脚本还读 `SERVICES_WAIT_SECONDS`（默认 300）与
-  `SERVICES_RESTART_DELAY`（默认 3）。
+- 环境变量：`DEV_SERVER_HOST=0.0.0.0`、`DEV_BACKEND_PORT=8181`、`LANG=C.UTF-8`、
+  `LC_ALL=C.UTF-8`、`UV_LINK_MODE=copy`、`COREPACK_ENABLE_DOWNLOAD_PROMPT=0`、
+  `MD_SCHEDULE_INTERVAL_SECONDS=0`、`SERVICES=1`（默认；`0` = 仅工具箱）。入口脚本还读
+  `SERVICES_WAIT_SECONDS`（默认 300）与 `SERVICES_RESTART_DELAY`（默认 3）。
+- **`DEV_BACKEND_PORT` 指向前端 dev/preview 代理的后端**（本容器为常驻后端的 **8181**）。
+  它与 **`E2E_BACKEND_PORT`** 是**两个不同关注点**，详见下节。
 
 > **容器内不再需要 `CHOKIDAR_USEPOLLING`**：工作副本在 ext4 上，inotify 正常，vite HMR
 > 无需轮询（`frontend/vite.config.ts` 的轮询逻辑仍保留，但默认关闭）。

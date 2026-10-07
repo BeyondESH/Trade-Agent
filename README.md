@@ -165,7 +165,10 @@ wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev
 **`trade_agent_img`** 与同一组命名卷。入口脚本 `docker/entrypoint.sh` 在同一容器内常驻拉起
 backend（**8181** → http://127.0.0.1:8181）与 frontend（**5173** → http://127.0.0.1:5173），
 **两个端口都发布在这一个容器上**，两路日志分别带 `[backend]` / `[frontend]` 前缀
-（`docker compose logs -f` 即可读）。容器带 `restart: unless-stopped`。日常：**宿主编辑 →
+（`docker compose logs -f` 即可读）。容器带 `restart: unless-stopped`。容器内 vite 的 `/api`、`/ws`
+**代理目标**由 `DEV_BACKEND_PORT=8181` 指定——它与 Playwright E2E 自起后端所用的
+`E2E_BACKEND_PORT` 是**两个关注点**（否则 `test:e2e` 会与常驻后端抢 8181）；宿主 / 测试行为不变。
+日常：**宿主编辑 →
 `scripts/dev-sync.sh sync` → 浏览器直接看**（单向：宿主 → 容器）；只想起工具箱（不起服务器）用
 `SERVICES=0 docker compose up -d`。
 
