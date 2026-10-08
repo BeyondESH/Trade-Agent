@@ -177,8 +177,9 @@ backend（**8181** → http://127.0.0.1:8181）与 frontend（**5173** → http:
 `dockerd` / 发行版重启后自动恢复——**本环境不注册任何 Windows 计划任务 / 自启项**。
 
 `scripts/dev-sync.sh` 另提供 `sync / up / shell / down / logs / backend / frontend /
-test-backend / test-frontend / hub-e2e / doctor` 子命令（`backend` / `frontend` 现在只**跟随
-常驻服务日志**，不会另起进程抢端口）。完整说明（单容器始终在线栈、入口脚本等待/自愈行为、
+test-backend / test-frontend / test-e2e / hub-e2e / doctor` 子命令（`backend` / `frontend`
+现在只**跟随常驻服务日志**，不会另起进程抢端口；`test-e2e` 在容器内跑 Playwright E2E，
+用空闲端口另起 vite + 后端，不与常驻服务冲突）。完整说明（单容器始终在线栈、入口脚本等待/自愈行为、
 `SERVICES=0` 工具箱模式、自启链、同步语义、`.git` 双工作副本注意事项、`backend/data` 与
 `backend/.env`、命名卷、镜像来源）见 **[docs/docker-dev.md](docs/docker-dev.md)**。
 

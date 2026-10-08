@@ -57,10 +57,17 @@ vite 的 dev/preview 代理（`/api`、`/ws`）**必须**转发到本容器常�
 `frontend/vite.config.ts` 的解析顺序是 `DEV_BACKEND_PORT ?? E2E_BACKEND_PORT ?? 8000`——在宿主 /
 E2E 上二者都未设置（或 `E2E_BACKEND_PORT` 照旧可覆盖）时行为**与以前完全一致**，改动是**加法**。
 
-> 本容器内一般不直接跑 `npm run test:e2e`：`frontend/playwright.config.ts` 的后端 webServer 命令写死
-> 了 Windows 的 `backend/.venv/Scripts/python.exe`，在 Linux 容器里不存在。E2E 请在 **Windows 宿主**
-> 上运行（设计如此，可用 `E2E_BACKEND_PORT` / `E2E_FRONTEND_PORT` 换端口）。容器内跑单测用
-> `scripts/dev-sync.sh test-frontend` 即可。
+> **容器内 E2E 现已支持。** `frontend/playwright.config.ts` 按**平台**解析后端解释器（Windows →
+> `.venv/Scripts/python.exe`，Linux/macOS → `.venv/bin/python`），Chromium 也已烘焙进镜像
+> （`/opt/ms-playwright`）。直接跑：
+>
+> ```bash
+> scripts/dev-sync.sh test-e2e
+> ```
+>
+> 它用**空闲端口**（默认 `E2E_BACKEND_PORT=8010` / `E2E_FRONTEND_PORT=5273`）另起一套 vite + 后端，
+> **绝不与常驻的 8181 / 5173 抢端口**。详见下文 [容器内运行 Playwright E2E](#容器内运行-playwright-e2e)。
+> 仅跑前端单测用 `scripts/dev-sync.sh test-frontend`。
 
 ### 自动恢复链（已具备，无需额外配置）
 
@@ -205,6 +212,7 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 | `frontend` | **跟随常驻前端日志**（过滤 `[frontend]`；不再手动起进程，避免与常驻服务抢 5173） |
 | `test-backend` | 容器内后端 pytest（`not integrity and not live and not online`） |
 | `test-frontend` | 容器内前端 vitest |
+| `test-e2e` | 容器内前端 Playwright E2E（自起**空闲端口**的 vite + 后端，不与常驻服务抢端口） |
 | `hub-e2e` | 容器内 `agent_hub-main` e2e |
 | `doctor` | 打印宿主路径 / 端口 / 卷名 / 唯一容器状态 |
 
@@ -273,13 +281,14 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 ## 在容器内运行与测试
 
 > backend / frontend 默认**已经常驻运行**（同一容器内，入口脚本拉起）。`test-backend` /
-> `test-frontend` / `hub-e2e` 只是往容器里 `exec` 测试进程，**不受影响**。曾经的
+> `test-frontend` / `test-e2e` / `hub-e2e` 只是往容器里 `exec` 测试进程，**不受影响**。曾经的
 > 「手动起服务」子命令 `backend` / `frontend` 已改为**日志跟随**，不会再抢端口。
 
 ```bash
 # 测试（推荐；无需动常驻服务）
 scripts/dev-sync.sh test-backend     # pytest -q -m "not integrity and not live and not online"
 scripts/dev-sync.sh test-frontend    # vitest run
+scripts/dev-sync.sh test-e2e         # Playwright E2E（自起空闲端口，见下节）
 scripts/dev-sync.sh hub-e2e          # pnpm e2e
 # 看常驻服务日志（合并看就 docker compose logs -f）
 scripts/dev-sync.sh backend          # 只看 [backend]
@@ -292,6 +301,57 @@ scripts/dev-sync.sh frontend         # 只看 [frontend]
 docker compose exec dev bash -lc 'cd /workspace/backend && .venv/bin/python -m pytest -q -m "not integrity and not live and not online"'
 docker compose exec dev bash -lc 'cd /workspace/frontend && npx vitest run'
 docker compose logs -f               # 合并日志（带 [backend]/[frontend] 前缀）
+```
+
+## 容器内运行 Playwright E2E
+
+容器内可直接运行 `npm run test:e2e`（Playwright）。它**自己另起一套** vite + 后端，因此必须：
+
+1. **用空闲端口**，否则会和常驻栈抢 `5173` / `8181`；
+2. **后端解释器按平台解析**（容器里是 Linux 的 `.venv/bin/python`）；
+3. **Chromium 已就位**（在镜像里，无需联网重新下载）。
+
+推荐入口是 `scripts/dev-sync.sh test-e2e`，它一次性处理好三件事：
+
+```bash
+scripts/dev-sync.sh test-e2e
+```
+
+它会 `cd /workspace/frontend` 并执行 `npm run test:e2e`，默认导出：
+
+| 变量 | 默认值 | 作用 |
+|---|---|---|
+| `E2E_BACKEND_PORT` | `8010` | Playwright 自起后端的端口 |
+| `E2E_FRONTEND_PORT` | `5273` | Playwright 自起 vite 的端口 |
+| `DEV_BACKEND_PORT` | `=$E2E_BACKEND_PORT` | 让**这套** E2E vite 的 `/api`、`/ws` 代理指向 E2E 后端，而不是常驻的 `8181` |
+
+以上三个变量都可从外部覆盖，例如换端口：
+
+```bash
+E2E_BACKEND_PORT=8020 E2E_FRONTEND_PORT=5283 scripts/dev-sync.sh test-e2e
+```
+
+等价的原始命令（`-T` 关掉 TTY）：
+
+```bash
+wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && \
+  docker compose exec -T dev bash -lc "cd /workspace/frontend && \
+  E2E_BACKEND_PORT=8010 E2E_FRONTEND_PORT=5273 DEV_BACKEND_PORT=8010 npm run test:e2e"'
+```
+
+> **为什么显式设置 `DEV_BACKEND_PORT`**：容器环境里它是 `8181`（常驻后端）。`frontend/vite.config.ts`
+> 的解析顺序是 `DEV_BACKEND_PORT ?? E2E_BACKEND_PORT ?? 8000`，若不为本次 E2E 覆盖它，Playwright
+> 起的 vite 会把 `/api` + `/ws` 代理到常驻 8181，E2E 后端（8010）虽被拉起却无人使用。`test-e2e`
+> 只在这个子树里覆盖它；**已经跑着的常驻 vite 在启动时就已解析好 `8181`，不受影响**。
+
+浏览器二进制烘焙在镜像的 `/opt/ms-playwright`（`PLAYWRIGHT_BROWSERS_PATH`，`Dockerfile` 安装，
+以 `dev` 用户执行、owner `1000:1000`），因此容器重建后依旧存在，且**不依赖 `$HOME`**——无论
+`docker exec` 用 root 还是 `dev` 都能找到。版本固定为 `playwright@1.62.1`，与
+`frontend/package.json` 声明的客户端版本一致。可自检：
+
+```bash
+docker compose exec dev bash -lc 'npx playwright --version && ls /opt/ms-playwright'
+docker compose exec dev bash -lc 'npx playwright install --dry-run chromium'   # 应显示已安装
 ```
 
 ## agent_hub-main 的 pnpm 工作流

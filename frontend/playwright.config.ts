@@ -10,7 +10,18 @@ const BACKEND_PORT = Number(process.env.E2E_BACKEND_PORT ?? 8000);
 const FRONTEND_PORT = Number(process.env.E2E_FRONTEND_PORT ?? 5173);
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
 const BACKEND_DIR = resolve(__dirname, "../backend");
-const PYTHON = resolve(BACKEND_DIR, ".venv/Scripts/python.exe");
+
+// Backend venv interpreter, resolved per platform: Windows keeps it under
+// `Scripts/python.exe`, Linux/macOS under `bin/python`. This lets the SAME
+// config drive the Windows host (unchanged) and the Linux dev container, where
+// the hardcoded Windows path never existed. An explicit `E2E_PYTHON` (absolute
+// path) still wins for unusual layouts.
+const PYTHON =
+  process.env.E2E_PYTHON ??
+  resolve(
+    BACKEND_DIR,
+    process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python",
+  );
 
 export default defineConfig({
   testDir: "./tests/e2e",

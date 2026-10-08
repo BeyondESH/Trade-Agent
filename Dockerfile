@@ -116,6 +116,22 @@ RUN set -eux; \
     install -d /workspace/backend/data; \
     chown -R 1000:1000 /workspace
 
+# --- Playwright browser binaries (Chromium) ----------------------------------
+# The OS libraries above are only half of Playwright: the browser build itself
+# lives outside npm, in Playwright's browsers cache (~300 MB). Bake it into the
+# IMAGE, not a volume, so a recreated container still has it. Installed as the
+# `dev` user under a stable, uid-1000-owned path (`PLAYWRIGHT_BROWSERS_PATH`),
+# independent of HOME, so `docker exec` finds the same browsers for root or dev.
+# Pinned to `playwright@1.62.1` — exactly the frontend's declared version — so
+# the downloaded browser revision matches the installed client.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+RUN set -eux; \
+    mkdir -p /opt/ms-playwright; \
+    chown 1000:1000 /opt/ms-playwright; \
+    gosu dev env HOME=/home/dev npx --yes playwright@1.62.1 install chromium; \
+    chown -R 1000:1000 /opt/ms-playwright; \
+    rm -rf /home/dev/.npm
+
 # --- Entrypoint: supervises backend + frontend inside the single container ----
 # The stack is ONE container that both serves (uvicorn :8181, vite :5173) and
 # stays usable as a toolbox. The script waits for the synced working copy,

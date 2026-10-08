@@ -34,6 +34,7 @@
 #   scripts/dev-sync.sh frontend        follow the resident frontend logs
 #   scripts/dev-sync.sh test-backend    backend pytest inside the container
 #   scripts/dev-sync.sh test-frontend   frontend vitest inside the container
+#   scripts/dev-sync.sh test-e2e        frontend Playwright E2E inside the container
 #   scripts/dev-sync.sh hub-e2e         agent_hub-main e2e inside the container
 #   scripts/dev-sync.sh doctor          print paths/ports/volumes + stack status
 #
@@ -144,6 +145,10 @@ if [ "$MODE" = host ]; then
     test-frontend)
       shift
       inner test-frontend "$@"
+      ;;
+    test-e2e)
+      shift
+      inner test-e2e "$@"
       ;;
     hub-e2e)
       shift
@@ -342,6 +347,19 @@ case "${1:-sync}" in
   test-frontend)
     cd "$DST/frontend"
     exec npx vitest run
+    ;;
+  test-e2e)
+    cd "$DST/frontend"
+    # The resident stack already owns 8181 (backend) and 5173 (vite), so the E2E
+    # suite's OWN servers must take free ports or they collide. `DEV_BACKEND_PORT`
+    # is set container-wide to the resident 8181; override it for THIS subtree so
+    # the Playwright-spawned vite proxies `/api` + `/ws` to the E2E backend, not
+    # the resident one. The already-running resident vite resolved its value at
+    # boot and is unaffected. All three vars stay overridable from outside.
+    export E2E_BACKEND_PORT="${E2E_BACKEND_PORT:-8010}"
+    export E2E_FRONTEND_PORT="${E2E_FRONTEND_PORT:-5273}"
+    export DEV_BACKEND_PORT="$E2E_BACKEND_PORT"
+    exec npm run test:e2e
     ;;
   hub-e2e)
     cd "$DST/agent_hub-main"
