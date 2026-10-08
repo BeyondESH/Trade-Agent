@@ -13,6 +13,7 @@ import pandas as pd
 from market_data.newsfeed import (
     BEIJING,
     CATEGORY_RULES,
+    _fetch_cls,
     build_item,
     classify,
     fetch_all,
@@ -162,3 +163,112 @@ def test_fetch_all_isolation() -> None:
     assert len(items_by_source["ths"]) == 1
     assert "sina" in errors and "upstream down" in errors["sina"]
     assert fake.calls == ["em", "sina", "ths", "cls"]
+
+
+class _FakeAKCurrentCLS:
+    """Canned DataFrame shaped like akshare's ``stock_info_global_cls``.
+
+    Current akshare returns 标题 / 内容 / 发布日期 (a ``date``) / 发布时间 (a
+    ``time``) and no link column, unlike the removed ``stock_telegraph_cls``.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def stock_info_global_cls(self) -> pd.DataFrame:  # noqa: D102
+        self.calls.append("stock_info_global_cls")
+        return pd.DataFrame(
+            [
+                {
+                    "标题": "某公司发布财报",
+                    "内容": "营收净利双增",
+                    "发布日期": datetime(2026, 8, 20).date(),
+                    "发布时间": datetime(2026, 8, 20, 14, 57).time(),
+                },
+            ]
+        )
+
+
+def test_fetch_cls_uses_current_akshare_api() -> None:
+    ak = _FakeAKCurrentCLS()
+    rows = _fetch_cls(ak)
+    assert ak.calls == ["stock_info_global_cls"]
+    expected_ts = int(datetime(2026, 8, 20, 14, 57, tzinfo=BEIJING).timestamp())
+    assert rows == [
+        {
+            "title": "某公司发布财报",
+            "content": "营收净利双增",
+            "url": None,
+            "ts": expected_ts,
+        }
+    ]
+
+    items = fetch_source("cls", _FakeAKCurrentCLS())
+    assert items[0]["source"] == "cls"
+    assert items[0]["category"] == "company"
+    assert items[0]["ts"] == expected_ts
+
+
+def test_fetch_cls_prefers_current_api_over_legacy() -> None:
+    class _BothAK:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def stock_info_global_cls(self) -> pd.DataFrame:  # noqa: D102
+            self.calls.append("stock_info_global_cls")
+            return pd.DataFrame(
+                [{"标题": "新", "内容": "x", "发布日期": "2026-08-20", "发布时间": "14:57:00"}]
+            )
+
+        def stock_telegraph_cls(self) -> pd.DataFrame:  # noqa: D102
+            self.calls.append("stock_telegraph_cls")
+            return pd.DataFrame([{"标题": "旧", "内容": "y"}])
+
+    ak = _BothAK()
+    rows = _fetch_cls(ak)
+    assert ak.calls == ["stock_info_global_cls"]
+    assert rows[0]["title"] == "新"
+
+
+def test_fetch_cls_missing_api_degrades_without_raising() -> None:
+    class _NoClsAK:
+        pass
+
+    assert _fetch_cls(_NoClsAK()) == []
+
+
+def test_fetch_all_continues_when_cls_api_missing() -> None:
+    class _AKWithoutCls:
+        def stock_info_global_em(self) -> pd.DataFrame:  # noqa: D102
+            return pd.DataFrame(
+                [
+                    {
+                        "标题": "t",
+                        "摘要": "c",
+                        "发布时间": "2026-08-20 15:00:00",
+                        "链接": "https://em.example",
+                    }
+                ]
+            )
+
+        def stock_info_global_sina(self) -> pd.DataFrame:  # noqa: D102
+            return pd.DataFrame([{"时间": "2026-08-20 14:59:00", "内容": "c"}])
+
+        def stock_info_global_ths(self) -> pd.DataFrame:  # noqa: D102
+            return pd.DataFrame(
+                [
+                    {
+                        "标题": "t",
+                        "内容": "c",
+                        "时间": "2026-08-20 14:58:00",
+                        "链接": "https://ths.example",
+                    }
+                ]
+            )
+
+    items_by_source, errors = fetch_all(_AKWithoutCls())
+    assert items_by_source["cls"] == []
+    assert len(items_by_source["em"]) == 1
+    assert len(items_by_source["sina"]) == 1
+    assert len(items_by_source["ths"]) == 1
+    assert "cls" not in errors

@@ -284,8 +284,22 @@ def _fetch_ths(ak: Any) -> list[dict]:
 
 
 def _fetch_cls(ak: Any) -> list[dict]:
-    """CLS telegraph: 标题 / 内容 / 发布日期 / 发布时间 / 链接."""
-    df = ak.stock_telegraph_cls()
+    """CLS telegraph: 标题 / 内容 / 发布日期 / 发布时间.
+
+    akshare exposes the CLS 电报 feed as ``stock_info_global_cls`` (the legacy
+    ``stock_telegraph_cls`` attribute was removed before 1.18.92, so calling it
+    raised ``AttributeError`` and the whole source failed). Prefer the current
+    name and fall back to the legacy attribute only when it is present. The feed
+    carries no per-item link, so ``url`` is always ``None``.
+    """
+    fetch = getattr(ak, "stock_info_global_cls", None) or getattr(ak, "stock_telegraph_cls", None)
+    if fetch is None:
+        logger.warning(
+            "news source cls unavailable: akshare exposes neither "
+            "stock_info_global_cls nor stock_telegraph_cls"
+        )
+        return []
+    df = fetch()
     out: list[dict] = []
     for _, row in df.iterrows():
         title = _str(row.get("标题"))
