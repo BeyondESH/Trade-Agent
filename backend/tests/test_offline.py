@@ -2,7 +2,7 @@
 
 Covers the pure-Python data logic + boundary branches:
 - pagination + normalization (3.1/3.2)
-- Parquet daily-partition dedup/merge + read (4.1-4.3)
+- PostgreSQL candle upsert dedup/merge + read (4.1-4.3)
 - incremental only fills the gap, no duplicates (3.3 / task 7.2)
 - gap detection (3.4)
 - Excel one-shot (per-day) + batched append (5.1/5.2)

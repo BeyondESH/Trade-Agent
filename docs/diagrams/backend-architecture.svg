@@ -1,200 +1,180 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1430 1310" width="1430" height="1310">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1180" width="1500" height="1180">
   <defs>
-    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/></marker>
-    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/></marker>
-    <marker id="arrowAmber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#d97706"/></marker>
-    <marker id="arrowPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/></marker>
-    <marker id="arrowSlate" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker>
+    <marker id="aBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/></marker>
+    <marker id="aGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/></marker>
+    <marker id="aOrange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/></marker>
+    <marker id="aCyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#0891b2"/></marker>
+    <marker id="aPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/></marker>
+    <marker id="aTeal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#0d9488"/></marker>
+    <marker id="aSlate" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker>
   </defs>
   <style>
     text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei','Microsoft JhengHei','SimHei',sans-serif;}
   </style>
-  <rect width="1430" height="1310" fill="#ffffff"/>
-  <text x="40" y="46" font-size="24" font-weight="700" fill="#0f172a">Backend Component Architecture — market-data (FastAPI)</text>
-  <text x="40" y="72" font-size="12.5" fill="#6b7280">Derived from backend/src/market_data/** · rev 0e83cf3 · listen port is configurable (host 8181 · container 8000 · CLI --port default 8000)</text>
-  <rect x="40" y="176" width="1050" height="1010" rx="16" ry="16" fill="#fcfdff" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="9,6"/>
-  <text x="58" y="198" font-size="14" font-weight="700" fill="#334155">Backend process boundary — Python package `market-data` (uv)</text>
-  <rect x="58" y="212" width="168" height="958" rx="12" ry="12" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5,4"/>
-  <text x="142" y="234" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155">Foundation</text>
-  <text x="142" y="251" text-anchor="middle" font-size="10.5" fill="#64748b">imported across layers</text>
-  <rect x="76" y="264" width="132" height="66" rx="8" ry="8" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1.5"/>
-  <text x="142.0" y="294.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">config.py</text>
-  <text x="142.0" y="311.0" text-anchor="middle" font-size="11.5" fill="#6b7280">Settings · MD_*</text>
-  <rect x="76" y="350" width="132" height="66" rx="8" ry="8" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1.5"/>
-  <text x="142.0" y="380.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">models.py</text>
-  <text x="142.0" y="397.0" text-anchor="middle" font-size="11.5" fill="#6b7280">Series · OHLCV</text>
-  <rect x="76" y="436" width="132" height="66" rx="8" ry="8" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1.5"/>
-  <text x="142.0" y="466.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">events.py</text>
-  <text x="142.0" y="483.0" text-anchor="middle" font-size="11.5" fill="#6b7280">EventLog (jsonl)</text>
-  <text x="142" y="540" text-anchor="middle" font-size="10.5" fill="#64748b">(see dependency graph</text>
-  <text x="142" y="555" text-anchor="middle" font-size="10.5" fill="#64748b">for exact fan-in)</text>
-  <rect x="246" y="200" width="828" height="120" rx="10" ry="10" fill="#dbeafe" fill-opacity="0.35" stroke="#dbeafe" stroke-width="1.2" stroke-dasharray="6,4"/>
-  <text x="258" y="220" font-size="12.5" font-weight="700" fill="#475569">1. Entry &amp; API</text>
-  <rect x="246" y="336" width="828" height="128" rx="10" ry="10" fill="#dcfce7" fill-opacity="0.35" stroke="#dcfce7" stroke-width="1.2" stroke-dasharray="6,4"/>
-  <text x="258" y="356" font-size="12.5" font-weight="700" fill="#475569">2. Realtime &amp; streaming</text>
-  <rect x="246" y="480" width="828" height="120" rx="10" ry="10" fill="#ffedd5" fill-opacity="0.35" stroke="#ffedd5" stroke-width="1.2" stroke-dasharray="6,4"/>
-  <text x="258" y="500" font-size="12.5" font-weight="700" fill="#475569">3. Ingestion &amp; backfill</text>
-  <rect x="246" y="616" width="828" height="120" rx="10" ry="10" fill="#fee2e2" fill-opacity="0.35" stroke="#fee2e2" stroke-width="1.2" stroke-dasharray="6,4"/>
-  <text x="258" y="636" font-size="12.5" font-weight="700" fill="#475569">4. Storage</text>
-  <rect x="246" y="752" width="828" height="116" rx="10" ry="10" fill="#ede9fe" fill-opacity="0.35" stroke="#ede9fe" stroke-width="1.2" stroke-dasharray="6,4"/>
-  <text x="258" y="772" font-size="12.5" font-weight="700" fill="#475569">5. Analysis</text>
-  <rect x="246" y="884" width="828" height="120" rx="10" ry="10" fill="#ccfbf1" fill-opacity="0.35" stroke="#ccfbf1" stroke-width="1.2" stroke-dasharray="6,4"/>
-  <text x="258" y="904" font-size="12.5" font-weight="700" fill="#475569">6. News pipeline</text>
-  <rect x="246" y="1020" width="828" height="150" rx="10" ry="10" fill="#fae8ff" fill-opacity="0.35" stroke="#fae8ff" stroke-width="1.2" stroke-dasharray="6,4"/>
-  <text x="258" y="1040" font-size="12.5" font-weight="700" fill="#475569">7. Agent worker — separate process</text>
-  <rect x="266" y="242" width="390" height="60" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="461.0" y="269.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">webapi.py</text>
-  <text x="461.0" y="286.0" text-anchor="middle" font-size="11.5" fill="#6b7280">FastAPI REST · WS /ws · SSE /news/stream</text>
-  <rect x="676" y="242" width="380" height="60" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="866.0" y="269.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">cli.py</text>
-  <text x="866.0" y="286.0" text-anchor="middle" font-size="11.5" fill="#6b7280">market-data CLI · serve / pull / agent-worker</text>
-  <rect x="266" y="378" width="390" height="60" rx="8" ry="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
-  <text x="461.0" y="405.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">streamhub.py</text>
-  <text x="461.0" y="422.0" text-anchor="middle" font-size="11.5" fill="#6b7280">MarketStream · WS routing + REST snapshot</text>
-  <rect x="676" y="378" width="380" height="60" rx="8" ry="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
-  <text x="866.0" y="405.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">realtime.py</text>
-  <text x="866.0" y="422.0" text-anchor="middle" font-size="11.5" fill="#6b7280">BitgetWsStream · public WS klines</text>
-  <rect x="266" y="522" width="190" height="60" rx="8" ry="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
-  <text x="361.0" y="549.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">ingestion.py</text>
-  <text x="361.0" y="566.0" text-anchor="middle" font-size="11.5" fill="#6b7280">MCP + REST v2/v3</text>
-  <rect x="470" y="522" width="190" height="60" rx="8" ry="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
-  <text x="565.0" y="549.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">mcp_client.py</text>
-  <text x="565.0" y="566.0" text-anchor="middle" font-size="11.5" fill="#6b7280">Bitget MCP (stdio)</text>
-  <rect x="674" y="522" width="190" height="60" rx="8" ry="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
-  <text x="769.0" y="549.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">scheduler.py</text>
-  <text x="769.0" y="566.0" text-anchor="middle" font-size="11.5" fill="#6b7280">APScheduler pull</text>
-  <rect x="878" y="522" width="178" height="60" rx="8" ry="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
-  <text x="967.0" y="549.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">discover.py</text>
-  <text x="967.0" y="566.0" text-anchor="middle" font-size="11.5" fill="#6b7280">MCP tool discovery</text>
-  <rect x="266" y="658" width="190" height="60" rx="8" ry="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/>
-  <text x="361.0" y="685.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">store.py</text>
-  <text x="361.0" y="702.0" text-anchor="middle" font-size="11.5" fill="#6b7280">ParquetStore</text>
-  <rect x="470" y="658" width="190" height="60" rx="8" ry="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/>
-  <text x="565.0" y="685.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">excel_export.py</text>
-  <text x="565.0" y="702.0" text-anchor="middle" font-size="11.5" fill="#6b7280">Excel export</text>
-  <rect x="674" y="658" width="190" height="60" rx="8" ry="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/>
-  <text x="769.0" y="685.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">chartstore.py</text>
-  <text x="769.0" y="702.0" text-anchor="middle" font-size="11.5" fill="#6b7280">chart config JSON</text>
-  <rect x="878" y="658" width="178" height="60" rx="8" ry="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/>
-  <text x="967.0" y="685.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">alertstore.py</text>
-  <text x="967.0" y="702.0" text-anchor="middle" font-size="11.5" fill="#6b7280">alerts JSON</text>
-  <rect x="266" y="792" width="190" height="58" rx="8" ry="8" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/>
-  <text x="361.0" y="818.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">indicators.py</text>
-  <text x="361.0" y="835.0" text-anchor="middle" font-size="11.5" fill="#6b7280">EMA/MACD/KDJ/BOLL</text>
-  <rect x="470" y="792" width="190" height="58" rx="8" ry="8" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/>
-  <text x="565.0" y="818.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">structure.py</text>
-  <text x="565.0" y="835.0" text-anchor="middle" font-size="11.5" fill="#6b7280">swings · trendlines</text>
-  <rect x="674" y="792" width="190" height="58" rx="8" ry="8" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/>
-  <text x="769.0" y="818.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">smc.py</text>
-  <text x="769.0" y="835.0" text-anchor="middle" font-size="11.5" fill="#6b7280">liquidity · order blocks</text>
-  <rect x="878" y="792" width="178" height="58" rx="8" ry="8" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/>
-  <text x="967.0" y="818.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">levels.py</text>
-  <text x="967.0" y="835.0" text-anchor="middle" font-size="11.5" fill="#6b7280">support / resistance</text>
-  <rect x="266" y="922" width="190" height="58" rx="8" ry="8" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
-  <text x="361.0" y="948.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">newsfeed.py</text>
-  <text x="361.0" y="965.0" text-anchor="middle" font-size="11.5" fill="#6b7280">AKShare flash news</text>
-  <rect x="470" y="922" width="190" height="58" rx="8" ry="8" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
-  <text x="565.0" y="948.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">blockbeats.py</text>
-  <text x="565.0" y="965.0" text-anchor="middle" font-size="11.5" fill="#6b7280">BlockBeats client</text>
-  <rect x="674" y="922" width="190" height="58" rx="8" ry="8" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
-  <text x="769.0" y="948.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">news_broker.py</text>
-  <text x="769.0" y="965.0" text-anchor="middle" font-size="11.5" fill="#6b7280">ring buffer + SSE</text>
-  <rect x="878" y="922" width="178" height="58" rx="8" ry="8" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
-  <text x="967.0" y="948.0" text-anchor="middle" font-size="13.5" font-weight="600" fill="#111827">blockbeats_cache.py</text>
-  <text x="967.0" y="965.0" text-anchor="middle" font-size="11.5" fill="#6b7280">daily local cache</text>
-  <rect x="262" y="1042" width="398" height="118" rx="9" ry="9" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1.3"/>
-  <text x="272" y="1059" font-size="11.5" font-weight="700" fill="#7e22ce">Tier 1 — Research (LLM)</text>
-  <rect x="274" y="1066" width="190" height="42" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="369.0" y="1084.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">research.py</text>
-  <text x="369.0" y="1101.0" text-anchor="middle" font-size="10" fill="#6b7280">deepagents graph</text>
-  <rect x="472" y="1066" width="178" height="42" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="561.0" y="1084.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">tools.py</text>
-  <text x="561.0" y="1101.0" text-anchor="middle" font-size="10" fill="#6b7280">read-only toolset</text>
-  <rect x="274" y="1114" width="190" height="42" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="369.0" y="1132.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">tool_policy.py</text>
-  <text x="369.0" y="1149.0" text-anchor="middle" font-size="10" fill="#6b7280">read-only guard</text>
-  <rect x="472" y="1114" width="178" height="42" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="561.0" y="1132.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">proposal.py</text>
-  <text x="561.0" y="1149.0" text-anchor="middle" font-size="10" fill="#6b7280">StrategyProposal</text>
-  <rect x="672" y="1042" width="398" height="118" rx="9" ry="9" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1.3"/>
-  <text x="682" y="1059" font-size="11.5" font-weight="700" fill="#6d28d9">Tier 2 — Execution (zero-LLM, deterministic)</text>
-  <rect x="684" y="1066" width="190" height="42" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="779.0" y="1084.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">runtime.py</text>
-  <text x="779.0" y="1101.0" text-anchor="middle" font-size="10" fill="#6b7280">worker loop + SqliteSaver</text>
-  <rect x="882" y="1066" width="178" height="42" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="971.0" y="1084.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">execution.py</text>
-  <text x="971.0" y="1101.0" text-anchor="middle" font-size="10" fill="#6b7280">LangGraph StateGraph</text>
-  <rect x="684" y="1114" width="190" height="42" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="779.0" y="1132.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">broker.py</text>
-  <text x="779.0" y="1149.0" text-anchor="middle" font-size="10" fill="#6b7280">PaperBroker</text>
-  <rect x="882" y="1114" width="178" height="42" rx="8" ry="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
-  <text x="971.0" y="1132.0" text-anchor="middle" font-size="11" font-weight="600" fill="#111827">store.py · streaming.py</text>
-  <text x="971.0" y="1149.0" text-anchor="middle" font-size="10" fill="#6b7280">projections / audit</text>
-  <rect x="1122" y="186" width="290" height="990" rx="16" ry="16" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="9,6"/>
-  <text x="1138" y="208" font-size="13.5" font-weight="700" fill="#92400e">External systems / boundaries</text>
-  <rect x="1134" y="214" width="266" height="70" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="1267.0" y="246.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">Browser · React 19</text>
-  <text x="1267.0" y="263.0" text-anchor="middle" font-size="10.5" fill="#6b7280">Vite proxy /api + /ws</text>
-  <rect x="1134" y="340" width="266" height="70" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="1267.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">Bitget public WebSocket</text>
-  <text x="1267.0" y="389.0" text-anchor="middle" font-size="10.5" fill="#6b7280">real-time klines</text>
-  <rect x="1134" y="418" width="266" height="70" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="1267.0" y="450.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">Bitget REST v2 / v3</text>
-  <text x="1267.0" y="467.0" text-anchor="middle" font-size="10.5" fill="#6b7280">deep-history backfill</text>
-  <rect x="1134" y="506" width="266" height="70" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="1267.0" y="538.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">Bitget Agent MCP</text>
-  <text x="1267.0" y="555.0" text-anchor="middle" font-size="10.5" fill="#6b7280">stdio · npx bitget-agent-mcp</text>
-  <rect x="1134" y="636" width="266" height="70" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="1267.0" y="668.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">Parquet + SQLite store</text>
-  <text x="1267.0" y="685.0" text-anchor="middle" font-size="10.5" fill="#6b7280">data/ on local disk</text>
-  <rect x="1134" y="888" width="266" height="70" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="1267.0" y="920.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">AKShare</text>
-  <text x="1267.0" y="937.0" text-anchor="middle" font-size="10.5" fill="#6b7280">global flash-news 4 sources</text>
-  <rect x="1134" y="966" width="266" height="70" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="1267.0" y="998.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">BlockBeats API</text>
-  <text x="1267.0" y="1015.0" text-anchor="middle" font-size="10.5" fill="#6b7280">crypto news / data (BB_API_KEY)</text>
-  <rect x="1134" y="1046" width="266" height="70" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="1267.0" y="1078.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">Anthropic LLM</text>
-  <text x="1267.0" y="1095.0" text-anchor="middle" font-size="10.5" fill="#6b7280">research layer only</text>
-  <path d="M 1134 249 H 1078" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrowBlue)"/>
-  <text x="1108" y="240" text-anchor="end" font-size="10.5" fill="#475569">/api · /ws · SSE</text>
-  <path d="M 1134 375 H 1078" fill="none" stroke="#16a34a" stroke-width="1.6" marker-end="url(#arrowGreen)"/>
-  <text x="1108" y="366" text-anchor="end" font-size="10.5" fill="#475569">realtime.py</text>
-  <path d="M 1134 453 H 1078" fill="none" stroke="#16a34a" stroke-width="1.6" marker-end="url(#arrowGreen)"/>
-  <text x="1108" y="469" text-anchor="end" font-size="10.5" fill="#475569">streamhub · ingestion</text>
-  <path d="M 1134 541 H 1078" fill="none" stroke="#d97706" stroke-width="1.6" marker-end="url(#arrowAmber)"/>
-  <text x="1108" y="532" text-anchor="end" font-size="10.5" fill="#475569">mcp_client.py</text>
-  <path d="M 1134 671 H 1078" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrowBlue)"/>
-  <text x="1108" y="662" text-anchor="end" font-size="10.5" fill="#475569">store · agent/runtime</text>
-  <path d="M 1134 923 H 1078" fill="none" stroke="#0891b2" stroke-width="1.6" marker-end="url(#arrowBlue)"/>
-  <text x="1108" y="914" text-anchor="end" font-size="10.5" fill="#475569">newsfeed.py</text>
-  <path d="M 1134 1001 H 1078" fill="none" stroke="#0891b2" stroke-width="1.6" marker-end="url(#arrowBlue)"/>
-  <text x="1108" y="1017" text-anchor="end" font-size="10.5" fill="#475569">blockbeats.py</text>
-  <path d="M 1134 1081 H 1078" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrowPurple)"/>
-  <text x="1108" y="1072" text-anchor="end" font-size="10.5" fill="#475569">research.py (LLM only)</text>
-  <path d="M 900 320 V 336" fill="none" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowSlate)" stroke-dasharray="4,3"/>
-  <path d="M 500 320 V 336" fill="none" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowSlate)" stroke-dasharray="4,3"/>
-  <path d="M 500 456 V 480" fill="none" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowSlate)" stroke-dasharray="4,3"/>
-  <path d="M 900 456 V 480" fill="none" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowSlate)" stroke-dasharray="4,3"/>
-  <path d="M 660 1101 H 672" fill="none" stroke="#9333ea" stroke-width="1.8" marker-end="url(#arrowPurple)"/>
-  <text x="666" y="1093" text-anchor="middle" font-size="10" fill="#475569">proposal</text>
-  <path d="M 266 286 H 236 V 1101 H 262" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowBlue)" stroke-dasharray="4,3"/>
-  <rect x="40" y="1200" width="1370" height="92" rx="10" ry="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2"/>
-  <text x="56" y="1220" font-size="12.5" font-weight="700" fill="#334155">Legend</text>
-  <line x1="132" y1="1237" x2="158" y2="1237" stroke="#2563eb" stroke-width="2"/>
-  <text x="166" y="1240" font-size="10.6" fill="#475569">solid — HTTP / WS / SSE data path</text>
-  <line x1="132" y1="1253" x2="158" y2="1253" stroke="#16a34a" stroke-width="2"/>
-  <text x="166" y="1256" font-size="10.6" fill="#475569">solid — Bitget public market data (WS / REST v2-v3)</text>
-  <line x1="132" y1="1269" x2="158" y2="1269" stroke="#d97706" stroke-width="2"/>
-  <text x="166" y="1272" font-size="10.6" fill="#475569">solid — Bitget Agent MCP (stdio)</text>
-  <line x1="132" y1="1285" x2="158" y2="1285" stroke="#0891b2" stroke-width="2"/>
-  <text x="166" y="1288" font-size="10.6" fill="#475569">solid — news sources (AKShare / BlockBeats)</text>
-  <line x1="760" y1="1237" x2="786" y2="1237" stroke="#9333ea" stroke-width="2"/>
-  <text x="794" y="1240" font-size="10.6" fill="#475569">solid — LLM research-only boundary</text>
-  <line x1="760" y1="1253" x2="786" y2="1253" stroke="#2563eb" stroke-width="2" stroke-dasharray="4,3"/>
-  <text x="794" y="1256" font-size="10.6" fill="#475569">dashed blue — webapi reads agent projections (read-only, no LLM)</text>
-  <line x1="760" y1="1269" x2="786" y2="1269" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3"/>
-  <text x="794" y="1272" font-size="10.6" fill="#475569">dashed slate — runtime wiring (lifespan starts components)</text>
-  <line x1="760" y1="1285" x2="786" y2="1285" stroke="#f59e0b" stroke-width="2"/>
-  <text x="794" y="1288" font-size="10.6" fill="#475569">amber dashed box/container — external boundary / local disk</text>
+<rect x="0" y="0" width="1500" height="1180" rx="0" ry="0" fill="#ffffff" stroke="none" stroke-width="0"/>
+<text x="40" y="46" font-size="24" fill="#0f172a" font-weight="700">Backend Runtime Architecture — market-data (FastAPI + agent worker)</text>
+<text x="40" y="72" font-size="12.5" fill="#6b7280">rev 40a337c · compose stack: dev (uvicorn :8181 + vite :5173) + postgres (postgres:16 · 5433→5432) · single persistence layer = PostgreSQL · legacy data/ files are audit-only</text>
+<rect x="540" y="92" width="420" height="56" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="750" y="116" font-size="12.5" fill="#111827" font-weight="600" text-anchor="middle">Browser — React 19 + klinecharts-pro</text>
+<text x="750" y="134" font-size="10.5" fill="#6b7280" text-anchor="middle">http://127.0.0.1:5173 · vite dev server (HMR)</text>
+<rect x="40" y="168" width="892" height="696" rx="16" ry="16" fill="#fcfdff" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="9,6"/>
+<text x="58" y="190" font-size="13.5" fill="#334155" font-weight="700">dev container — trade-dev-1 · image trade_agent_img · restart: unless-stopped</text>
+<rect x="64" y="210" width="300" height="100" rx="10" ry="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+<text x="78" y="232" font-size="12.5" fill="#1e3a8a" font-weight="700">frontend — vite dev server :5173</text>
+<text x="78" y="252" font-size="10.5" fill="#475569">React 19 · klinecharts-pro</text>
+<text x="78" y="268" font-size="10.5" fill="#475569">Tailwind v4 · dark/light · HMR</text>
+<text x="78" y="290" font-size="10.5" fill="#2563eb">proxy /api + /ws → 127.0.0.1:8181</text>
+<rect x="384" y="210" width="524" height="372" rx="10" ry="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.4"/>
+<text x="398" y="232" font-size="12.5" fill="#334155" font-weight="700">backend — uvicorn :8181 (FastAPI app)</text>
+<rect x="398" y="244" width="496" height="92" rx="8" ry="8" fill="#e8f0fe" stroke="#2563eb" stroke-width="1.5"/>
+<text x="410" y="266" font-size="12" fill="#111827" font-weight="700">webapi.py — HTTP / WS / SSE surface</text>
+<text x="410" y="285" font-size="10.2" fill="#475569">REST: /candles /candles/recent /analyze /structure /levels /tickers</text>
+<text x="410" y="300" font-size="10.2" fill="#475569">/books /trades /funding /mark-price /instruments /chart-config /alerts</text>
+<text x="410" y="315" font-size="10.2" fill="#475569">WS /ws: candle·ticker·books·trade·mark-price·funding</text>
+<text x="410" y="330" font-size="10.2" fill="#475569">SSE: /news/stream · /research/{thread_id}/stream</text>
+<text x="398" y="356" font-size="11" fill="#64748b" font-weight="700">lifespan starts the resident runtime components:</text>
+<rect x="398" y="364" width="122" height="62" rx="8" ry="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+<text x="459" y="388" font-size="10.5" fill="#111827" font-weight="600" text-anchor="middle">realtime.py</text>
+<text x="459" y="405" font-size="9.5" fill="#64748b" text-anchor="middle">BitgetWsStream</text>
+<rect x="532" y="364" width="122" height="62" rx="8" ry="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+<text x="593" y="388" font-size="10.5" fill="#111827" font-weight="600" text-anchor="middle">streamhub.py</text>
+<text x="593" y="405" font-size="9.5" fill="#64748b" text-anchor="middle">MarketStream</text>
+<rect x="666" y="364" width="122" height="62" rx="8" ry="8" fill="#ccfbf1" stroke="#0891b2" stroke-width="1.5"/>
+<text x="727" y="388" font-size="10.5" fill="#111827" font-weight="600" text-anchor="middle">news_broker.py</text>
+<text x="727" y="405" font-size="9.5" fill="#64748b" text-anchor="middle">+ newsfeed.py</text>
+<rect x="800" y="364" width="122" height="62" rx="8" ry="8" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+<text x="861" y="388" font-size="10.5" fill="#111827" font-weight="600" text-anchor="middle">scheduler.py</text>
+<text x="861" y="405" font-size="9.5" fill="#64748b" text-anchor="middle">REST incremental</text>
+<rect x="398" y="436" width="300" height="56" rx="8" ry="8" fill="#ccfbf1" stroke="#0891b2" stroke-width="1.5"/>
+<text x="548" y="460" font-size="10.5" fill="#111827" font-weight="600" text-anchor="middle">blockbeats_cache.py</text>
+<text x="548" y="477" font-size="9.5" fill="#64748b" text-anchor="middle">daily cron refresh (12:00) + startup warm-up</text>
+<rect x="714" y="436" width="180" height="56" rx="8" ry="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="804" y="460" font-size="10.5" fill="#0f766e" font-weight="700" text-anchor="middle">db.py — data access</text>
+<text x="804" y="477" font-size="9.5" fill="#64748b" text-anchor="middle">psycopg_pool + bootstrap()</text>
+<text x="398" y="516" font-size="10.2" fill="#475569">Both processes instantiate db.py (PostgreSQL pool); a dead database</text>
+<text x="398" y="531" font-size="10.2" fill="#475569">fails startup loudly (DatabaseUnavailable → HTTP 503), never empty data.</text>
+<rect x="64" y="598" width="844" height="170" rx="10" ry="10" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1.5"/>
+<text x="78" y="620" font-size="12.5" fill="#7e22ce" font-weight="700">worker — market-data agent-worker (cli.py) · separate process</text>
+<rect x="78" y="634" width="400" height="82" rx="8" ry="8" fill="#ffffff" stroke="#db2777" stroke-width="1.5"/>
+<text x="88" y="654" font-size="11.5" fill="#111827" font-weight="700">Tier 1 — research.py (LLM)</text>
+<text x="88" y="671" font-size="10" fill="#475569">deepagents + langgraph · tools.py + tool_policy.py</text>
+<text x="88" y="687" font-size="10" fill="#475569">read-only toolset → StrategyProposal</text>
+<text x="88" y="703" font-size="10" fill="#9333ea">the ONLY module that instantiates an LLM</text>
+<rect x="490" y="634" width="404" height="82" rx="8" ry="8" fill="#ffffff" stroke="#6d28d9" stroke-width="1.5"/>
+<text x="500" y="654" font-size="11.5" fill="#111827" font-weight="700">Tier 2 — execution.py (deterministic · 0 LLM)</text>
+<text x="500" y="671" font-size="10" fill="#475569">langgraph StateGraph · broker.py PaperBroker</text>
+<text x="500" y="687" font-size="10" fill="#475569">plan_position from paper equity · fail_closed</text>
+<text x="500" y="703" font-size="10" fill="#6d28d9">runtime.py drives the loop, owns both graphs</text>
+<text x="78" y="752" font-size="10.2" fill="#475569">One PostgresSaver shared by both compiled graphs · worker is the sole checkpointer writer ·</text>
+<text x="78" y="766" font-size="10.2" fill="#475569">FastAPI only READS the agent projections (proposals / runs / stream_events).</text>
+<rect x="64" y="784" width="844" height="72" rx="10" ry="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.4" stroke-dasharray="5,4"/>
+<text x="78" y="804" font-size="11" fill="#334155" font-weight="700">named volumes · read-only mount</text>
+<text x="78" y="822" font-size="10.2" fill="#475569">trade-workspace → /workspace  (native ext4 working copy — git / tests / servers run here)</text>
+<text x="78" y="838" font-size="10.2" fill="#475569">trade-data → /workspace/backend/data  (legacy Parquet day-files + JSON/JSONL — audit / re-run only)</text>
+<text x="78" y="852" font-size="10.2" fill="#475569">read-only bind /src-ro ← host repo (rsync source for scripts/dev-sync.sh)</text>
+<rect x="948" y="168" width="512" height="696" rx="16" ry="16" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.6" stroke-dasharray="9,6"/>
+<text x="966" y="190" font-size="13.5" fill="#0f766e" font-weight="700">postgres container — trade-postgres-1 · image postgres:16</text>
+<text x="966" y="212" font-size="11" fill="#0f766e" font-weight="600">single persistence layer — PostgreSQL</text>
+<rect x="966" y="220" width="476" height="250" rx="10" ry="10" fill="#ffffff" stroke="#99f6e4" stroke-width="1.5"/>
+<text x="980" y="240" font-size="11.5" fill="#0f766e" font-weight="700">application tables (db.py SCHEMA_SQL)</text>
+<rect x="978" y="250" width="224" height="44" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="988" y="268" font-size="10.6" fill="#111827" font-weight="700">candles</text>
+<text x="988" y="284" font-size="9.2" fill="#64748b">OHLCV · BRIN on open_time · 78,422 rows</text>
+<rect x="1210" y="250" width="224" height="44" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="1220" y="268" font-size="10.6" fill="#111827" font-weight="700">alerts</text>
+<text x="1220" y="284" font-size="9.2" fill="#64748b">id / seq bigserial · jsonb-free</text>
+<rect x="978" y="302" width="224" height="44" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="988" y="320" font-size="10.6" fill="#111827" font-weight="700">chart_config</text>
+<text x="988" y="336" font-size="9.2" fill="#64748b">jsonb state · pk (cat, sym, tf)</text>
+<rect x="1210" y="302" width="224" height="44" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="1220" y="320" font-size="10.6" fill="#111827" font-weight="700">blockbeats_cache</text>
+<text x="1220" y="336" font-size="9.2" fill="#64748b">jsonb data · fetched_at</text>
+<rect x="978" y="354" width="224" height="44" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="988" y="372" font-size="10.6" fill="#111827" font-weight="700">events</text>
+<text x="988" y="388" font-size="9.2" fill="#64748b">source, seq · payload jsonb</text>
+<rect x="1210" y="354" width="224" height="44" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="1220" y="372" font-size="10.6" fill="#111827" font-weight="700">proposals</text>
+<text x="1220" y="388" font-size="9.2" fill="#64748b">record jsonb · id bigserial (order)</text>
+<rect x="978" y="406" width="224" height="44" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="988" y="424" font-size="10.6" fill="#111827" font-weight="700">runs</text>
+<text x="988" y="440" font-size="9.2" fill="#64748b">record jsonb · id bigserial (order)</text>
+<rect x="1210" y="406" width="224" height="44" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="1220" y="424" font-size="10.6" fill="#111827" font-weight="700">stream_events</text>
+<text x="1220" y="440" font-size="9.2" fill="#64748b">GLOBAL id = the SSE cursor</text>
+<rect x="966" y="482" width="476" height="190" rx="10" ry="10" fill="#ffffff" stroke="#99f6e4" stroke-width="1.5"/>
+<text x="980" y="502" font-size="11.5" fill="#0f766e" font-weight="700">LangGraph checkpointer (PostgresSaver)</text>
+<text x="980" y="520" font-size="10" fill="#475569">worker = sole writer · both graphs isolated by thread_id</text>
+<rect x="978" y="530" width="224" height="42" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="988" y="556" font-size="10.6" fill="#111827" font-weight="600">checkpoints</text>
+<rect x="1210" y="530" width="224" height="42" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="1220" y="556" font-size="10.6" fill="#111827" font-weight="600">checkpoint_blobs</text>
+<rect x="978" y="580" width="224" height="42" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="988" y="606" font-size="10.6" fill="#111827" font-weight="600">checkpoint_writes</text>
+<rect x="1210" y="580" width="224" height="42" rx="7" ry="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.2"/>
+<text x="1220" y="606" font-size="10.6" fill="#111827" font-weight="600">checkpoint_migrations</text>
+<rect x="966" y="684" width="476" height="62" rx="10" ry="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.4" stroke-dasharray="5,4"/>
+<text x="980" y="706" font-size="10.5" fill="#334155" font-weight="700">volume trade-pgdata → /var/lib/postgresql/data</text>
+<text x="980" y="724" font-size="10.2" fill="#475569">published 5433 → container 5432 · healthcheck pg_isready</text>
+<text x="966" y="770" font-size="10.2" fill="#6b7280">credentials from repo-root .env (POSTGRES_USER/PASSWORD/DB, MD_POSTGRES_DSN)</text>
+<text x="966" y="788" font-size="10.2" fill="#6b7280">depends_on: service_healthy → never start against an unready DB</text>
+<text x="40" y="884" font-size="11" fill="#64748b" font-weight="700">external systems / boundaries — all reached from the dev container (backend or worker process)</text>
+<path d="M 84 864 V 898" fill="none" stroke="#94a3b8" stroke-width="1.4"/>
+<line x1="60" y1="898" x2="1440" y2="898" stroke="#cbd5e1" stroke-width="1.4"/>
+<path d="M 147 898 V 916" fill="none" stroke="#16a34a" stroke-width="1.4"/>
+<rect x="40" y="916" width="215" height="76" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="147" y="942" font-size="11.5" fill="#111827" font-weight="600" text-anchor="middle">Bitget public WebSocket</text>
+<text x="147" y="960" font-size="9.6" fill="#6b7280" text-anchor="middle">realtime.py · klines/books/ticker</text>
+<text x="147" y="977" font-size="8.8" fill="#b45309" text-anchor="middle">external boundary</text>
+<path d="M 392 898 V 916" fill="none" stroke="#16a34a" stroke-width="1.4"/>
+<rect x="285" y="916" width="215" height="76" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="392" y="942" font-size="11.5" fill="#111827" font-weight="600" text-anchor="middle">Bitget REST v2 / v3</text>
+<text x="392" y="960" font-size="9.6" fill="#6b7280" text-anchor="middle">ingestion.py / scheduler.py · backfill</text>
+<text x="392" y="977" font-size="8.8" fill="#b45309" text-anchor="middle">external boundary</text>
+<path d="M 637 898 V 916" fill="none" stroke="#ea580c" stroke-width="1.4"/>
+<rect x="530" y="916" width="215" height="76" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="637" y="942" font-size="11.5" fill="#111827" font-weight="600" text-anchor="middle">Bitget Agent MCP (stdio)</text>
+<text x="637" y="960" font-size="9.6" fill="#6b7280" text-anchor="middle">mcp_client.py · npx bitget-agent-mcp</text>
+<text x="637" y="977" font-size="8.8" fill="#b45309" text-anchor="middle">external boundary</text>
+<path d="M 882 898 V 916" fill="none" stroke="#0891b2" stroke-width="1.4"/>
+<rect x="775" y="916" width="215" height="76" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="882" y="942" font-size="11.5" fill="#111827" font-weight="600" text-anchor="middle">AKShare</text>
+<text x="882" y="960" font-size="9.6" fill="#6b7280" text-anchor="middle">newsfeed.py · 7×24 flash news</text>
+<text x="882" y="977" font-size="8.8" fill="#b45309" text-anchor="middle">external boundary</text>
+<path d="M 1127 898 V 916" fill="none" stroke="#0891b2" stroke-width="1.4"/>
+<rect x="1020" y="916" width="215" height="76" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="1127" y="942" font-size="11.5" fill="#111827" font-weight="600" text-anchor="middle">BlockBeats API</text>
+<text x="1127" y="960" font-size="9.6" fill="#6b7280" text-anchor="middle">blockbeats.py · BB_API_KEY</text>
+<text x="1127" y="977" font-size="8.8" fill="#b45309" text-anchor="middle">external boundary</text>
+<path d="M 1372 898 V 916" fill="none" stroke="#9333ea" stroke-width="1.4"/>
+<rect x="1265" y="916" width="215" height="76" rx="8" ry="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="1372" y="942" font-size="11.5" fill="#111827" font-weight="600" text-anchor="middle">Anthropic LLM</text>
+<text x="1372" y="960" font-size="9.6" fill="#6b7280" text-anchor="middle">research.py only · MD_AGENT_MODEL</text>
+<text x="1372" y="977" font-size="8.8" fill="#b45309" text-anchor="middle">external boundary</text>
+<path d="M 700 148 V 158 H 50 V 260 H 64" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#aBlue)"/>
+<text x="380" y="152" font-size="10.2" fill="#475569" text-anchor="middle">HTTP / WS / SSE</text>
+<path d="M 364 260 H 384" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#aBlue)"/>
+<text x="374" y="252" font-size="9.4" fill="#475569" text-anchor="middle">proxy</text>
+<path d="M 908 300 H 948" fill="none" stroke="#0d9488" stroke-width="1.6" marker-end="url(#aTeal)"/>
+<text x="928" y="292" font-size="9.4" fill="#0f766e" text-anchor="middle">psycopg_pool</text>
+<path d="M 908 670 H 948" fill="none" stroke="#6d28d9" stroke-width="1.8" marker-end="url(#aPurple)"/>
+<text x="928" y="646" font-size="9.4" fill="#6d28d9" text-anchor="middle">checkpoints</text>
+<text x="928" y="658" font-size="9.4" fill="#6d28d9" text-anchor="middle">+ projections</text>
+<rect x="40" y="1016" width="1420" height="132" rx="10" ry="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2"/>
+<text x="56" y="1040" font-size="12.5" fill="#334155" font-weight="700">Legend</text>
+<line x1="56" y1="1058" x2="82" y2="1058" stroke="#2563eb" stroke-width="2.2"/>
+<text x="90" y="1062" font-size="10.6" fill="#475569">HTTP / WS / SSE data path</text>
+<line x1="776" y1="1058" x2="802" y2="1058" stroke="#16a34a" stroke-width="2.2"/>
+<text x="810" y="1062" font-size="10.6" fill="#475569">Bitget public market data (WS / REST)</text>
+<line x1="56" y1="1078" x2="82" y2="1078" stroke="#ea580c" stroke-width="2.2"/>
+<text x="90" y="1082" font-size="10.6" fill="#475569">Bitget Agent MCP (stdio)</text>
+<line x1="776" y1="1078" x2="802" y2="1078" stroke="#0891b2" stroke-width="2.2"/>
+<text x="810" y="1082" font-size="10.6" fill="#475569">news sources (AKShare / BlockBeats)</text>
+<line x1="56" y1="1098" x2="82" y2="1098" stroke="#9333ea" stroke-width="2.2"/>
+<text x="90" y="1102" font-size="10.6" fill="#475569">LLM — research tier only</text>
+<line x1="776" y1="1098" x2="802" y2="1098" stroke="#0d9488" stroke-width="2.2"/>
+<text x="810" y="1102" font-size="10.6" fill="#475569">PostgreSQL access (psycopg_pool)</text>
+<line x1="56" y1="1118" x2="82" y2="1118" stroke="#94a3b8" stroke-width="2.2" stroke-dasharray="4,3"/>
+<text x="90" y="1122" font-size="10.6" fill="#475569">container / process boundary</text>
+<line x1="776" y1="1118" x2="802" y2="1118" stroke="#fbbf24" stroke-width="2.2"/>
+<text x="810" y="1122" font-size="10.6" fill="#475569">amber dashed box = external boundary / named volume</text>
 </svg>

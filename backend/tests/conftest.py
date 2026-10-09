@@ -2,7 +2,7 @@
 
 Provides:
   - tmp_settings: Settings bound to a temp data dir (MD_DATA_DIR isolation)
-  - seed_store: deterministic parquet seed (complete + gapped segments)
+  - seed_store: deterministic PostgreSQL candle seed (complete + gapped segments)
   - live_server: a real uvicorn subprocess bound to the seeded store
   - network availability helpers for the --online subset
 """

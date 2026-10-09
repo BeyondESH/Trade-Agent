@@ -155,7 +155,7 @@ def create_app(
             cache_scheduler.start()
         except Exception as exc:  # noqa: BLE001 - scheduler is best-effort
             logger.warning("BlockBeats cache scheduler start failed: %s", exc)
-        # Incremental persistence: keep the parquet store current with the live
+        # Incremental persistence: keep the candle store current with the live
         # stream so history never lags real-time by more than one interval.
         # Without this, store stops at the last manual CLI pull and the chart
         # shows a gap between stored history and the live buffer. Uses the
@@ -662,7 +662,7 @@ def create_app(
 
     # -- websocket subscription protocol -----------------------------------
     def _snapshot(category: str, symbol: str, timeframe: str) -> dict:
-        # Live stream is the primary source for the current bar; the parquet
+        # Live stream is the primary source for the current bar; the candle
         # store only supplies history/indicators and is NOT required for a
         # usable snapshot. Without a live bar we still return a structured
         # frame (with an explicit error) so the frontend never silently

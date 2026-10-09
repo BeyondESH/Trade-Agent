@@ -269,7 +269,7 @@ def build_research_tools(
     """Assemble the read-only toolset for the research layer.
 
     Optional collaborators are injectable so tests run without network/npx; in
-    production only the Parquet store is required. ``news_broker`` lets a caller
+    production only the candle store is required. ``news_broker`` lets a caller
     that *does* run the in-process ``NewsBroker`` reuse its ring buffer instead
     of hitting AKShare.
     """

@@ -133,7 +133,7 @@ class AgentRuntime:
         return saver
 
     def _default_market(self, symbol: str, category: str) -> Quote | None:
-        # Resolve an entry quote from the Parquet store (deterministic, no LLM).
+        # Resolve an entry quote from the candle store (PostgreSQL, deterministic, no LLM).
         try:
             frame = self.parquet.read(Series(category, symbol, self._timeframe), limit=1)
         except Exception:  # noqa: BLE001 - missing data is simply "not tradable"
