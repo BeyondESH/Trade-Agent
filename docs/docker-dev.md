@@ -19,7 +19,7 @@ server，并把两路输出分别加上 `[backend]` / `[frontend]` 前缀，浏�
 | 服务 | 容器 | 作用 | 发布端口 |
 |---|---|---|---|
 | `dev` | `trade-dev-1` | 工具箱（shell / exec / 测试 / sync）**＋** 常驻 backend / frontend | **8181** 与 **5173** |
-| `postgres` | `trade-postgres-1` | LangGraph checkpointer 后端（研究图 + 执行图持久化） | **5433**（→ 容器 5432） |
+| `postgres` | `trade-postgres-1` | **唯一持久层**：K 线 / 告警 / 图表配置 / 事件 / 快讯缓存 / 智能体投影 + LangGraph checkpointer（研究图 + 执行图） | **5433**（→ 容器 5432） |
 
 - **`dev`：一个容器、一个镜像、一组卷**：镜像 `trade_agent_img`；卷 `trade-workspace` →
   `/workspace`、`trade-data` → `/workspace/backend/data`。后端 / 前端跑的就是你 `sync` 进去的
@@ -44,8 +44,8 @@ server，并把两路输出分别加上 `[backend]` / `[frontend]` 前缀，浏�
 - **子进程崩溃自愈**：若 backend 或 frontend 进程退出，入口脚本会打印日志并在
   `SERVICES_RESTART_DELAY`（默认 **3s**）后**重启**它；容器**不会**因某个子进程退出而退出，
   「始终在线」得以维持（每一轮都打印，绝非静默）。
-- 后端默认带 `MD_SCHEDULE_INTERVAL_SECONDS=0`（关闭定时增量落盘，避免常驻容器持续对外轮询 /
-  写卷）；需要周期性落盘时把它改成正整数即可。
+- 后端默认带 `MD_SCHEDULE_INTERVAL_SECONDS=0`（关闭定时增量持久化，避免常驻容器持续对外轮询 /
+  写库）；需要周期性持久化时把它改成正整数即可。
 
 ### dev 代理端口 vs E2E 端口（`DEV_BACKEND_PORT`）
 
@@ -145,7 +145,7 @@ docker compose ps                 # 查看状态
 | 容器 | **`trade-dev-1`**（服务名 `dev`） | 工具箱 + 常驻服务器 |
 | `/mnt/d/work/project/trade` → `/src-ro` | **bind（`read_only: true`）** | 单向同步的**源**，容器永不写入 |
 | `trade-workspace` → `/workspace` | **named volume（ext4）** | **原生工作副本**，git / 测试在此运行 |
-| `trade-data` → `/workspace/backend/data` | **named volume** | 后端数据目录，与宿主 parquet 隔离 |
+| `trade-data` → `/workspace/backend/data` | **named volume** | 后端数据目录（live 数据已在 PostgreSQL，这里主要留档 legacy Parquet / JSON） |
 | 镜像 | **`postgres:16`** | checkpointer 后端（经镜像源拉取） |
 | 容器 | **`trade-postgres-1`**（服务名 `postgres`） | LangGraph checkpointer 数据库 |
 | `trade-pgdata` → `/var/lib/postgresql/data` | **named volume** | PostgreSQL 数据目录（不随 `down` 删除） |
@@ -283,13 +283,14 @@ Windows 编辑 ──(scripts/dev-sync.sh sync / up)──▶ /workspace（容�
 
 ## `backend/data` 与 `backend/.env`
 
-- **`backend/data`** 是 `trade-data` 命名卷，是**容器自己的**数据目录，**不会**写入宿主
-  的 parquet 存储。若宿主 `backend/data` 有内容，首次同步会一次性 seed 进该卷。
+- **`backend/data`** 是 `trade-data` 命名卷，是**容器自己的**数据目录，**不会**写入宿主的
+  `backend/data`。live 数据现在都在 PostgreSQL；此卷只保留 legacy 文件（Parquet / JSON）。
+  若宿主 `backend/data` 有 legacy 内容，首次同步会一次性 seed 进该卷。
 - **`backend/.env`** 不在 git 里、且被同步**排除**；首次同步时若容器内缺失，会从
   `/src-ro/backend/.env` **一次性拷贝**一份。因为被排除，后续任何 `sync`（含 `--delete`）
   都不会删除或覆盖它。
 - 后端由入口脚本常驻启动，compose 里已带 `MD_SCHEDULE_INTERVAL_SECONDS=0`，
-  避免容器去写宿主 parquet。
+  避免容器持续增量拉取 / 写库 / 对外轮询。
 
 ## 在容器内运行与测试
 
@@ -411,14 +412,17 @@ docker.io 拉 build frontend，本环境会失败；本项目也未使用任何 
 > 只放行 `Dockerfile` 与 `docker/entrypoint.sh`——它只约束 **build context 的传输**，
 > 与运行时容器内容无关。
 
-## Checkpointer：PostgreSQL（Phase 2 基础）
+## PostgreSQL：唯一持久层（Phase 2 / Phase 3）
 
-LangGraph 的 checkpointer 已从 SQLite 文件迁移到独立的 `postgres` 服务。两张图（研究 / 执行）
-共用**一个**同步 `PostgresSaver`（按 `thread_id` 隔离），worker 是唯一写者。
+三个迁移阶段已把全部存储从文件搬到独立的 `postgres` 服务（LangGraph checkpointer、JSON 存储、
+OHLCV K 线、智能体投影 / SSE 游标）。两张图（研究 / 执行）共用**一个**同步
+`PostgresSaver`（按 `thread_id` 隔离），worker 是唯一写者。
 
 - **连接**：worker 经 `MD_POSTGRES_DSN` 连接（compose 从仓库根 `.env` 注入，指向
   `postgres:5432`）。`docker compose exec dev` 内的一切进程都继承该变量。
-- **schema**：`PostgresSaver.setup()` 会自动建表（`checkpoints` / `checkpoint_blobs` /
+- **schema**：应用表由 `db.py` 的 DDL 建立（`candles` / `alerts` / `chart_config` /
+  `blockbeats_cache` / `events` / `proposals` / `runs` / `stream_events`）；
+  `PostgresSaver.setup()` 另建 checkpointer 表（`checkpoints` / `checkpoint_blobs` /
   `checkpoint_writes` / `checkpoint_migrations`）。查看：
 
   ```bash
@@ -445,9 +449,10 @@ docker compose exec dev bash -lc \
 特性：**幂等**（重跑不产生重复行）、支持 `--dry-run`、报告读 / 写行数与 thread_ids；
 SQLite 文件不存在时以 0 退出。脚本**只读**旧文件，**不会**删除它。
 
-> `backend/data/agent/checkpoints.sqlite` 现为 **legacy**：运行时不再写入，保留仅供迁移
-> 重跑与审计。另注意 `alertstore.py` / `chartstore.py` / `blockbeats_cache.py` / `store.py` /
-> `agent/store.py` 是 JSON / JSONL / Parquet，**不是** SQLite，未随本次迁移改动。
+> 旧的 `backend/data/agent/checkpoints.sqlite`、`runs.jsonl` / `stream.jsonl` 等 JSON/JSONL、
+> 以及 `backend/data/parquet` 日分区现均为 **legacy**：运行时**不再读写**，保留仅供迁移脚本
+> 重跑与审计（`alertstore.py` / `chartstore.py` / `blockbeats_cache.py` / `store.py` /
+> `agent/store.py` 已全部改为读写 PostgreSQL）。
 
 ## 故障排查
 

@@ -35,12 +35,12 @@
 
 Trade-Agent is a full-stack cryptocurrency market research and trading terminal:
 
-- **Backend** (Python / FastAPI): pulls historical K-line data through Bitget's official MCP service and persists it to Parquet; streams real-time market data over the public WebSocket; provides indicator / structure / support-resistance analysis and a financial news pipeline powered by AKShare / BlockBeats.
+- **Backend** (Python / FastAPI): pulls historical K-line data through Bitget's official MCP service and persists it to PostgreSQL; streams real-time market data over the public WebSocket; provides indicator / structure / support-resistance analysis and a financial news pipeline powered by AKShare / BlockBeats.
 - **Frontend** (React 19 / Vite / TypeScript): a professional TradingView-style terminal with a market dashboard, markets overview, screener, heatmaps, community ideas, and a news center — fully localized in Chinese with dark/light themes.
 
 > **About the AI Agent**: this project previously shipped a self-authored AI trading agent and a QUANT LAB quant workbench; both have been removed entirely. They are being rebuilt on **LangChain / LangGraph / Deep Agents**, under a hard boundary: **the LLM only performs front-loaded "deep market research & strategy generation"; order execution and hard risk control are taken over by a zero-LLM, deterministic LangGraph state graph.**
 >
-> **Currently Phase 1 (paper loop)**: research and execution run autonomously on a schedule inside a **separate worker process**; execution uses a **paper broker** and **does not touch live trading**; human-in-the-loop approval, a Postgres checkpointer and cross-process resume are deferred to Phase 2. Enabling the research tier requires model credentials (`MD_AGENT_MODEL` + the provider API key); without them the worker no-ops without placing orders or erroring.
+> **Currently Phase 1 (paper loop)**: research and execution run autonomously on a schedule inside a **separate worker process**; execution uses a **paper broker** and **does not touch live trading**; the checkpointer, the JSON stores (alerts / chart-config / BlockBeats cache / events) and the K-line / agent projections have all moved to **PostgreSQL** (the standalone compose `postgres` service, the **single persistence layer**); human-in-the-loop approval and cross-process resume are deferred to Phase 2. Enabling the research tier requires model credentials (`MD_AGENT_MODEL` + the provider API key); without them the worker no-ops without placing orders or erroring.
 
 The project is developed spec-first with [OpenSpec](https://github.com/Fission-AI/OpenSpec); every feature has corresponding specs and design docs in `openspec/`.
 
@@ -52,14 +52,14 @@ The project is developed spec-first with [OpenSpec](https://github.com/Fission-A
 - **Global financial news**: 7x24 flashes aggregated from East Money / Sina / THS / CLS via AKShare, pushed in real time over SSE, auto topic classification, waterfall UI, and paged history.
 - **BlockBeats news/data**: crypto news flash and data cache.
 - **Price alerts**: local + server-persisted alerts.
-- **K-line history**: deep backfill via MCP / REST v2 / v3, Parquet storage, incremental scheduling, and data-integrity checks.
+- **K-line history**: deep backfill via MCP / REST v2 / v3, PostgreSQL storage, incremental scheduling, and data-integrity checks.
 - **Chinese-first UI**, dark/light themes, responsive multi-market (SPOT / USDT-FUTURES).
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Python >= 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · pydantic-settings · akshare |
+| Backend | Python >= 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · pydantic-settings · akshare · PostgreSQL (single persistence layer: K-line / alerts / chart-config / events / news cache / agent projections / LangGraph checkpointer) |
 | Data access | Bitget Agent MCP (stdio) · Bitget public WebSocket · REST v2/v3 |
 | Frontend | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Radix UI · motion · lucide-react · self-hosted Google Sans Flex / Noto Sans SC |
 | Testing | pytest (three-layer suite) · Vitest + Testing Library · Playwright (E2E) |
@@ -80,10 +80,19 @@ The project is developed spec-first with [OpenSpec](https://github.com/Fission-A
 │   SSE: /news/stream (global news live stream)                      │
 ├────────────────────────────────────────────────────────────────────┤
 │  Bitget MCP (stdio) │ Bitget public WS │ AKShare │ BlockBeats API  │
-│  K-line ingest/backfill │ realtime bars/books │ 4 news sources │ daily cache │
-│  Parquet Store      │ ring buffer       │ ring buffer │ local cache │
+│  K-line ingest/backfill │ realtime bars/books │ 4 news sources     │
+│                        ▼  single persistence layer (PostgreSQL)    │
+│  candles · alerts · chart_config · blockbeats_cache · events ·     │
+│  proposals · runs · stream_events · LangGraph checkpointer tables  │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+> PostgreSQL is the only persistence layer: `candles` / `alerts` / `chart_config` /
+> `blockbeats_cache` / `events` / `proposals` / `runs` / `stream_events` (plus the tables
+> created by the LangGraph checkpointer). The old files — the daily partitions under
+> `backend/data/parquet` and the JSON / JSONL under `backend/data/agent` (`runs.jsonl`,
+> `stream.jsonl`, ...) — are **pre-migration storage** kept on disk for audit and re-runs;
+> they are **no longer read or written at runtime**.
 
 ## Quick Start
 
@@ -153,7 +162,8 @@ Backend settings use the `MD_` prefix (loaded from `backend/.env`); all are opti
 |---|---|---|
 | `BB_API_KEY` | empty | BlockBeats news/data API key (news endpoints degrade without it) |
 | `BITGET_API_KEY` / `SECRET` / `PASSPHRASE` | empty | Reserved; not needed for public market data |
-| `MD_DATA_DIR` | `./data` | Data root (Parquet / Excel / caches) |
+| `MD_DATA_DIR` | `./data` | Data root; live data lives in PostgreSQL, so this only holds legacy files (Parquet / Excel / old JSON caches) |
+| `MD_POSTGRES_DSN` | `postgresql://trade@postgres:5432/trade` | PostgreSQL DSN for the **single persistence layer** (K-line / alerts / chart-config / events / BlockBeats cache / agent projections / LangGraph checkpointer); injected by compose from the repo-root `.env` (host processes use `localhost:5433`) |
 | `MD_SYMBOLS` | `BTCUSDT,ETHUSDT,SOLUSDT` | Default symbols to ingest |
 | `MD_TIMEFRAMES` | `1m,5m,...,1d` | Default timeframes |
 | `MD_CATEGORY` | `USDT-FUTURES` | Default product line |
@@ -178,7 +188,7 @@ A three-layer test pyramid, all runnable locally (the `online` subset needs exte
 
 | Layer | Command | Scope |
 |---|---|---|
-| L1 data integrity | `cd backend && python -m pytest -m integrity` | Full parquet series quality (monotonic / OHLC / gap whitelists) |
+| L1 data integrity | `cd backend && python -m pytest -m integrity` | Full PostgreSQL `candles` series quality (monotonic / OHLC / gap whitelists; needs the imported test DB, skips without Postgres) |
 | L2 live API/WS | `cd backend && python -m pytest tests/test_live_api.py tests/test_live_ws.py` | Real uvicorn process: all REST endpoints + WS channels |
 | L3 browser journeys | `cd frontend && npm run test:e2e` | Playwright user journeys (auto-starts vite + backend) |
 
@@ -199,7 +209,7 @@ cd frontend && npm run test && npm run typecheck
 │       ├── streamhub.py         # WS subscription routing & push
 │       ├── ingestion.py         # MCP / REST historical ingest & backfill
 │       ├── mcp_client.py        # Bitget Agent MCP client
-│       ├── store.py / scheduler.py        # Parquet store / incremental-persistence scheduler
+│       ├── store.py / scheduler.py        # PostgreSQL K-line store / incremental-persistence scheduler
 │       ├── indicators.py / levels.py      # Technical indicators / support-resistance
 │       ├── smc.py / structure.py          # Market structure & liquidity levels
 │       ├── newsfeed.py / news_broker.py   # Global news (AKShare → SSE)
@@ -241,7 +251,7 @@ cd frontend && npm run test && npm run typecheck
 
 | Data | Source | Notes |
 |---|---|---|
-| K-line history | Bitget (MCP / REST v2 / v3) | Deep history backfill, Parquet storage |
+| K-line history | Bitget (MCP / REST v2 / v3) | Deep history backfill, PostgreSQL storage |
 | Realtime market data | Bitget public WebSocket | K-line / order book / ticker, no auth |
 | Global financial news | AKShare (East Money / Sina / THS / CLS) | 7x24 flashes, SSE push, topic classification, free & keyless |
 | Crypto news | BlockBeats API | Newsflash / data, requires `BB_API_KEY` |

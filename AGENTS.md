@@ -19,9 +19,14 @@ Notes:
   Without the flag the L2 tests are deselected, so plain `python -m pytest -q`
   stays green and fast; `server startup` timeout is env-tunable via
   `MD_TEST_SERVER_START_TIMEOUT` (default 180s).
-- L1 discovers series from the PostgreSQL `candles` table (requires
-  `MD_POSTGRES_DSN` + imported candles); freshness (type-C staleness) also skips
-  when no backend is running.
+- L1 discovers series with `SELECT DISTINCT category, symbol, timeframe FROM
+  candles` (requires `MD_POSTGRES_DSN` + imported candles); freshness (type-C
+  staleness) also skips when no backend is running.
+- DB-backed fixtures are marked `db` and use a dedicated `<dbname>_test`
+  database derived from `MD_POSTGRES_DSN` (name override: `MD_TEST_POSTGRES_DB`);
+  they skip, never fail, when Postgres is unreachable. L1 therefore runs against
+  the imported DB - `data/parquet` and the JSON/JSONL stores are legacy trees kept
+  on disk for audit/re-run only.
 - Gap registries live in `backend/tests/data_registry.py`: `KNOWN_GAPS` (type B
   micro-gaps, hard gate) and `STRUCTURAL_EXEMPTIONS` (type A structural gaps).
 - Full regression: `cd backend && python -m pytest -q` and

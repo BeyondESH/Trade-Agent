@@ -35,12 +35,12 @@
 
 Trade-Agent 是一个全栈的加密货币行情研究与交易终端：
 
-- **后端**（Python / FastAPI）：通过 Bitget 官方 MCP 服务抓取 K 线历史并落盘 Parquet，通过公共 WebSocket 实时推送行情；提供指标 / 结构 / 支撑阻力分析，以及基于 AKShare / BlockBeats 的财经快讯管线。
+- **后端**（Python / FastAPI）：通过 Bitget 官方 MCP 服务抓取 K 线历史并写入 PostgreSQL，通过公共 WebSocket 实时推送行情；提供指标 / 结构 / 支撑阻力分析，以及基于 AKShare / BlockBeats 的财经快讯管线。
 - **前端**（React 19 / Vite / TypeScript）：类 TradingView 的专业终端界面，包含行情仪表盘、市场总览、筛币器、热力图、社区观点、新闻中心等，全中文界面、支持暗/亮主题。
 
 > **关于 AI Agent**：本项目曾内置自研的 AI 交易智能体与 QUANT LAB 量化研究，二者已整体移除。现以 **LangChain / LangGraph / Deep Agents** 重建，遵循一条硬边界：**LLM 只做前置的"深度市场研报与策略生成"，下单执行与硬风控由零 LLM 的确定性 LangGraph 状态图接管**。
 >
-> **当前为 Phase 1（纸面闭环）**：研究与执行均在**独立 worker 进程**内定时自治运行；执行走**纸面 broker**，**不接实盘**；checkpointer 已迁移到 **PostgreSQL**（独立的 compose `postgres` 服务），作为跨进程恢复的基础；人工审批（HITL）与跨进程恢复留待 Phase 2。启用研究层需提供模型凭据（`MD_AGENT_MODEL` + 对应 provider API Key）；缺失时 worker 空转、不下单、不报错。
+> **当前为 Phase 1（纸面闭环）**：研究与执行均在**独立 worker 进程**内定时自治运行；执行走**纸面 broker**，**不接实盘**；checkpointer、JSON 存储（告警 / 图表配置 / BlockBeats 缓存 / 事件）与 K 线 / 智能体投影均已迁移到 **PostgreSQL**（独立的 compose `postgres` 服务，**唯一持久层**），作为跨进程恢复与查询的基础；人工审批（HITL）与跨进程恢复留待 Phase 2。启用研究层需提供模型凭据（`MD_AGENT_MODEL` + 对应 provider API Key）；缺失时 worker 空转、不下单、不报错。
 
 整个项目以 [OpenSpec](https://github.com/Fission-AI/OpenSpec) 规格驱动开发，历史功能均有对应规格与设计文档沉淀在 `openspec/`。
 
@@ -52,14 +52,14 @@ Trade-Agent 是一个全栈的加密货币行情研究与交易终端：
 - **全球财经快讯**：AKShare 聚合东财 / 新浪 / 同花顺 / 财联社 7×24 快讯，SSE 实时推送，主题自动分类，瀑布流 UI，支持历史分页。
 - **BlockBeats 快讯/数据**：加密货币新闻流与数据缓存。
 - **价格提醒**：本地 + 服务端持久化告警。
-- **K 线历史**：MCP / REST v2 / v3 深度历史回填，Parquet 存储，增量调度，数据完整性校验。
+- **K 线历史**：MCP / REST v2 / v3 深度历史回填，PostgreSQL 存储，增量调度，数据完整性校验。
 - **全中文界面**，暗/亮主题，响应式多市场（SPOT / USDT-FUTURES）。
 
 ## 技术栈
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Python ≥ 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · pydantic-settings · akshare · PostgreSQL（LangGraph checkpointer） |
+| 后端 | Python ≥ 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · pydantic-settings · akshare · PostgreSQL（唯一持久层：K 线 / 告警 / 图表配置 / 事件 / 快讯缓存 / 智能体投影 / LangGraph checkpointer） |
 | 数据接入 | Bitget Agent MCP（stdio）· Bitget 公共 WebSocket · REST v2/v3 |
 | 前端 | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Radix UI · motion · lucide-react · 自托管 Google Sans Flex / Noto Sans SC |
 | 测试 | pytest（三层测试）· Vitest + Testing Library · Playwright（E2E） |
@@ -80,10 +80,18 @@ Trade-Agent 是一个全栈的加密货币行情研究与交易终端：
 │   SSE：/news/stream（全球快讯实时流）                               │
 ├────────────────────────────────────────────────────────────────────┤
 │  Bitget MCP (stdio) │ Bitget 公共 WS │ AKShare │ BlockBeats API    │
-│  K线抓取/回填        │ 实时bar/盘口    │ 快讯4源 │ 加密快讯/数据     │
-│  Parquet Store      │ 环形缓冲        │ 环形缓冲 │ 每日本地缓存      │
+│  K线抓取/回填        │ 实时bar/盘口    │ 快讯4源 │ 加密快讯/数据   │
+│                        ▼  单一持久层（PostgreSQL）                 │
+│  candles · alerts · chart_config · blockbeats_cache · events ·     │
+│  proposals · runs · stream_events · LangGraph 检查点表             │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+> 持久层只有 PostgreSQL：`candles` / `alerts` / `chart_config` / `blockbeats_cache` /
+> `events` / `proposals` / `runs` / `stream_events`（外加 LangGraph checkpointer 建的表）。
+> 旧文件 —— `backend/data/parquet` 的日分区与 `backend/data/agent` 下的 JSON / JSONL
+> （`runs.jsonl`、`stream.jsonl` 等）—— 是**迁移前的存储**，留在磁盘上仅供审计与重跑，
+> 运行时**不再读写**。
 
 ## 快速开始
 
@@ -207,8 +215,8 @@ docker compose exec dev bash -lc \
 |---|---|---|
 | `BB_API_KEY` | 空 | BlockBeats 新闻/数据 API Key（缺失时快讯接口降级） |
 | `BITGET_API_KEY` / `SECRET` / `PASSPHRASE` | 空 | 预留，公开行情无需 |
-| `MD_DATA_DIR` | `./data` | 数据根目录（Parquet / Excel / 缓存） |
-| `MD_POSTGRES_DSN` | `postgresql://trade@postgres:5432/trade` | LangGraph checkpointer 的 PostgreSQL 连接串；compose 从仓库根 `.env` 注入（宿主进程改用 `localhost:5433`） |
+| `MD_DATA_DIR` | `./data` | 数据根目录；live 数据在 PostgreSQL，此目录只放 legacy 文件（Parquet / Excel / 旧 JSON 缓存） |
+| `MD_POSTGRES_DSN` | `postgresql://trade@postgres:5432/trade` | **唯一持久层**的 PostgreSQL 连接串（K 线 / 告警 / 图表配置 / 事件 / BlockBeats 缓存 / 智能体投影 / LangGraph checkpointer）；compose 从仓库根 `.env` 注入（宿主进程改用 `localhost:5433`） |
 | `MD_SYMBOLS` | `BTCUSDT,ETHUSDT,SOLUSDT` | 默认抓取标的 |
 | `MD_TIMEFRAMES` | `1m,5m,…,1d` | 默认周期 |
 | `MD_CATEGORY` | `USDT-FUTURES` | 默认产品线 |
@@ -233,7 +241,7 @@ docker compose exec dev bash -lc \
 
 | 层 | 命令 | 覆盖 |
 |---|---|---|
-| L1 数据完整性 | `cd backend && python -m pytest -m integrity` | Parquet 全序列质量（单调性 / OHLC / 缺口白名单） |
+| L1 数据完整性 | `cd backend && python -m pytest -m integrity` | PostgreSQL `candles` 全序列质量（单调性 / OHLC / 缺口白名单；需已导入的测试库，无 Postgres 时跳过） |
 | L2 实时 API/WS | `cd backend && python -m pytest -m live --run-live` | 真实 uvicorn 进程的 REST + WS 全通道 |
 | L3 浏览器旅程 | `cd frontend && npm run test:e2e` | Playwright 用户旅程（自动起 vite + 后端） |
 
@@ -292,7 +300,7 @@ pip install pre-commit && pre-commit install && pre-commit run --all-files
 │       ├── streamhub.py         # WS 订阅路由与推送
 │       ├── ingestion.py         # MCP / REST 历史抓取与回填
 │       ├── mcp_client.py        # Bitget Agent MCP 客户端
-│       ├── store.py / scheduler.py        # Parquet 存储 / 增量持久化调度
+│       ├── store.py / scheduler.py        # PostgreSQL K 线存储 / 增量持久化调度
 │       ├── indicators.py / levels.py      # 技术指标 / 支撑阻力
 │       ├── smc.py / structure.py          # 市场结构与流动性位
 │       ├── newsfeed.py / news_broker.py   # 全球快讯（AKShare → SSE）
@@ -334,7 +342,7 @@ pip install pre-commit && pre-commit install && pre-commit run --all-files
 
 | 数据 | 来源 | 说明 |
 |---|---|---|
-| K 线历史 | Bitget（MCP / REST v2 / v3） | 深度历史回填，Parquet 存储 |
+| K 线历史 | Bitget（MCP / REST v2 / v3） | 深度历史回填，PostgreSQL 存储 |
 | 实时行情 | Bitget 公共 WebSocket | K 线 / 盘口 / Ticker，无需鉴权 |
 | 全球财经快讯 | AKShare（东财 / 新浪 / 同花顺 / 财联社） | 7×24 快讯，SSE 推送，主题分类，免费无 Key |
 | 加密新闻 | BlockBeats API | 快讯 / 数据，需 `BB_API_KEY` |
