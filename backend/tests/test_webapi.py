@@ -62,9 +62,9 @@ def _seed(tmp) -> Settings:  # noqa: ANN001
     return settings
 
 
-def _client(tmp, news_broker=None) -> TestClient:  # noqa: ANN001
+def _client(tmp, news_broker=None, database=None) -> TestClient:  # noqa: ANN001
     broker = news_broker if news_broker is not None else _FakeNewsBroker()
-    return TestClient(create_app(_seed(tmp), news_broker=broker))
+    return TestClient(create_app(_seed(tmp), news_broker=broker, database=database))
 
 
 def _tmp():
@@ -295,9 +295,9 @@ def test_timeframe_case_insensitive() -> None:
 
 
 # -- 8.3b chart config -----------------------------------------------------
-def test_chart_config_roundtrip_and_reject() -> None:
+def test_chart_config_roundtrip_and_reject(pg_db) -> None:  # noqa: ANN001
     with _tmp() as tmp:
-        c = _client(tmp)
+        c = _client(tmp, database=pg_db)
         p = {"symbol": "BTCUSDT", "timeframe": "5m"}
         # missing -> empty template
         empty = c.get("/chart-config", params=p).json()
@@ -1309,10 +1309,12 @@ def test_backfill_falls_back_to_mcp_when_rest_fails() -> None:
         assert body["earliest_reached"] is True
 
 
-def test_alerts_crud_and_persistence() -> None:
+def test_alerts_crud_and_persistence(pg_db) -> None:  # noqa: ANN001
     with _tmp() as tmp:
         settings = _seed(tmp)
-        c = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        c = TestClient(
+            create_app(settings, stream=_FakeStream(None), market=_FakeMarket(), database=pg_db)
+        )
 
         # empty at first
         assert c.get("/alerts").json() == {"alerts": []}
@@ -1348,21 +1350,27 @@ def test_alerts_crud_and_persistence() -> None:
         assert c.delete(f"/alerts/{alert_id}").status_code == 404
 
 
-def test_alerts_persist_across_app_restart() -> None:
+def test_alerts_persist_across_app_restart(pg_db) -> None:  # noqa: ANN001
     with _tmp() as tmp:
         settings = _seed(tmp)
-        c1 = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        c1 = TestClient(
+            create_app(settings, stream=_FakeStream(None), market=_FakeMarket(), database=pg_db)
+        )
         c1.post("/alerts", json={"symbol": "ETHUSDT", "condition": "below", "threshold": 2500})
         # a brand-new app instance over the same data_dir
-        c2 = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        c2 = TestClient(
+            create_app(settings, stream=_FakeStream(None), market=_FakeMarket(), database=pg_db)
+        )
         alerts = c2.get("/alerts").json()["alerts"]
         assert len(alerts) == 1 and alerts[0]["symbol"] == "ETHUSDT"
 
 
-def test_alerts_round_trip_reference_line_with_color() -> None:
+def test_alerts_round_trip_reference_line_with_color(pg_db) -> None:  # noqa: ANN001
     with _tmp() as tmp:
         settings = _seed(tmp)
-        c = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        c = TestClient(
+            create_app(settings, stream=_FakeStream(None), market=_FakeMarket(), database=pg_db)
+        )
         # a reference line is an enabled:false alert with an optional custom color
         r = c.post(
             "/alerts",
@@ -1401,9 +1409,9 @@ def _run_all() -> None:
 # -- global news pipeline -------------------------------------------------
 
 
-def test_news_categories_and_health() -> None:
+def test_news_categories_and_health(pg_db) -> None:  # noqa: ANN001
     with _tmp() as tmp:
-        with _client(tmp) as c:
+        with _client(tmp, database=pg_db) as c:
             cats = c.get("/news/categories")
             assert cats.status_code == 200
             assert cats.json()["categories"][0] == "crypto"
@@ -1424,14 +1432,14 @@ def _news_item(news_id: str, category: str, ts: int) -> dict:
     }
 
 
-def test_news_context_filters() -> None:
+def test_news_context_filters(pg_db) -> None:  # noqa: ANN001
     now = int(time.time())
     items = [
         _news_item("em_crypto", "crypto", now),
         _news_item("em_macro_old", "macro", now - 2 * 3600),
     ]
     with _tmp() as tmp:
-        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+        with _client(tmp, _FakeNewsBroker(items=items), database=pg_db) as c:
             r = c.get("/news/context", params={"hours": 1, "category": "crypto"})
             assert r.status_code == 200
             body = r.json()
@@ -1443,11 +1451,11 @@ def test_news_context_filters() -> None:
             assert len(all_r.json()["items"]) == 2
 
 
-def test_news_stream_sse() -> None:
+def test_news_stream_sse(pg_db) -> None:  # noqa: ANN001
     now = int(time.time())
     items = [_news_item("em_a", "crypto", now), _news_item("em_b", "macro", now)]
     with _tmp() as tmp:
-        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+        with _client(tmp, _FakeNewsBroker(items=items), database=pg_db) as c:
             with c.stream("GET", "/news/stream") as r:
                 assert r.status_code == 200
                 assert r.headers["content-type"].startswith("text/event-stream")
@@ -1462,11 +1470,11 @@ def test_news_stream_sse() -> None:
                 assert "sources" in snap
 
 
-def test_news_stream_snapshot_capped_newest_first() -> None:
+def test_news_stream_snapshot_capped_newest_first(pg_db) -> None:  # noqa: ANN001
     now = int(time.time())
     items = [_news_item(f"em_{i}", "crypto", now - i) for i in range(120)]
     with _tmp() as tmp:
-        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+        with _client(tmp, _FakeNewsBroker(items=items), database=pg_db) as c:
             with c.stream("GET", "/news/stream") as r:
                 lines = [ln for ln in r.iter_lines() if ln]
                 snap = json.loads(lines[1][len("data: ") :])
@@ -1476,7 +1484,7 @@ def test_news_stream_snapshot_capped_newest_first() -> None:
                 assert ids[0] == "em_0" and ids[-1] == "em_99"  # newest first
 
 
-def test_news_history_paging_and_filters() -> None:
+def test_news_history_paging_and_filters(pg_db) -> None:  # noqa: ANN001
     now = int(time.time())
     items = [
         _news_item("em_crypto_0", "crypto", now),
@@ -1485,7 +1493,7 @@ def test_news_history_paging_and_filters() -> None:
         _news_item("em_macro_1", "macro", now - 300),
     ]
     with _tmp() as tmp:
-        with _client(tmp, _FakeNewsBroker(items=items)) as c:
+        with _client(tmp, _FakeNewsBroker(items=items), database=pg_db) as c:
             # newest-first full page
             r = c.get("/news/history").json()
             assert [i["id"] for i in r["items"]] == [
@@ -1515,7 +1523,7 @@ def test_news_history_paging_and_filters() -> None:
 
 
 # -- lifespan scheduler wiring --------------------------------------------
-def test_lifespan_skips_ingest_scheduler_when_interval_disabled() -> None:
+def test_lifespan_skips_ingest_scheduler_when_interval_disabled(pg_db) -> None:  # noqa: ANN001
     with _tmp() as tmp:
         settings = _seed(tmp)
         settings.schedule_interval_seconds = 0
@@ -1524,6 +1532,7 @@ def test_lifespan_skips_ingest_scheduler_when_interval_disabled() -> None:
             stream=_FakeStream(None),
             market=_FakeMarket(),
             news_broker=_FakeNewsBroker(),
+            database=pg_db,
         )
         with TestClient(app) as c:
             assert c.app.state.ingest_scheduler is None

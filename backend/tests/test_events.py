@@ -1,19 +1,20 @@
-"""Offline tests for the bounded JSONL event log.
+"""Offline tests for the bounded PostgreSQL event log.
 
 Run:
-    python tests/test_events.py     # from backend/ with PYTHONPATH=src
-    pytest
+    pytest tests/test_events.py
 """
 
 from __future__ import annotations
 
-import json
+import pytest
 
 from market_data.events import EventLog
 
+pytestmark = pytest.mark.db
 
-def test_append_and_list_roundtrip(tmp_path) -> None:  # noqa: ANN001
-    log = EventLog(tmp_path / "events" / "log.jsonl")
+
+def test_append_and_list_roundtrip(pg_db) -> None:  # noqa: ANN001
+    log = EventLog(pg_db)
     first = log.append("circuit_breaker", {"action": "blocked", "drawdown": 0.15})
     second = log.append("circuit_breaker", {"action": "enforced", "symbols": ["BTCUSDT"]})
     assert first["id"] != second["id"]
@@ -24,28 +25,31 @@ def test_append_and_list_roundtrip(tmp_path) -> None:  # noqa: ANN001
     assert events[1]["payload"]["symbols"] == ["BTCUSDT"]
 
 
-def test_persists_across_instances(tmp_path) -> None:  # noqa: ANN001
-    path = tmp_path / "log.jsonl"
-    EventLog(path).append("circuit_breaker", {"action": "blocked"})
-    reloaded = EventLog(path).list()
+def test_persists_across_instances(pg_db) -> None:  # noqa: ANN001
+    EventLog(pg_db).append("circuit_breaker", {"action": "blocked"})
+    reloaded = EventLog(pg_db).list()
     assert len(reloaded) == 1 and reloaded[0]["payload"]["action"] == "blocked"
 
 
-def test_overflow_evicts_oldest(tmp_path) -> None:  # noqa: ANN001
-    path = tmp_path / "log.jsonl"
-    log = EventLog(path, max_events=3)
+def test_overflow_evicts_oldest(pg_db) -> None:  # noqa: ANN001
+    log = EventLog(pg_db, max_events=3)
     appended = [log.append("tick", {"n": i}) for i in range(5)]
     kept = log.list()
     assert [e["id"] for e in kept] == [e["id"] for e in appended[-3:]]
     assert [e["payload"]["n"] for e in kept] == [2, 3, 4]
-    # File itself is bounded (one JSON object per line).
-    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    assert len(lines) == 3
-    assert all(isinstance(json.loads(line), dict) for line in lines)
 
 
-def test_list_filters_by_kind(tmp_path) -> None:  # noqa: ANN001
-    log = EventLog(tmp_path / "log.jsonl")
+def test_cap_is_per_source(pg_db) -> None:  # noqa: ANN001
+    log = EventLog(pg_db, max_events=2)
+    for i in range(3):
+        log.append("a", {"n": i})
+    log.append("b", {"n": 99})
+    assert [e["payload"]["n"] for e in log.list(kind="a")] == [1, 2]
+    assert [e["payload"]["n"] for e in log.list(kind="b")] == [99]
+
+
+def test_list_filters_by_kind(pg_db) -> None:  # noqa: ANN001
+    log = EventLog(pg_db)
     log.append("circuit_breaker", {"action": "blocked"})
     log.append("other", {"x": 1})
     log.append("circuit_breaker", {"action": "enforced"})
@@ -54,18 +58,14 @@ def test_list_filters_by_kind(tmp_path) -> None:  # noqa: ANN001
     assert [e["payload"]["action"] for e in only] == ["blocked", "enforced"]
 
 
-def test_list_limit_returns_newest(tmp_path) -> None:  # noqa: ANN001
-    log = EventLog(tmp_path / "log.jsonl")
+def test_list_limit_returns_newest(pg_db) -> None:  # noqa: ANN001
+    log = EventLog(pg_db)
     for i in range(4):
         log.append("tick", {"n": i})
     assert [e["payload"]["n"] for e in log.list(limit=2)] == [2, 3]
 
 
-def test_load_skips_corrupt_lines(tmp_path) -> None:  # noqa: ANN001
-    path = tmp_path / "log.jsonl"
-    path.write_text(
-        '{"id": "abc", "ts": 1, "kind": "k", "payload": {}}\nnot json\n', encoding="utf-8"
-    )
-    log = EventLog(path)
-    log.append("k", {"n": 1})
-    assert [e["payload"] for e in log.list()] == [{}, {"n": 1}]
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(pytest.main([__file__, "-v"]))

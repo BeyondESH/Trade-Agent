@@ -24,7 +24,9 @@ from typing import IO
 
 import httpx
 import pandas as pd
+import psycopg
 import pytest
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from market_data.config import Settings
 from market_data.models import Series
@@ -191,7 +193,7 @@ def _wait_for_ready(
 
 
 @pytest.fixture(scope="session")
-def live_server(tmp_path_factory) -> Iterator[str]:
+def live_server(tmp_path_factory, pg_test_dsn: str) -> Iterator[str]:
     """A real uvicorn process serving a freshly seeded store.
 
     Spawns on an ephemeral port with MD_DATA_DIR pointing at a temp dir and
@@ -271,6 +273,7 @@ def live_server(tmp_path_factory) -> Iterator[str]:
     env["MD_DATA_DIR"] = str(data_dir)
     env["MD_SCHEDULE_INTERVAL_SECONDS"] = "0"
     env["MD_LOG_LEVEL"] = "WARNING"
+    env["MD_POSTGRES_DSN"] = pg_test_dsn
     timeout = float(os.environ.get("MD_TEST_SERVER_START_TIMEOUT", "180"))
     proc, log_path, log_fh = _spawn_live(env, port)
     base = f"http://127.0.0.1:{port}"
@@ -304,6 +307,73 @@ def live_backend_or_skip(live_server: str) -> str:
     if not _backend_reachable(live_server):
         pytest.skip("live backend unreachable")
     return live_server
+
+
+# -- PostgreSQL-backed store fixtures ---------------------------------------
+# Tests use a dedicated `<dbname>_test` database so production data is never
+# touched; without a reachable Postgres the fixtures skip (see the `db` marker).
+_DB_TABLES = ("alerts", "chart_config", "blockbeats_cache", "events")
+
+
+def _derive_test_database(base_dsn: str) -> tuple[str, str]:
+    """Create (if needed) and return the DSN for the dedicated test database."""
+    info = conninfo_to_dict(base_dsn)
+    base_name = info.get("dbname") or "trade"
+    test_name = os.environ.get("MD_TEST_POSTGRES_DB") or f"{base_name}_test"
+    admin = {**info, "dbname": "postgres"}
+    with psycopg.connect(make_conninfo(**admin), autocommit=True, connect_timeout=3) as conn:
+        exists = conn.execute(
+            "SELECT 1 FROM pg_database WHERE datname = %s", (test_name,)
+        ).fetchone()
+        if exists is None:
+            conn.execute(f'CREATE DATABASE "{test_name}"')
+    return make_conninfo(**{**info, "dbname": test_name}), test_name
+
+
+@pytest.fixture(scope="session")
+def pg_test_dsn() -> str:
+    """A DSN for the session's throwaway test database, or skip without Postgres."""
+    base = os.environ.get("MD_TEST_POSTGRES_DSN") or os.environ.get("MD_POSTGRES_DSN")
+    if not base:
+        pytest.skip("Postgres DSN not configured (MD_POSTGRES_DSN); DB-backed tests skipped")
+    try:
+        dsn, _ = _derive_test_database(base)
+    except Exception as exc:  # noqa: BLE001 - absence of Postgres must skip, not fail
+        pytest.skip(f"Postgres unavailable: {exc}")
+    return dsn
+
+
+@pytest.fixture(scope="session")
+def pg_database(pg_test_dsn: str):
+    """A session-scoped `Database` on the test DB with the schema bootstrapped."""
+    from market_data.db import Database
+
+    database = Database(pg_test_dsn)
+    database.bootstrap()
+    yield database
+    database.close()
+
+
+def _truncate(database) -> None:  # noqa: ANN001
+    with database.connection() as conn:
+        conn.execute("TRUNCATE " + ", ".join(_DB_TABLES) + " RESTART IDENTITY")
+
+
+@pytest.fixture()
+def pg_db(pg_database):  # noqa: ANN001
+    """A clean PostgreSQL `Database` bound to the BlockBeats cache; per-test isolation."""
+    import market_data.blockbeats_cache as blockbeats_cache
+
+    blockbeats_cache.configure_database(pg_database)
+    _truncate(pg_database)
+    try:
+        yield pg_database
+    finally:
+        _truncate(pg_database)
+        blockbeats_cache.configure_database(None)
+        from market_data import db as db_module
+
+        db_module.reset_databases()
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:  # noqa: ANN001

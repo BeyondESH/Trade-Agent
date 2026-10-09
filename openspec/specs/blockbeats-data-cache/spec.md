@@ -19,21 +19,21 @@ TBD - created by archiving change blockbeats-data-cache. Update Purpose after ar
 - **THEN** 后端 SHALL 记录告警并继续正常启动
 - **AND** 定时任务 SHALL 仍在下次触发时重试
 
-### Requirement: 缓存按参数分文件
-系统 SHALL 按端点参数组合分文件缓存：无参端点各一个文件；`top10_netflow` 按 `network` 各一份；`us10y` 与 `dxy` 按 `type` 各一份，默认预缓存 `type=1M`。前端请求携带参数时 SHALL 命中对应参数组合的缓存。
+### Requirement: 缓存按参数组合存储
+系统 SHALL 按端点参数组合分别缓存：无参端点各一条缓存记录；`top10_netflow` 按 `network` 各一条；`us10y` 与 `dxy` 按 `type` 各一条，默认预缓存 `type=1M`。每条记录以 `cache_key`（`<endpoint>[.<network>][.<type>]`）唯一标识。前端请求携带参数时 SHALL 命中对应参数组合的缓存。
 
 #### Scenario: 无参端点单独缓存
 - **WHEN** 定时抓取 `btc_etf`、`daily_tx` 等无参端点
-- **THEN** 每个端点 SHALL 保存到独立缓存文件
+- **THEN** 每个端点 SHALL 保存为独立的缓存记录
 
-#### Scenario: top10_netflow 按 network 分文件
+#### Scenario: top10_netflow 按 network 分记录
 - **WHEN** 定时抓取 `top10_netflow` 的不同 network（如 solana、ethereum）
-- **THEN** 各 network SHALL 保存到独立缓存文件
-- **AND** 前端请求 `top10_netflow?network=ethereum` 时 SHALL 命中 ethereum 的缓存文件
+- **THEN** 各 network SHALL 保存为独立的缓存记录
+- **AND** 前端请求 `top10_netflow?network=ethereum` 时 SHALL 命中 ethereum 的缓存记录
 
-#### Scenario: us10y / dxy 按 type 分文件
+#### Scenario: us10y / dxy 按 type 分记录
 - **WHEN** 定时抓取 `us10y` 或 `dxy`
-- **THEN** SHALL 预缓存 `type=1M` 的对应文件
+- **THEN** SHALL 预缓存 `type=1M` 的对应记录
 - **AND** 前端请求 `us10y?type=1M` 时 SHALL 命中该缓存
 
 ### Requirement: 手动刷新端点
@@ -50,9 +50,9 @@ TBD - created by archiving change blockbeats-data-cache. Update Purpose after ar
 - **AND** 失败端点的旧缓存 SHALL 保留，不被覆盖
 
 ### Requirement: 缓存持久化
-系统 SHALL 将 BlockBeats data 缓存写盘持久化，存于后端 `data` 目录下的专用缓存目录，避免进程重启后丢失；缓存文件中 SHALL 记录抓取时间戳 `fetched_at`。
+系统 SHALL 将 BlockBeats data 缓存持久化到 PostgreSQL `blockbeats_cache` 表（连接串来自 `MD_POSTGRES_DSN`），避免进程重启后丢失；每条缓存记录 SHALL 记录抓取时间戳 `fetched_at`。
 
 #### Scenario: 重启后复用缓存
-- **WHEN** 后端重启而缓存目录中存在历史缓存文件
+- **WHEN** 后端重启而缓存表中存在历史缓存记录
 - **THEN** 后端 SHALL 直接复用现有缓存，无需重新从上游抓取
 

@@ -17,16 +17,16 @@ from market_data.config import Settings
 from market_data.webapi import create_app
 
 
-def _client(monkeypatch=None) -> TestClient:
+def _client(pg_db, monkeypatch=None) -> TestClient:  # noqa: ANN001
     settings = Settings(data_dir=Path(tempfile.mkdtemp()))
     if monkeypatch is not None:
-        # Isolate the cache dir so proxy tests always miss cache and hit the
-        # monkeypatched upstream deterministically.
+        # Never hit a warm cache: the pg_db fixture truncates the cache table, so
+        # proxy tests deterministically miss and hit the monkeypatched upstream.
         monkeypatch.setattr(blockbeats_cache, "get_settings", lambda: settings)
-    return TestClient(create_app(settings), raise_server_exceptions=False)
+    return TestClient(create_app(settings, database=pg_db), raise_server_exceptions=False)
 
 
-def test_data_proxy_forwards_with_api_key(monkeypatch) -> None:
+def test_data_proxy_forwards_with_api_key(pg_db, monkeypatch) -> None:
     """GET /blockbeats/data/dxy proxies with the api-key header."""
     calls: list[tuple[str, dict | None]] = []
 
@@ -37,7 +37,7 @@ def test_data_proxy_forwards_with_api_key(monkeypatch) -> None:
     monkeypatch.setattr(blockbeats, "_get", fake_get)
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
 
-    resp = _client(monkeypatch).get("/blockbeats/data/dxy")
+    resp = _client(pg_db, monkeypatch).get("/blockbeats/data/dxy")
     assert resp.status_code == 200
     assert resp.json()["data"] == {"value": 103.5}
     assert calls == [("/v1/data/dxy", None)]
@@ -62,7 +62,7 @@ def test_bb_api_key_unsupported_env_falls_back_to_md_prefix(monkeypatch) -> None
     assert s.bb_api_key == "md-key"
 
 
-def test_data_proxy_network_param(monkeypatch) -> None:
+def test_data_proxy_network_param(pg_db, monkeypatch) -> None:
     calls: list[tuple[str, dict | None]] = []
 
     def fake_get(path: str, params: dict | None = None) -> dict:
@@ -72,12 +72,14 @@ def test_data_proxy_network_param(monkeypatch) -> None:
     monkeypatch.setattr(blockbeats, "_get", fake_get)
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
 
-    resp = _client(monkeypatch).get("/blockbeats/data/top10_netflow", params={"network": "solana"})
+    resp = _client(pg_db, monkeypatch).get(
+        "/blockbeats/data/top10_netflow", params={"network": "solana"}
+    )
     assert resp.status_code == 200
     assert calls == [("/v1/data/top10_netflow", {"network": "solana"})]
 
 
-def test_data_proxy_us10y_endpoint_name(monkeypatch) -> None:
+def test_data_proxy_us10y_endpoint_name(pg_db, monkeypatch) -> None:
     """The endpoint name matches the upstream doc exactly (/v1/data/us10y)."""
     calls: list[tuple[str, dict | None]] = []
 
@@ -88,12 +90,12 @@ def test_data_proxy_us10y_endpoint_name(monkeypatch) -> None:
     monkeypatch.setattr(blockbeats, "_get", fake_get)
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
 
-    resp = _client(monkeypatch).get("/blockbeats/data/us10y")
+    resp = _client(pg_db, monkeypatch).get("/blockbeats/data/us10y")
     assert resp.status_code == 200
     assert calls == [("/v1/data/us10y", None)]
 
 
-def test_data_proxy_type_param(monkeypatch) -> None:
+def test_data_proxy_type_param(pg_db, monkeypatch) -> None:
     """`type` is forwarded only when explicitly provided."""
     calls: list[tuple[str, dict | None]] = []
 
@@ -104,40 +106,40 @@ def test_data_proxy_type_param(monkeypatch) -> None:
     monkeypatch.setattr(blockbeats, "_get", fake_get)
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
 
-    resp = _client(monkeypatch).get("/blockbeats/data/dxy", params={"type": "1M"})
+    resp = _client(pg_db, monkeypatch).get("/blockbeats/data/dxy", params={"type": "1M"})
     assert resp.status_code == 200
     assert calls == [("/v1/data/dxy", {"type": "1M"})]
 
-    resp = _client(monkeypatch).get("/blockbeats/data/dxy")
+    resp = _client(pg_db, monkeypatch).get("/blockbeats/data/dxy")
     assert resp.status_code == 200
     assert calls == [("/v1/data/dxy", {"type": "1M"}), ("/v1/data/dxy", None)]
 
 
-def test_data_proxy_old_endpoint_name_400(monkeypatch) -> None:
+def test_data_proxy_old_endpoint_name_400(pg_db, monkeypatch) -> None:
     """Legacy endpoint names are rejected now that names match upstream."""
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
-    resp = _client(monkeypatch).get("/blockbeats/data/daily_volume")
+    resp = _client(pg_db, monkeypatch).get("/blockbeats/data/daily_volume")
     assert resp.status_code == 400
 
 
-def test_data_proxy_unknown_endpoint_400(monkeypatch) -> None:
+def test_data_proxy_unknown_endpoint_400(pg_db, monkeypatch) -> None:
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
-    resp = _client(monkeypatch).get("/blockbeats/data/not_an_endpoint")
+    resp = _client(pg_db, monkeypatch).get("/blockbeats/data/not_an_endpoint")
     assert resp.status_code == 400
 
 
-def test_data_proxy_upstream_error_502(monkeypatch) -> None:
+def test_data_proxy_upstream_error_502(pg_db, monkeypatch) -> None:
     def fake_get(path: str, params: dict | None = None) -> dict:  # noqa: ARG001
         raise RuntimeError("upstream down")
 
     monkeypatch.setattr(blockbeats, "_get", fake_get)
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
 
-    resp = _client(monkeypatch).get("/blockbeats/data/dxy")
+    resp = _client(pg_db, monkeypatch).get("/blockbeats/data/dxy")
     assert resp.status_code == 502
 
 
-def test_newsflash_proxy_whitelist_and_forward(monkeypatch) -> None:
+def test_newsflash_proxy_whitelist_and_forward(pg_db, monkeypatch) -> None:
     calls: list[tuple[str, dict | None]] = []
 
     def fake_get(path: str, params: dict | None = None) -> dict:
@@ -152,7 +154,7 @@ def test_newsflash_proxy_whitelist_and_forward(monkeypatch) -> None:
     monkeypatch.setattr(blockbeats, "_get", fake_get)
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
 
-    resp = _client(monkeypatch).get(
+    resp = _client(pg_db, monkeypatch).get(
         "/blockbeats/newsflash/ai", params={"page": 1, "size": 10, "lang": "cn"}
     )
     assert resp.status_code == 200
@@ -161,9 +163,9 @@ def test_newsflash_proxy_whitelist_and_forward(monkeypatch) -> None:
     assert resp.json()["data"][0]["create_time"] == 1769677313
 
 
-def test_newsflash_proxy_unknown_type_400(monkeypatch) -> None:
+def test_newsflash_proxy_unknown_type_400(pg_db, monkeypatch) -> None:
     monkeypatch.setenv("BB_API_KEY", "test-key-123")
-    resp = _client(monkeypatch).get("/blockbeats/newsflash/bogus")
+    resp = _client(pg_db, monkeypatch).get("/blockbeats/newsflash/bogus")
     assert resp.status_code == 400
 
 

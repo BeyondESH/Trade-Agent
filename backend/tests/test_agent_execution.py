@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
@@ -337,18 +336,18 @@ def test_same_proposal_on_new_thread_does_not_duplicate_order() -> None:
     assert second["failed"] is True  # existing position blocks the re-entry
 
 
-def test_audit_events_are_written_to_jsonl(tmp_path: Path) -> None:
+def test_audit_events_are_written_to_jsonl(pg_db) -> None:  # noqa: ANN001
     broker = PaperBroker(1000.0, 0.2)
-    events = EventLog(tmp_path / "agent" / "events.jsonl")
+    events = EventLog(pg_db)
     graph = _graph(broker, {"BTCUSDT": 100.0}, _limits(), events=events)
     graph.invoke({"proposal": _proposal(), "now_ms": NOW_MS})
     steps = events.list(kind="execution_step")
     assert [e["payload"]["node"] for e in steps] == SUCCESS_PATH
 
 
-def test_failed_run_is_audited(tmp_path: Path) -> None:
+def test_failed_run_is_audited(pg_db) -> None:  # noqa: ANN001
     broker = PaperBroker(1000.0, 0.2)
-    events = EventLog(tmp_path / "events.jsonl")
+    events = EventLog(pg_db)
     graph = _graph(broker, {}, _limits(), events=events)
     graph.invoke({"proposal": _proposal(), "now_ms": NOW_MS})
     nodes = [e["payload"]["node"] for e in events.list(kind="execution_step")]

@@ -1,11 +1,8 @@
-# alerts-backend Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change tv-replay-and-alerts. Update Purpose after archive.
-## Requirements
 ### Requirement: 后端警报持久化
 
-系统 SHALL 在后端实现 `/alerts` 端点：`GET` 列表、`POST` 创建、`PUT`/`DELETE` 更新与删除，数据持久化到 PostgreSQL `alerts` 表（连接串来自 `MD_POSTGRES_DSN`）。同一用户的警报 SHALL 跨设备/会话保持。
+系统 SHALL 在后端实现 `/alerts` 端点：`GET` 列表、`POST` 创建、`PUT`/`DELETE` 更新与删除，数据持久化到 PostgreSQL `alerts` 表（连接串来自 `MD_POSTGRES_DSN`）。同一用户的警报 SHALL 跨设备/会话保持。列表 SHALL 按 `seq DESC` 返回（最新在前），字段形状与前端 `Alert` 类型一致。
 
 #### Scenario: 创建并列出
 
@@ -21,4 +18,3 @@ TBD - created by archiving change tv-replay-and-alerts. Update Purpose after arc
 
 - **WHEN** 重启服务后 `GET /alerts`
 - **THEN** 之前创建的警报 SHALL 仍存在
-

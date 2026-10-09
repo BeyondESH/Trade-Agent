@@ -1,14 +1,25 @@
-"""Persistent chart state per series (chart terminal layout).
+"""Persistent chart state per series (chart terminal layout) in PostgreSQL.
 
 Stores indicator layout, hand-drawn overlays and auto-layer toggles keyed by
-`category/symbol/timeframe` in a local JSON file (parallel to appconfig).
-Writes are lightly validated and capped to keep the file bounded.
+``(category, symbol, timeframe)``. The public API is unchanged from the former
+JSON store (``load`` / ``get`` / ``save`` with the same validation, the same
+100-drawing cap and the same "missing -> empty template" behaviour); only the
+medium changed - a row per series in ``chart_config`` with the opaque state kept
+as ``jsonb``.
+
+The old store had no locking at all, so two concurrent ``save`` calls clobbered
+each other (lost update). The upsert below is atomic per series key, so
+concurrent writes of different series no longer interfere and a same-series
+write is a correct last-writer-wins.
 """
 
 from __future__ import annotations
 
 import json
-from pathlib import Path
+
+from psycopg.types.json import Jsonb
+
+from market_data.db import Database, get_database
 
 MAX_DRAWINGS_PER_SERIES = 100
 
@@ -20,28 +31,46 @@ _EMPTY_SERIES_STATE = {
 
 
 class ChartStore:
-    def __init__(self, path: str | Path) -> None:
-        self.path = Path(path)
+    def __init__(self, database: Database | None = None, *, dsn: str | None = None) -> None:
+        self._db = database or get_database(dsn)
 
     def load(self) -> dict:
-        if not self.path.exists():
-            return {}
-        data = json.loads(self.path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
+        with self._db.connection() as conn:
+            rows = conn.execute(
+                "SELECT category, symbol, timeframe, state FROM chart_config"
+            ).fetchall()
+        return {
+            _series_key(row["category"], row["symbol"], row["timeframe"]): row["state"]
+            for row in rows
+        }
 
     def get(self, category: str, symbol: str, timeframe: str) -> dict:
-        return self.load().get(_series_key(category, symbol, timeframe), _empty_state())
+        with self._db.connection() as conn:
+            row = conn.execute(
+                "SELECT state FROM chart_config "
+                "WHERE category = %s AND symbol = %s AND timeframe = %s",
+                (category, symbol, timeframe),
+            ).fetchone()
+        if row is None:
+            return _empty_state()
+        return row["state"]
 
     def save(self, category: str, symbol: str, timeframe: str, state: dict) -> dict:
         validated = _validate_state(state)
-        data = self.load()
-        data[_series_key(category, symbol, timeframe)] = validated
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        with self._db.connection() as conn:
+            conn.execute(
+                "INSERT INTO chart_config (category, symbol, timeframe, state) "
+                "VALUES (%s, %s, %s, %s) "
+                "ON CONFLICT (category, symbol, timeframe) DO UPDATE "
+                "SET state = EXCLUDED.state, updated_at = now()",
+                (category, symbol, timeframe, Jsonb(validated)),
+            )
         return validated
 
 
 def _series_key(category: str, symbol: str, timeframe: str) -> str:
+    # NOT normalized on purpose: `1H` and `1h` are distinct series, matching the
+    # former file-backed key exactly.
     return f"{category}/{symbol}/{timeframe}"
 
 

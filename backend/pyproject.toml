@@ -64,6 +64,7 @@ markers = [
     "integrity: full parquet data quality gate (L1)",
     "live: real-process API/WS tests against a spawned uvicorn (L2)",
     "online: tests that require external network (Bitget/BlockBeats), skipped when unreachable",
+    "db: tests backed by the PostgreSQL test database, skipped when Postgres is unreachable",
 ]
 testpaths = ["tests"]
 

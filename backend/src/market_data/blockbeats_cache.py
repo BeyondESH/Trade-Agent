@@ -1,34 +1,36 @@
-"""Server-side cache for BlockBeats daily data endpoints.
+"""Server-side cache for BlockBeats daily data endpoints (PostgreSQL).
 
-BlockBeats `/v1/data/*` snapshots only change daily; fetching them on every
+BlockBeats ``/v1/data/*`` snapshots only change daily; fetching them on every
 frontend request is slow and wasteful. This module persists each endpoint's
-response `data` to a small JSON file under `data_dir/blockbeats_cache/` and lets
-the web API serve from cache, falling back to a live fetch only on a cache
-miss (e.g. an unusual parameter combination). The API key never leaves the
-server side — the same `blockbeats.fetch_data` (which reads `Settings.bb_api_key`)
-is reused.
+response ``data`` and lets the web API serve from cache, falling back to a live
+fetch only on a cache miss (e.g. an unusual parameter combination). The API key
+never leaves the server side - the same ``blockbeats.fetch_data`` (which reads
+``Settings.bb_api_key``) is reused.
 
-Cache file layout: `<cache_dir>/<endpoint>[.<param>].json`, e.g.
-- `btc_etf.json`, `daily_tx.json`          (no-param endpoints)
-- `top10_netflow.solana.json`              (network param)
-- `us10y.1M.json`, `dxy.1M.json`           (type param, default 1M)
+Phase 1 of the JSON -> PostgreSQL migration: instead of one JSON file per
+``<endpoint>[.<param>]`` combination, each combination is one row in
+``blockbeats_cache`` keyed by its former file stem (``cache_key``). The payload
+stays opaque and lives in ``jsonb``; the same ``refresh_all`` isolation
+semantics apply (a failing endpoint keeps its previous row).
 
-Each file holds `{"fetched_at": "<UTC iso>", "data": <payload>}`.
+The former ``save_cache`` wrote atomically (temp file + ``os.replace``); the DB
+upsert preserves that "a failed write never corrupts the existing cache value"
+guarantee.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from psycopg.types.json import Jsonb
+
 from market_data import blockbeats
 from market_data.blockbeats import DATA_ENDPOINTS
 from market_data.config import get_settings
+from market_data.db import Database, get_database
 
 logger = logging.getLogger(__name__)
 
@@ -49,67 +51,90 @@ NO_PARAM_END_POINTS = tuple(
 )
 
 
-def cache_dir() -> Path:
-    """The blockbeats cache directory, creating it if needed."""
-    d = get_settings().blockbeats_cache_dir
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+# Module-level override so the FastAPI app (and tests) can share their Database.
+_override: Database | None = None
 
 
-def has_cache() -> bool:
-    """Whether any cache files exist, i.e. a previous run already populated it."""
-    d = get_settings().blockbeats_cache_dir
-    if not d.is_dir():
-        return False
-    return any(d.glob("*.json"))
+def configure_database(database: Database | None) -> None:
+    """Bind the cache to a specific `Database` (used by `create_app` and tests)."""
+    global _override
+    _override = database
 
 
-def path_for(endpoint: str, network: str | None = None, type: str | None = None) -> Path:
-    """Resolve the cache file path for an (endpoint, param) combination."""
+def _db() -> Database:
+    return _override or get_database()
+
+
+def cache_key(endpoint: str, network: str | None = None, type: str | None = None) -> str:
+    """The canonical cache key for an (endpoint, param) combination.
+
+    Mirrors the former cache filename stem: ``<endpoint>[.<network>][.<type>]``.
+    """
     parts: list[str] = [endpoint]
     if network is not None:
         parts.append(network)
     if type is not None:
         parts.append(type)
-    return cache_dir() / f"{'.'.join(parts)}.json"
+    return ".".join(parts)
+
+
+def cache_dir() -> Path:
+    """The (legacy) blockbeats cache directory, kept for API compatibility."""
+    d = get_settings().blockbeats_cache_dir
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def path_for(endpoint: str, network: str | None = None, type: str | None = None) -> Path:
+    """Legacy file path for a cache key, kept for API/call-site compatibility.
+
+    The cache no longer writes files; this only computes the historical path.
+    """
+    return cache_dir() / f"{cache_key(endpoint, network, type)}.json"
+
+
+def has_cache() -> bool:
+    """Whether any cache rows exist, i.e. a previous run already populated it."""
+    with _db().connection() as conn:
+        row = conn.execute("SELECT EXISTS (SELECT 1 FROM blockbeats_cache) AS present").fetchone()
+    return bool(row["present"])
 
 
 def load_cache(endpoint: str, network: str | None = None, type: str | None = None) -> dict | None:
-    """Return `{"fetched_at", "data"}` for a cached endpoint, or None on miss/corruption."""
-    p = path_for(endpoint, network, type)
-    try:
-        with open(p, encoding="utf-8") as f:
-            obj = json.load(f)
-        if not isinstance(obj, dict) or "data" not in obj:
-            return None
-        return obj
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
+    """Return ``{"fetched_at", "data"}`` for a cached endpoint, or None on miss."""
+    key = cache_key(endpoint, network, type)
+    with _db().connection() as conn:
+        row = conn.execute(
+            "SELECT fetched_at, data FROM blockbeats_cache WHERE cache_key = %s", (key,)
+        ).fetchone()
+    if row is None:
         return None
+    fetched_at = row["fetched_at"]
+    if isinstance(fetched_at, datetime):
+        fetched_at = fetched_at.astimezone(UTC).isoformat()
+    return {"fetched_at": fetched_at, "data": row["data"]}
 
 
 def save_cache(
     endpoint: str, data: Any, network: str | None = None, type: str | None = None
-) -> Path:
-    """Persist `data` for an endpoint; atomic write via temp file + rename.
+) -> str:
+    """Upsert ``data`` for an endpoint; returns the ``cache_key``.
 
-    Returns the written path. Raises OSError on write failure, but a failed
-    write never corrupts an existing cache file (rename replaces atomically).
+    A failed write never corrupts an existing cache value (row-level upsert).
     """
-    p = path_for(endpoint, network, type)
-    obj = {"fetched_at": datetime.now(UTC).isoformat(), "data": data}
-    fd, tmp = tempfile.mkstemp(dir=str(p.parent), suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(obj, f, ensure_ascii=False)
-        os.replace(tmp, str(p))
-    except Exception:
-        # Best-effort cleanup of the temp file on any failure.
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
-    return p
+    key = cache_key(endpoint, network, type)
+    with _db().connection() as conn:
+        conn.execute(
+            "INSERT INTO blockbeats_cache "
+            "(cache_key, endpoint, network, type, fetched_at, data) "
+            "VALUES (%s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (cache_key) DO UPDATE SET "
+            "endpoint = EXCLUDED.endpoint, network = EXCLUDED.network, "
+            "type = EXCLUDED.type, fetched_at = EXCLUDED.fetched_at, "
+            "data = EXCLUDED.data",
+            (key, endpoint, network, type, datetime.now(UTC), Jsonb(data)),
+        )
+    return key
 
 
 def _write_for(endpoint: str, network: str | None = None, type: str | None = None) -> bool:
@@ -129,10 +154,10 @@ def _write_for(endpoint: str, network: str | None = None, type: str | None = Non
 
 
 def refresh_all() -> dict[str, str]:
-    """Fetch every cached endpoint combination and write it to disk.
+    """Fetch every cached endpoint combination and write it to the cache.
 
     Single-endpoint failures are isolated and never abort the rest. Returns a
-    summary `{cache_key: "ok" | "error"}` keyed by the cache file stem.
+    summary ``{cache_key: "ok" | "error"}`` keyed by the cache key.
     """
     result: dict[str, str] = {}
 

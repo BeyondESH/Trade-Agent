@@ -26,6 +26,7 @@ from market_data.agent.store import ProjectionStore, proposal_meta
 from market_data.alertstore import AlertStore
 from market_data.chartstore import ChartStore
 from market_data.config import Settings, get_settings
+from market_data.db import Database, DatabaseUnavailable, get_database
 from market_data.ingestion import KlineIngestor
 from market_data.mcp_client import McpError
 from market_data.models import Series
@@ -100,8 +101,13 @@ def create_app(
     backfill_rest_fetcher: Callable[[str, str, str, int, int], list] | None = None,
     news_broker: NewsBroker | None = None,
     projection_store: ProjectionStore | None = None,
+    database: Database | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
+    # Fail-fast pool: a dead database raises DatabaseUnavailable (503 / startup
+    # abort) instead of silently serving empty data.
+    database = database or get_database(settings.postgres_dsn)
+    blockbeats_cache.configure_database(database)
     stream = stream or BitgetWsStream(
         url=settings.ws_public_url,
         category=settings.category,
@@ -119,6 +125,9 @@ def create_app(
 
     @asynccontextmanager
     async def _lifespan(_app: FastAPI):
+        # Schema bootstrap is the single startup migration point; a dead database
+        # aborts startup (clear error) instead of serving empty data.
+        database.bootstrap()
         # BlockBeats daily data cache: warm it up on startup (best-effort) so
         # the first frontend requests don't hit the upstream, then schedule a
         # daily refresh at 12:00 local time.
@@ -128,11 +137,11 @@ def create_app(
         cache_scheduler = BackgroundScheduler()
         # Warm up only on a first ever run (empty cache). Restarts reuse the
         # existing snapshots; the daily cron job handles refreshes at 12:00.
-        if not blockbeats_cache.has_cache():
-            try:
+        try:
+            if not blockbeats_cache.has_cache():
                 blockbeats_cache.refresh_all()
-            except Exception as exc:  # noqa: BLE001 - warm-up is best-effort
-                logger.warning("BlockBeats cache warm-up failed: %s", exc)
+        except Exception as exc:  # noqa: BLE001 - warm-up is best-effort
+            logger.warning("BlockBeats cache warm-up failed: %s", exc)
         cache_scheduler.add_job(
             blockbeats_cache.refresh_all,
             CronTrigger(
@@ -186,9 +195,13 @@ def create_app(
 
     app = FastAPI(title="AI Trading API", version="0.1.0", lifespan=_lifespan)
 
+    @app.exception_handler(DatabaseUnavailable)
+    async def _database_unavailable(_request, exc: DatabaseUnavailable) -> JSONResponse:
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
+
     store = ParquetStore(settings.parquet_dir)
-    chart_store = ChartStore(settings.chart_config_path)
-    alert_store = AlertStore(settings.data_dir / "alerts" / "alerts.json")
+    chart_store = ChartStore(database)
+    alert_store = AlertStore(database)
     # Agent projections are written by the standalone worker; FastAPI only reads.
     projection_store = projection_store or ProjectionStore(settings.agent_dir)
 

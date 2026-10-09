@@ -1,45 +1,55 @@
-"""Price-alert persistence for the web API.
+"""Price-alert persistence (PostgreSQL).
 
-Simple JSON document store (data_dir/alerts/alerts.json). Thread-safe via a
-lock; structure mirrors the frontend `Alert` type so both data sources
-(server / local fallback) stay interchangeable.
+Phase 1 of the JSON -> PostgreSQL migration. The public API is unchanged -
+``list`` / ``create`` / ``update`` / ``delete`` with the same validation, the
+same field shape (mirroring the frontend ``Alert`` type) and the same
+newest-first list order - but rows live in the ``alerts`` table instead of
+``data_dir/alerts/alerts.json``.
+
+The old implementation locked a non-atomic whole-file ``write_text``; a database
+transaction now makes concurrent create/update/delete correct by construction
+without changing the observable ordering (``ORDER BY seq DESC`` preserves the
+former insert-at-index-0 semantics).
 """
 
 from __future__ import annotations
 
-import json
-import threading
 import time
 import uuid
-from pathlib import Path
+
+from market_data.db import Database, get_database
 
 REQUIRED_FIELDS = ("symbol", "condition", "threshold")
 CONDITIONS = ("above", "below")
 
+_COLUMNS = "id, symbol, condition, threshold, enabled, triggered, created_at, color"
+
+
+def _row_to_alert(row: dict) -> dict:
+    """Map a DB row to the wire shape (``createdAt`` camelCase; ``color`` optional)."""
+    alert = {
+        "id": row["id"],
+        "symbol": row["symbol"],
+        "condition": row["condition"],
+        "threshold": row["threshold"],
+        "enabled": row["enabled"],
+        "triggered": row["triggered"],
+        "createdAt": row["created_at"],
+    }
+    if row["color"] is not None:
+        alert["color"] = row["color"]
+    return alert
+
 
 class AlertStore:
-    def __init__(self, path: str | Path) -> None:
-        self.path = Path(path)
-        self._lock = threading.Lock()
-
-    # -- persistence -------------------------------------------------------
-    def _load(self) -> list[dict]:
-        if not self.path.exists():
-            return []
-        try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-            return [a for a in data if isinstance(a, dict) and isinstance(a.get("id"), str)]
-        except (json.JSONDecodeError, OSError):
-            return []
-
-    def _save(self, alerts: list[dict]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(alerts, ensure_ascii=False, indent=2), encoding="utf-8")
+    def __init__(self, database: Database | None = None, *, dsn: str | None = None) -> None:
+        self._db = database or get_database(dsn)
 
     # -- API ---------------------------------------------------------------
     def list(self) -> list[dict]:
-        with self._lock:
-            return self._load()
+        with self._db.connection() as conn:
+            rows = conn.execute(f"SELECT {_COLUMNS} FROM alerts ORDER BY seq DESC").fetchall()
+        return [_row_to_alert(row) for row in rows]
 
     def create(self, data: dict) -> dict:
         symbol = str(data.get("symbol") or "")
@@ -53,6 +63,7 @@ class AlertStore:
             threshold = float(threshold)
         except (TypeError, ValueError) as exc:
             raise ValueError("alert.threshold must be a number") from exc
+        color = str(data["color"]) if data.get("color") else None
         alert = {
             "id": uuid.uuid4().hex[:12],
             "symbol": symbol,
@@ -62,38 +73,62 @@ class AlertStore:
             "triggered": bool(data.get("triggered", False)),
             "createdAt": int(data.get("createdAt") or time.time() * 1000),
         }
-        if data.get("color"):
-            alert["color"] = str(data["color"])
-        with self._lock:
-            alerts = self._load()
-            alerts.insert(0, alert)
-            self._save(alerts)
+        with self._db.connection() as conn:
+            conn.execute(
+                "INSERT INTO alerts "
+                "(id, symbol, condition, threshold, enabled, triggered, created_at, color) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    alert["id"],
+                    alert["symbol"],
+                    alert["condition"],
+                    alert["threshold"],
+                    alert["enabled"],
+                    alert["triggered"],
+                    alert["createdAt"],
+                    color,
+                ),
+            )
+        if color is not None:
+            alert["color"] = color
         return alert
 
     def update(self, alert_id: str, patch: dict) -> dict | None:
-        with self._lock:
-            alerts = self._load()
-            target = next((a for a in alerts if a["id"] == alert_id), None)
-            if target is None:
+        if "condition" in patch and patch["condition"] not in CONDITIONS:
+            raise ValueError(f"alert.condition must be one of {CONDITIONS}")
+        if "threshold" in patch:
+            try:
+                patch["threshold"] = float(patch["threshold"])
+            except (TypeError, ValueError) as exc:
+                raise ValueError("alert.threshold must be a number") from exc
+        with self._db.connection() as conn, conn.transaction():
+            row = conn.execute(
+                f"SELECT {_COLUMNS} FROM alerts WHERE id = %s FOR UPDATE", (alert_id,)
+            ).fetchone()
+            if row is None:
                 return None
-            if "condition" in patch and patch["condition"] not in CONDITIONS:
-                raise ValueError(f"alert.condition must be one of {CONDITIONS}")
-            if "threshold" in patch:
-                try:
-                    patch["threshold"] = float(patch["threshold"])
-                except (TypeError, ValueError) as exc:
-                    raise ValueError("alert.threshold must be a number") from exc
+            current = dict(row)
             for key in ("symbol", "condition", "threshold", "enabled", "triggered", "color"):
                 if key in patch and patch[key] is not None:
-                    target[key] = patch[key]
-            self._save(alerts)
-            return dict(target)
+                    current[key] = patch[key]
+            conn.execute(
+                "UPDATE alerts SET symbol = %s, condition = %s, threshold = %s, "
+                "enabled = %s, triggered = %s, color = %s WHERE id = %s",
+                (
+                    current["symbol"],
+                    current["condition"],
+                    current["threshold"],
+                    current["enabled"],
+                    current["triggered"],
+                    current["color"],
+                    alert_id,
+                ),
+            )
+            return _row_to_alert(current)
 
     def delete(self, alert_id: str) -> bool:
-        with self._lock:
-            alerts = self._load()
-            remaining = [a for a in alerts if a["id"] != alert_id]
-            if len(remaining) == len(alerts):
-                return False
-            self._save(remaining)
-            return True
+        with self._db.connection() as conn:
+            row = conn.execute(
+                "DELETE FROM alerts WHERE id = %s RETURNING id", (alert_id,)
+            ).fetchone()
+        return row is not None
