@@ -69,7 +69,7 @@ class AgentRuntime:
         kill_switch: bool | None = None,
     ) -> None:
         self.settings = settings
-        self.store = store or ProjectionStore(settings.agent_dir)
+        self.store = store or ProjectionStore(dsn=settings.postgres_dsn)
         self.parquet = ParquetStore(dsn=settings.postgres_dsn)
         self.broker = broker or PaperBroker(
             settings.agent_paper_equity, settings.agent_max_drawdown
@@ -95,7 +95,6 @@ class AgentRuntime:
         """Assemble both graphs on a single PostgresSaver (idempotent)."""
         if self.research_graph is not None and self.execution_graph is not None:
             return self
-        self.settings.agent_dir.mkdir(parents=True, exist_ok=True)
         saver = self._checkpointer or self._build_postgres_checkpointer()
         toolset = self.tools or build_research_tools(self.settings)
         self.research_graph = build_research_graph(

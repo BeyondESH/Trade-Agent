@@ -21,9 +21,9 @@ TBD - created by archiving change deep-agents-paper-loop. Update Purpose after a
 - **WHEN** 提案 `confidence=1.5` 或 `limit` 缺少价格
 - **THEN** SHALL 拒绝且不落盘
 
-### Requirement: 提案落盘与投影
+### Requirement: 提案持久化与投影
 
-系统 SHALL 将每个合法提案落盘，并写入可查询投影，支持按时间与标的检索；落盘 MUST 记录 `provenance`（模型、prompt 版本、研究 `thread_id`）。
+系统 SHALL 将每个合法提案持久化到 PostgreSQL `proposals` 表（`record` 列为完整 `model_dump`，并索引 `proposal_id`/`produced_at`/`kind`），支持按时间与标的检索；持久化 MUST 记录 `provenance`（模型、prompt 版本、研究 `thread_id`）。
 
 #### Scenario: 可检索
 

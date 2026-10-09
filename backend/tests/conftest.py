@@ -9,7 +9,6 @@ Provides:
 
 from __future__ import annotations
 
-import json
 import logging
 import math
 import os
@@ -18,7 +17,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import IO
 
@@ -226,16 +225,19 @@ def live_server(tmp_path_factory, pg_test_dsn: str) -> Iterator[str]:
         store.save(Series(cat, sym, tf), df)
 
     # Agent projections: the worker is a separate process, so seed the read-only
-    # JSONL projections here to exercise the /research + /executions endpoints.
-    agent_dir = data_dir / "agent"
-    (agent_dir / "streams").mkdir(parents=True, exist_ok=True)
-    now_iso = datetime.now(UTC).isoformat()
-    (agent_dir / "proposals.jsonl").write_text(
-        json.dumps(
+    # PostgreSQL projections here to exercise the /research + /executions
+    # endpoints. The FastAPI subprocess reads the same test database.
+    from market_data.agent.proposal import StrategyProposal
+    from market_data.agent.store import ProjectionStore
+
+    projection = ProjectionStore(database)
+    now = datetime.now(UTC)
+    projection.append_proposal(
+        StrategyProposal.model_validate(
             {
                 "proposal_id": "seed-p1",
-                "produced_at": now_iso,
-                "expires_at": now_iso,
+                "produced_at": now.isoformat(),
+                "expires_at": (now + timedelta(minutes=30)).isoformat(),
                 "symbol": "BTCUSDT",
                 "category": "USDT-FUTURES",
                 "timeframe": "1h",
@@ -246,30 +248,21 @@ def live_server(tmp_path_factory, pg_test_dsn: str) -> Iterator[str]:
                 "rationale": "seeded for L2",
             }
         )
-        + "\n",
-        encoding="utf-8",
     )
-    (agent_dir / "runs.jsonl").write_text(
-        json.dumps(
-            {
-                "run_id": "exec:seed-p1",
-                "kind": "execution",
-                "thread_id": "exec:seed-p1",
-                "proposal_id": "seed-p1",
-                "status": "ok",
-                "reason": "",
-            }
-        )
-        + "\n",
-        encoding="utf-8",
+    projection.append_run(
+        {
+            "run_id": "exec:seed-p1",
+            "kind": "execution",
+            "thread_id": "exec:seed-p1",
+            "proposal_id": "seed-p1",
+            "status": "ok",
+            "reason": "",
+        }
     )
-    (agent_dir / "streams" / "research_seed.jsonl").write_text(
-        json.dumps({"type": "event", "seq": 1, "method": "values", "data": {}})
-        + "\n"
-        + json.dumps({"type": "done", "seq": 2})
-        + "\n",
-        encoding="utf-8",
+    projection.append_stream_event(
+        "research:seed", {"type": "event", "seq": 1, "method": "values", "data": {}}
     )
+    projection.append_stream_event("research:seed", {"type": "done", "seq": 2})
 
     port = _free_port()
     env = dict(os.environ)
@@ -316,7 +309,16 @@ def live_backend_or_skip(live_server: str) -> str:
 # -- PostgreSQL-backed store fixtures ---------------------------------------
 # Tests use a dedicated `<dbname>_test` database so production data is never
 # touched; without a reachable Postgres the fixtures skip (see the `db` marker).
-_DB_TABLES = ("alerts", "chart_config", "blockbeats_cache", "events", "candles")
+_DB_TABLES = (
+    "alerts",
+    "chart_config",
+    "blockbeats_cache",
+    "events",
+    "candles",
+    "stream_events",
+    "proposals",
+    "runs",
+)
 
 
 def _derive_test_database(base_dsn: str) -> tuple[str, str]:

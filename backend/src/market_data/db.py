@@ -116,6 +116,43 @@ CREATE TABLE IF NOT EXISTS candles (
     PRIMARY KEY (category, symbol, timeframe, open_time)
 );
 CREATE INDEX IF NOT EXISTS candles_open_time_brin ON candles USING brin (open_time);
+
+-- Agent projections (Phase-3: the former JSONL files under data_dir/agent).
+-- The worker is the sole writer and appends synchronously; the FastAPI reads.
+-- `stream_events.id` is a GLOBAL bigserial cursor: the payload's `seq` is a
+-- per-run counter that resets to 0 on every run, so it cannot order a stream.
+-- `payload`/`record` keep the exact stored JSON so the on-the-wire shape is
+-- unchanged. `proposals.id` / `runs.id` preserve the former append order for
+-- the "newest first" lists (ORDER BY id DESC).
+CREATE TABLE IF NOT EXISTS stream_events (
+    id bigserial PRIMARY KEY,
+    thread_id text NOT NULL,
+    seq integer,
+    type text NOT NULL,
+    payload jsonb NOT NULL
+);
+CREATE INDEX IF NOT EXISTS stream_events_thread_id_id ON stream_events (thread_id, id);
+
+CREATE TABLE IF NOT EXISTS proposals (
+    proposal_id text PRIMARY KEY,
+    produced_at timestamptz,
+    kind text,
+    record jsonb NOT NULL,
+    id bigserial
+);
+CREATE INDEX IF NOT EXISTS proposals_id_desc_idx ON proposals (id DESC);
+
+CREATE TABLE IF NOT EXISTS runs (
+    run_id text PRIMARY KEY,
+    thread_id text,
+    kind text,
+    status text,
+    started_at timestamptz,
+    finished_at timestamptz,
+    record jsonb NOT NULL,
+    id bigserial
+);
+CREATE INDEX IF NOT EXISTS runs_id_desc_idx ON runs (id DESC);
 """
 
 

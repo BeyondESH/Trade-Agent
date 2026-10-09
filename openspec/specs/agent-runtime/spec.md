@@ -30,7 +30,7 @@ worker SHALL 以可配置周期运行自治闭环（研究 → 提案 → 执行
 
 ### Requirement: Postgres checkpointer
 
-系统 SHALL 使用 `langgraph-checkpoint-postgres` 的 `PostgresSaver` 作为两张图的 checkpointer，按 `thread_id` 隔离运行；worker SHALL 是 checkpointer 的唯一写者。PostgreSQL SHALL 由独立的 `postgres` 服务提供，worker 经 `MD_POSTGRES_DSN` 连接并调用 `setup()` 建立 schema；同步 worker SHALL 使用同步 `PostgresSaver`。
+系统 SHALL 使用 `langgraph-checkpoint-postgres` 的 `PostgresSaver` 作为两张图的 checkpointer，按 `thread_id` 隔离运行；worker SHALL 是 checkpointer 的唯一写者。PostgreSQL SHALL 由独立的 `postgres` 服务提供，worker 经 `MD_POSTGRES_DSN` 连接并调用 `setup()` 建立 schema；同步 worker SHALL 使用同步 `PostgresSaver`。投影（`proposals` / `runs` / `stream_events` 表，存于同一 PostgreSQL）同样 SHALL 由 worker 独占写入，FastAPI 进程 SHALL 只读这些表。
 
 #### Scenario: 运行隔离
 

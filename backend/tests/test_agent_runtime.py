@@ -18,6 +18,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from market_data.agent.execution import Quote
 from market_data.agent.runtime import AgentRuntime
+from market_data.agent.store import ProjectionStore
 from market_data.config import Settings
 
 T0 = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
@@ -59,8 +60,12 @@ def _runtime(tmp_path: Path, model, database=None, **kwargs) -> AgentRuntime:  #
     market = kwargs.pop(
         "market", lambda symbol, category: Quote(symbol=symbol, price=100.0, ts=NOW_MS)
     )
+    store = kwargs.pop("store", None)
+    if store is None and database is not None:
+        store = ProjectionStore(database)
     return AgentRuntime(
         settings,
+        store=store,
         model=model,
         tools=tools,
         market=market,

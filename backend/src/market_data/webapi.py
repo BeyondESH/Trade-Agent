@@ -203,7 +203,7 @@ def create_app(
     chart_store = ChartStore(database)
     alert_store = AlertStore(database)
     # Agent projections are written by the standalone worker; FastAPI only reads.
-    projection_store = projection_store or ProjectionStore(settings.agent_dir)
+    projection_store = projection_store or ProjectionStore(database)
 
     # Global news pipeline: dedicated polling thread + SSE hub. Tests inject a
     # fake broker so no real AKShare network traffic happens in offline runs.
@@ -603,7 +603,7 @@ def create_app(
 
     @app.get("/research/{thread_id}/stream")
     async def research_stream(thread_id: str) -> StreamingResponse:
-        if not projection_store.stream_path(thread_id).exists():
+        if not projection_store.has_stream(thread_id):
             raise HTTPException(status_code=404, detail="stream not found")
 
         async def _event_gen():
