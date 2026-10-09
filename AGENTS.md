@@ -5,20 +5,23 @@ opt-in.
 
 | Layer | Where | Command | Scope |
 |---|---|---|---|
-| L1 data integrity | `backend/tests/test_data_integrity.py` | `cd backend && python -m pytest -m integrity` | full parquet series quality (monotonic, OHLC, gaps vs whitelists) |
+| L1 data integrity | `backend/tests/test_data_integrity.py` | `cd backend && python -m pytest -m integrity` | full PostgreSQL `candles` series quality (monotonic, OHLC, gaps vs whitelists); skips without Postgres |
 | L2 live API/WS | `backend/tests/test_live_api.py`, `test_live_ws.py` | `cd backend && python -m pytest -m live --run-live` | real uvicorn process spawned by `live_server` fixture; all REST endpoints + /ws channels |
 | L3 browser journeys | `frontend/tests/e2e/*.spec.ts` | `cd frontend && npm run test:e2e` | Playwright (chromium) user journeys; webServer auto-starts vite + backend |
 
 Notes:
-- L2 `live_server` fixture spawns an isolated uvicorn with a temp data dir and
-  the incremental-persistence scheduler disabled (`MD_SCHEDULE_INTERVAL_SECONDS=0`).
+- L2 `live_server` fixture spawns an isolated uvicorn with a temp data dir,
+  the incremental-persistence scheduler disabled (`MD_SCHEDULE_INTERVAL_SECONDS=0`),
+  and `MD_POSTGRES_DSN` pointing at the test DB it seeds with candles.
 - The `online` marker (`--run-online`) gates tests that need external network
   (Bitget REST/WS, BlockBeats). Without the flag they skip; never fail.
 - The `live` marker (`--run-live`) gates the L2 subset (spawns a real uvicorn).
   Without the flag the L2 tests are deselected, so plain `python -m pytest -q`
   stays green and fast; `server startup` timeout is env-tunable via
   `MD_TEST_SERVER_START_TIMEOUT` (default 180s).
-- L1 freshness (type-C staleness) also skips when no backend is running.
+- L1 discovers series from the PostgreSQL `candles` table (requires
+  `MD_POSTGRES_DSN` + imported candles); freshness (type-C staleness) also skips
+  when no backend is running.
 - Gap registries live in `backend/tests/data_registry.py`: `KNOWN_GAPS` (type B
   micro-gaps, hard gate) and `STRUCTURAL_EXEMPTIONS` (type A structural gaps).
 - Full regression: `cd backend && python -m pytest -q` and

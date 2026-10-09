@@ -52,57 +52,54 @@ def _series() -> Series:
     return Series("USDT-FUTURES", "BTCUSDT", "5m")
 
 
-def test_pagination_and_store_dedup() -> None:
+def test_pagination_and_store_dedup(pg_db) -> None:  # noqa: ANN001
+    store = ParquetStore(pg_db)
+    ingestor = KlineIngestor(FakeClient(), store, page_limit=5)  # small -> forces paging
+    series = _series()
+    end = BASE + STEP * 19  # 20 bars, page_limit 5 -> 4 pages
+    frame = ingestor.fetch_range(series, BASE, end)
+    assert len(frame) == 20, f"expected 20 bars, got {len(frame)}"
+    added = store.save(series, frame)
+    assert added == 20
+    # Save again -> no duplicates.
+    added_again = store.save(series, frame)
+    assert added_again == 0, "re-saving must add 0 rows (dedup)"
+    assert len(store.read(series)) == 20
+
+
+def test_incremental_only_fills_gap(pg_db) -> None:  # noqa: ANN001
+    store = ParquetStore(pg_db)
+    ingestor = KlineIngestor(FakeClient(), store, page_limit=1000)
+    series = _series()
+    end1 = BASE + STEP * 9
+    ingestor.ingest_incremental(series, BASE, end1)  # 10 bars
+    assert len(store.read(series)) == 10
+    end2 = BASE + STEP * 19
+    added = ingestor.ingest_incremental(series, BASE, end2)  # only 10 new
+    assert added == 10, f"incremental should add 10, added {added}"
+    frame = store.read(series)
+    assert len(frame) == 20
+    assert frame["open_time"].is_monotonic_increasing
+    assert frame["open_time"].nunique() == 20  # no duplicates
+
+
+def test_gap_detection(pg_db) -> None:  # noqa: ANN001
+    store = ParquetStore(pg_db)
+    ingestor = KlineIngestor(FakeClient(), store, page_limit=1000)
+    series = _series()
+    ingestor.ingest_incremental(series, BASE, BASE + STEP * 4)  # bars 0..4
+    # Manually punch a hole by rewriting the store without bar 2.
+    frame = store.read(series)
+    frame = frame[frame["open_time"] != BASE + STEP * 2]  # remove bar 2
+    store.delete(series)
+    store.save(series, frame)
+    gaps = ingestor.find_gaps(series)
+    assert BASE + STEP * 2 in gaps, "removed bar should be reported as a gap"
+
+
+def test_excel_export(pg_db) -> None:  # noqa: ANN001
     with tempfile.TemporaryDirectory() as tmp:
-        store = ParquetStore(Path(tmp))
-        ingestor = KlineIngestor(FakeClient(), store, page_limit=5)  # small -> forces paging
-        series = _series()
-        end = BASE + STEP * 19  # 20 bars, page_limit 5 -> 4 pages
-        frame = ingestor.fetch_range(series, BASE, end)
-        assert len(frame) == 20, f"expected 20 bars, got {len(frame)}"
-        added = store.save(series, frame)
-        assert added == 20
-        # Save again -> no duplicates.
-        added_again = store.save(series, frame)
-        assert added_again == 0, "re-saving must add 0 rows (dedup)"
-        assert len(store.read(series)) == 20
-
-
-def test_incremental_only_fills_gap() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        store = ParquetStore(Path(tmp))
-        ingestor = KlineIngestor(FakeClient(), store, page_limit=1000)
-        series = _series()
-        end1 = BASE + STEP * 9
-        ingestor.ingest_incremental(series, BASE, end1)  # 10 bars
-        assert len(store.read(series)) == 10
-        end2 = BASE + STEP * 19
-        added = ingestor.ingest_incremental(series, BASE, end2)  # only 10 new
-        assert added == 10, f"incremental should add 10, added {added}"
-        frame = store.read(series)
-        assert len(frame) == 20
-        assert frame["open_time"].is_monotonic_increasing
-        assert frame["open_time"].nunique() == 20  # no duplicates
-
-
-def test_gap_detection() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        store = ParquetStore(Path(tmp))
-        ingestor = KlineIngestor(FakeClient(), store, page_limit=1000)
-        series = _series()
-        ingestor.ingest_incremental(series, BASE, BASE + STEP * 4)  # bars 0..4
-        # Manually punch a hole by rewriting the store without bar 2.
-        frame = store.read(series)
-        frame = frame[frame["open_time"] != BASE + STEP * 2]  # remove bar 2
-        store.delete(series)
-        store.save(series, frame)
-        gaps = ingestor.find_gaps(series)
-        assert BASE + STEP * 2 in gaps, "removed bar should be reported as a gap"
-
-
-def test_excel_export() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        store = ParquetStore(Path(tmp))
+        store = ParquetStore(pg_db)
         ingestor = KlineIngestor(FakeClient(), store, page_limit=1000)
         series = _series()
         frame = ingestor.fetch_range(series, BASE, BASE + STEP * 9)

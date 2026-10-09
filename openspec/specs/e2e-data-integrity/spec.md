@@ -1,17 +1,17 @@
 # e2e-data-integrity Specification
 
 ## Purpose
-Full parquet data-quality gate (L1): every series is checked for monotonic
-timestamps, legal OHLC, period-aligned spacing and whitelisted gaps, so
+Full candle data-quality gate (L1, PostgreSQL): every series is checked for
+monotonic timestamps, legal OHLC, period-aligned spacing and whitelisted gaps, so
 regressions in the ingestion path fail loudly.
 
 ## Requirements
 
 ### Requirement: 全量 series 数据质量门禁
-测试系统 SHALL 枚举 `data/parquet` 下的全部 series（category/symbol/timeframe），对每个 series 校验数据质量，作为回归基线。枚举 SHALL 通过扫描存储目录自动发现，而非硬编码列表。
+测试系统 SHALL 枚举 PostgreSQL `candles` 表中的全部 series（category/symbol/timeframe），对每个 series 校验数据质量，作为回归基线。枚举 SHALL 通过对 `candles` 表执行 `SELECT DISTINCT category, symbol, timeframe` 自动发现，而非硬编码列表；无可用 Postgres（或表为空）时 SHALL 跳过而非失败。
 #### Scenario: 自动发现全部 series
 - **WHEN** 数据完整性测试运行
-- **THEN** 测试 SHALL 发现并校验存储中全部 series，且测试参数化按 series 展开
+- **THEN** 测试 SHALL 从 `candles` 表发现并校验全部 series，且测试参数化按 series 展开
 
 ### Requirement: 时间戳序列校验
 每个 series 的 `open_time` 列 SHALL 严格递增且无重复值。

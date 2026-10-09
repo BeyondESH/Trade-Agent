@@ -29,6 +29,7 @@ import pytest
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from market_data.config import Settings
+from market_data.db import Database
 from market_data.models import Series
 from market_data.store import ParquetStore
 
@@ -51,8 +52,8 @@ def tmp_settings(tmp_path: Path) -> Settings:
 
 
 @pytest.fixture
-def seed_store(tmp_settings: Settings) -> ParquetStore:
-    """Deterministic parquet seed: 3 symbols x 2 timeframes, with a gap in one.
+def seed_store(pg_db) -> ParquetStore:  # noqa: ANN001
+    """Deterministic PostgreSQL candle seed: 3 symbols x 2 timeframes, one gapped.
 
     Layout:
       BTCUSDT 1m  (120 bars, gapless)
@@ -60,7 +61,7 @@ def seed_store(tmp_settings: Settings) -> ParquetStore:
       ETHUSDT  1h  (48 bars, gapless)
       SOLUSDT  1h  (48 bars, gapless)
     """
-    store = ParquetStore(tmp_settings.parquet_dir)
+    store = ParquetStore(pg_db)
 
     def _frame(
         symbol: str, timeframe: str, n: int, step_ms: int, gap: tuple[int, int] | None = None
@@ -202,7 +203,9 @@ def live_server(tmp_path_factory, pg_test_dsn: str) -> Iterator[str]:
     teardown.
     """
     data_dir = tmp_path_factory.mktemp("live-server-data")
-    store = ParquetStore(data_dir / "parquet")
+    database = Database(pg_test_dsn)
+    database.bootstrap()
+    store = ParquetStore(database)
     for key, step_ms, n, gap in (
         ("USDT-FUTURES/BTCUSDT/1m", 60_000, 120, None),
         ("USDT-FUTURES/BTCUSDT/1h", 3_600_000, 72, (30, 33)),
@@ -299,6 +302,7 @@ def live_server(tmp_path_factory, pg_test_dsn: str) -> Iterator[str]:
         finally:
             if not log_fh.closed:
                 log_fh.close()
+            database.close()
 
 
 @pytest.fixture(scope="session")
@@ -312,7 +316,7 @@ def live_backend_or_skip(live_server: str) -> str:
 # -- PostgreSQL-backed store fixtures ---------------------------------------
 # Tests use a dedicated `<dbname>_test` database so production data is never
 # touched; without a reachable Postgres the fixtures skip (see the `db` marker).
-_DB_TABLES = ("alerts", "chart_config", "blockbeats_cache", "events")
+_DB_TABLES = ("alerts", "chart_config", "blockbeats_cache", "events", "candles")
 
 
 def _derive_test_database(base_dsn: str) -> tuple[str, str]:

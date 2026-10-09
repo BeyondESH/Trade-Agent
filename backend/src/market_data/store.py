@@ -1,74 +1,111 @@
-"""Parquet store for OHLCV candles (tasks 4.1-4.3).
+"""OHLCV candle store backed by PostgreSQL (Phase 2 of the persistence migration).
 
-Layout: <parquet_dir>/<category>/<symbol>/<timeframe>/<YYYY-MM-DD>.parquet
-One file per UTC calendar day. Deduplicated and merged on `open_time`.
+The public API and the observable semantics of the former Parquet day-file
+store are preserved exactly, so the 34 call sites need no change beyond
+construction:
+
+* ``save`` returns the number of **net-new distinct bars** (a re-save of the
+  same frame returns 0; a re-save that only changes a price returns 0 new).
+* ``read`` reproduces the former "newest-first, stop early at ``limit``, then
+  ascending + ``tail(limit)``" window by querying
+  ``ORDER BY open_time DESC LIMIT n`` and reversing - and the ``limit=None``
+  case returns every row in range ascending. An empty result is still an empty
+  DataFrame carrying the canonical columns.
+* ``latest_open_time`` / ``earliest_open_time`` are ``MAX`` / ``MIN``.
+* ``delete`` removes every row of one series.
+
+Only the medium changed: bars live in the ``candles`` table (primary key
+``(category, symbol, timeframe, open_time)``) instead of one Parquet file per
+UTC day. The class name ``ParquetStore`` is retained on purpose: it is imported
+and constructed at 34 sites and the migration brief requires their method calls
+to stay untouched. The former per-day-file ``_file_cache`` is gone - PostgreSQL's
+shared buffer pool plus the connection pool are the cache now, and an in-process
+cache would need cross-process invalidation because the agent worker writes the
+same table.
 """
 
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from collections.abc import Iterator, Sequence
+from typing import Any
 
 import pandas as pd
 
+from market_data.db import Database, get_database
 from market_data.models import OHLCV_COLUMNS, Series
 
 logger = logging.getLogger(__name__)
 
+_SELECT_COLUMNS = "open_time, open, high, low, close, volume"
 
-def _day_key(open_time_ms: pd.Series) -> pd.Series:
-    return pd.to_datetime(open_time_ms, unit="ms", utc=True).dt.strftime("%Y-%m-%d")
+# The upsert reports ``xmax = 0`` for a genuinely INSERTed row (its new tuple
+# has no previous transaction) and ``False`` for a conflict that took the UPDATE
+# branch - exactly the net-new bar count the old day-file merge produced. Each
+# row binds 9 parameters; chunking keeps a statement well under PostgreSQL's
+# 65535 bind-parameter ceiling.
+_UPSERT_TEMPLATE = (
+    "INSERT INTO candles "
+    "(category, symbol, timeframe, open_time, open, high, low, close, volume) "
+    "VALUES {placeholders} "
+    "ON CONFLICT (category, symbol, timeframe, open_time) DO UPDATE SET "
+    "open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, "
+    "close = EXCLUDED.close, volume = EXCLUDED.volume "
+    "RETURNING (xmax = 0) AS inserted"
+)
+_ROW_PLACEHOLDER = "(%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+_MAX_ROWS_PER_INSERT = 5000
+
+
+def _chunk(rows: Sequence[tuple], size: int) -> Iterator[Sequence[tuple]]:
+    for start in range(0, len(rows), size):
+        yield rows[start : start + size]
 
 
 class ParquetStore:
-    def __init__(self, root: Path) -> None:
-        self._root = Path(root)
-        # Per-day-file cache (key = absolute parquet path). Reads hit the cache
-        # instead of re-reading the same files during wide-range queries; save()
-        # and delete() invalidate the affected entries.
-        self._file_cache: dict[str, pd.DataFrame] = {}
+    def __init__(self, database: Database | None = None, *, dsn: str | None = None) -> None:
+        self._db = database or get_database(dsn)
 
-    def _dir(self, series: Series) -> Path:
-        return self._root / series.relative_path()
-
-    def _day_path(self, series: Series, day: str) -> Path:
-        return self._dir(series) / f"{day}.parquet"
-
-    def _day_files(self, series: Series) -> list[Path]:
-        directory = self._dir(series)
-        if not directory.exists():
-            return []
-        return sorted(directory.glob("*.parquet"))
-
-    # -- write (4.1, 4.2) --------------------------------------------------
+    # -- write -------------------------------------------------------------
     def save(self, series: Series, frame: pd.DataFrame) -> int:
-        """Merge `frame` into per-day partitions, dedup on open_time.
+        """Upsert ``frame`` into ``candles`` in one transaction.
 
-        Returns the number of newly added rows across all days.
+        Returns the number of newly added distinct ``open_time`` bars.
         """
         if frame.empty:
             return 0
         incoming = self._normalize(frame)
-        incoming = incoming.assign(_day=_day_key(incoming["open_time"]))
-        added = 0
-        for day, group in incoming.groupby("_day"):
-            path = self._day_path(series, str(day))
-            path.parent.mkdir(parents=True, exist_ok=True)
-            existing = self._read_file(path)
-            before = len(existing)
-            combined = (
-                pd.concat([existing, group[OHLCV_COLUMNS]], ignore_index=True)
-                .drop_duplicates(subset="open_time", keep="last")
-                .sort_values("open_time")
-                .reset_index(drop=True)
+        # The old day-file merge deduplicated on `open_time` (keep last) before
+        # writing; a single multi-row upsert must do the same or PostgreSQL
+        # raises "ON CONFLICT DO UPDATE command cannot affect row a second time".
+        incoming = incoming.drop_duplicates(subset="open_time", keep="last")
+        rows = [
+            (
+                series.category,
+                series.symbol,
+                series.timeframe,
+                int(open_time),
+                float(open_),
+                float(high),
+                float(low),
+                float(close),
+                float(volume),
             )
-            combined.to_parquet(path, index=False)
-            added += len(combined) - before
-            self._file_cache.pop(str(path), None)
+            for open_time, open_, high, low, close, volume in incoming[OHLCV_COLUMNS].itertuples(
+                index=False
+            )
+        ]
+        added = 0
+        with self._db.connection() as conn, conn.transaction():
+            for chunk in _chunk(rows, _MAX_ROWS_PER_INSERT):
+                placeholders = ", ".join([_ROW_PLACEHOLDER] * len(chunk))
+                params = tuple(value for row in chunk for value in row)
+                result = conn.execute(_UPSERT_TEMPLATE.format(placeholders=placeholders), params)
+                added += sum(1 for row in result.fetchall() if row["inserted"])
         logger.info("Saved %s: +%d rows.", series.relative_path(), added)
         return added
 
-    # -- read (4.3) --------------------------------------------------------
+    # -- read --------------------------------------------------------------
     def read(
         self,
         series: Series,
@@ -76,88 +113,63 @@ class ParquetStore:
         end_ms: int | None = None,
         limit: int | None = None,
     ) -> pd.DataFrame:
-        files = self._day_files(series)
-        if not files:
-            return pd.DataFrame(columns=OHLCV_COLUMNS)
-        # Narrow the candidate day files to the requested window before reading
-        # anything, so wide-range reads do not scale with total history depth.
-        start_day = _day_key(pd.Series([start_ms]))[0] if start_ms is not None else None
-        end_day = _day_key(pd.Series([end_ms]))[0] if end_ms is not None else None
-        candidates = files
-        if start_day:
-            candidates = [f for f in candidates if f.stem >= start_day]
-        if end_day:
-            candidates = [f for f in candidates if f.stem <= end_day]
-        if not candidates:
-            return pd.DataFrame(columns=OHLCV_COLUMNS)
-
-        # With a limit, read newest day files first and stop once enough rows
-        # have been collected (the caller only needs the tail of the range).
-        frames: list[pd.DataFrame] = []
-        total = 0
-        for path in reversed(candidates):
-            frame = self._read_cached(path)
-            if frame.empty:
-                continue
-            frames.append(frame)
-            total += len(frame)
-            if limit is not None and total >= limit:
-                break
-
-        if not frames:
-            return pd.DataFrame(columns=OHLCV_COLUMNS)
-        frame = pd.concat(frames, ignore_index=True)
+        clauses = ["category = %s", "symbol = %s", "timeframe = %s"]
+        params: list[Any] = [series.category, series.symbol, series.timeframe]
         if start_ms is not None:
-            frame = frame[frame["open_time"] >= start_ms]
+            clauses.append("open_time >= %s")
+            params.append(int(start_ms))
         if end_ms is not None:
-            frame = frame[frame["open_time"] <= end_ms]
-        frame = frame.sort_values("open_time").reset_index(drop=True)
-        if limit is not None and len(frame) > limit:
-            frame = frame.tail(limit).reset_index(drop=True)
-        return frame
+            clauses.append("open_time <= %s")
+            params.append(int(end_ms))
+        where = " AND ".join(clauses)
 
-    def _read_cached(self, path: Path) -> pd.DataFrame:
-        key = str(path)
-        cached = self._file_cache.get(key)
-        if cached is None:
-            cached = self._read_file(path)
-            self._file_cache[key] = cached
-        return cached
+        with self._db.connection() as conn:
+            if limit is not None:
+                # Newest-first bounded scan, then reverse to ascending: the exact
+                # result of the former "read newest day files, stop at limit,
+                # sort asc, tail(limit)".
+                rows = conn.execute(
+                    f"SELECT {_SELECT_COLUMNS} FROM candles WHERE {where} "
+                    "ORDER BY open_time DESC LIMIT %s",
+                    [*params, int(limit)],
+                ).fetchall()
+                rows = list(reversed(rows))
+            else:
+                rows = conn.execute(
+                    f"SELECT {_SELECT_COLUMNS} FROM candles WHERE {where} ORDER BY open_time ASC",
+                    params,
+                ).fetchall()
+
+        if not rows:
+            return pd.DataFrame(columns=OHLCV_COLUMNS)
+        frame = pd.DataFrame(rows, columns=OHLCV_COLUMNS)
+        return self._normalize(frame)
 
     def latest_open_time(self, series: Series) -> int | None:
-        files = self._day_files(series)
-        if not files:
-            return None
-        # Day files are named YYYY-MM-DD, so the last one holds the latest bars.
-        frame = self._read_file(files[-1])
-        if frame.empty:
-            return None
-        return int(frame["open_time"].max())
+        return self._extreme_open_time(series, "MAX")
 
     def earliest_open_time(self, series: Series) -> int | None:
-        files = self._day_files(series)
-        if not files:
+        return self._extreme_open_time(series, "MIN")
+
+    def _extreme_open_time(self, series: Series, func: str) -> int | None:
+        with self._db.connection() as conn:
+            row = conn.execute(
+                f"SELECT {func}(open_time) AS open_time FROM candles "
+                "WHERE category = %s AND symbol = %s AND timeframe = %s",
+                (series.category, series.symbol, series.timeframe),
+            ).fetchone()
+        if row is None or row["open_time"] is None:
             return None
-        # Day files are named YYYY-MM-DD, so the first one holds the oldest bars.
-        frame = self._read_file(files[0])
-        if frame.empty:
-            return None
-        return int(frame["open_time"].min())
+        return int(row["open_time"])
 
     def delete(self, series: Series) -> None:
-        root = str(self._dir(series))
-        for key in list(self._file_cache):
-            if key.startswith(root):
-                del self._file_cache[key]
-        for path in self._day_files(series):
-            path.unlink()
+        with self._db.connection() as conn:
+            conn.execute(
+                "DELETE FROM candles WHERE category = %s AND symbol = %s AND timeframe = %s",
+                (series.category, series.symbol, series.timeframe),
+            )
 
-    @staticmethod
-    def _read_file(path: Path) -> pd.DataFrame:
-        if not path.exists():
-            return pd.DataFrame(columns=OHLCV_COLUMNS)
-        return pd.read_parquet(path)
-
+    # -- helpers -----------------------------------------------------------
     @staticmethod
     def _normalize(frame: pd.DataFrame) -> pd.DataFrame:
         missing = [c for c in OHLCV_COLUMNS if c not in frame.columns]

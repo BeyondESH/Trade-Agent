@@ -9,7 +9,6 @@ tool call that LangChain parses into ``structured_response``.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 import httpx
@@ -115,9 +114,9 @@ def _ok_rest(_request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, json={"code": "00000", "data": {"lastPr": "100.0"}})
 
 
-def seeded_store(root: Path, symbol: str = "BTCUSDT", timeframe: str = "1h") -> ParquetStore:
+def seeded_store(database, symbol: str = "BTCUSDT", timeframe: str = "1h") -> ParquetStore:  # noqa: ANN001
     """A deterministic 150-bar series so indicator/structure tools have history."""
-    store = ParquetStore(root / "parquet")
+    store = ParquetStore(database)
     closes = np.array([100 + 5 * np.sin(i / 4.0) for i in range(150)], dtype="float64")
     frame = pd.DataFrame(
         {

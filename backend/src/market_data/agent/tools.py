@@ -273,7 +273,7 @@ def build_research_tools(
     that *does* run the in-process ``NewsBroker`` reuse its ring buffer instead
     of hitting AKShare.
     """
-    parquet = store or ParquetStore(settings.parquet_dir)
+    parquet = store or ParquetStore(dsn=settings.postgres_dsn)
     client = rest_client or httpx.Client(base_url=BITGET_REST_BASE, timeout=DEFAULT_TIMEOUT)
     provider = news_provider
     if provider is None and news_broker is not None:

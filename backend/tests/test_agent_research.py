@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from agent_fakes import fake_tools, make_proposal, proposal_model, seeded_store
 from langchain.agents.middleware import TodoListMiddleware
@@ -13,31 +14,31 @@ from market_data.agent.research import SUBAGENT_NAMES, build_research_graph, bui
 from market_data.config import Settings
 
 
-def _graph(tmp_path: Path, model):  # noqa: ANN001, ANN202
+def _graph(tmp_path: Path, model, database) -> Any:  # noqa: ANN001, ANN202
     settings = Settings(data_dir=tmp_path)
-    tools = fake_tools(settings, store=seeded_store(tmp_path))
+    tools = fake_tools(settings, store=seeded_store(database))
     return build_research_graph(settings, tools=tools, model=model)
 
 
-def test_build_returns_a_compiled_state_graph(tmp_path: Path) -> None:
-    graph = _graph(tmp_path, proposal_model())
+def test_build_returns_a_compiled_state_graph(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
+    graph = _graph(tmp_path, proposal_model(), pg_db)
     assert isinstance(graph, CompiledStateGraph)
     # TodoListMiddleware is wired, so the planning node exists.
     assert any("TodoListMiddleware" in node for node in graph.nodes)
 
 
-def test_planning_middleware_contributes_write_todos(tmp_path: Path) -> None:
+def test_planning_middleware_contributes_write_todos(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     # The middleware we install is the one that carries the `write_todos` tool;
     # its node appearing in the compiled graph proves it is actually wired.
     middleware = TodoListMiddleware()
     assert any(getattr(candidate, "name", None) == "write_todos" for candidate in middleware.tools)
-    graph = _graph(tmp_path, proposal_model())
+    graph = _graph(tmp_path, proposal_model(), pg_db)
     assert any("TodoListMiddleware" in node for node in graph.nodes)
 
 
-def test_run_produces_a_valid_strategy_proposal(tmp_path: Path) -> None:
+def test_run_produces_a_valid_strategy_proposal(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     proposal = make_proposal(proposal_id="p-assembly")
-    graph = _graph(tmp_path, proposal_model(proposal))
+    graph = _graph(tmp_path, proposal_model(proposal), pg_db)
     result = graph.invoke({"messages": [{"role": "user", "content": "research BTCUSDT"}]})
     structured = result.get("structured_response")
     assert isinstance(structured, StrategyProposal)
@@ -45,9 +46,9 @@ def test_run_produces_a_valid_strategy_proposal(tmp_path: Path) -> None:
     assert structured.symbol == "BTCUSDT"
 
 
-def test_subagents_are_the_two_phase_one_analysts(tmp_path: Path) -> None:
+def test_subagents_are_the_two_phase_one_analysts(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     settings = Settings(data_dir=tmp_path)
-    tools = fake_tools(settings, store=seeded_store(tmp_path))
+    tools = fake_tools(settings, store=seeded_store(pg_db))
     subagents = build_subagents(tools)
     assert {spec["name"] for spec in subagents} == set(SUBAGENT_NAMES)
     news = next(spec for spec in subagents if spec["name"] == "news-analyst")
@@ -56,8 +57,8 @@ def test_subagents_are_the_two_phase_one_analysts(tmp_path: Path) -> None:
     assert {t.name for t in technical["tools"]} == {t.name for t in tools.technical_and_market}
 
 
-def test_stream_events_expose_messages_and_values(tmp_path: Path) -> None:
-    graph = _graph(tmp_path, proposal_model())
+def test_stream_events_expose_messages_and_values(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
+    graph = _graph(tmp_path, proposal_model(), pg_db)
     methods: list[str] = []
     final_values: dict = {}
     for event in graph.stream_events(

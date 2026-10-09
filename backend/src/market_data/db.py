@@ -1,9 +1,10 @@
 """PostgreSQL access layer: a shared connection pool + idempotent schema bootstrap.
 
-Phase 1 of the "all persistence -> PostgreSQL" migration. This is the single
+Phases 1-2 of the "all persistence -> PostgreSQL" migration. This is the single
 place that owns the connection lifecycle and the DDL, so the formerly
-file-backed stores (alerts, chart config, BlockBeats cache, event log) can share
-one pool instead of each opening its own connection or writing its own file.
+file-backed stores (alerts, chart config, BlockBeats cache, event log) and the
+formerly Parquet-backed OHLCV candle store can share one pool instead of each
+opening its own connection or writing its own file.
 
 Design decisions
 ----------------
@@ -95,6 +96,26 @@ CREATE TABLE IF NOT EXISTS events (
     payload jsonb NOT NULL,
     PRIMARY KEY (source, seq)
 );
+
+-- OHLCV candles (Phase-2: the former Parquet day-file store). One row per bar;
+-- `open_time` is epoch milliseconds kept as a bigint; the five price/volume
+-- fields are double precision (never numeric) so no float drift is introduced.
+-- A single table + a BRIN index on `open_time` (append-only, physically ordered
+-- by the PK within a series) is deliberately chosen over declarative
+-- partitioning: 78k rows today, designed to grow without over-engineering.
+CREATE TABLE IF NOT EXISTS candles (
+    category text NOT NULL,
+    symbol text NOT NULL,
+    timeframe text NOT NULL,
+    open_time bigint NOT NULL,
+    open double precision NOT NULL,
+    high double precision NOT NULL,
+    low double precision NOT NULL,
+    close double precision NOT NULL,
+    volume double precision NOT NULL,
+    PRIMARY KEY (category, symbol, timeframe, open_time)
+);
+CREATE INDEX IF NOT EXISTS candles_open_time_brin ON candles USING brin (open_time);
 """
 
 

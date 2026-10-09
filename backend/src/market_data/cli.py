@@ -124,7 +124,7 @@ def main() -> None:
         discover_main()
         return
 
-    store = ParquetStore(settings.parquet_dir)
+    store = ParquetStore(dsn=settings.postgres_dsn)
 
     if args.command == "analyze":
         from market_data import indicators, levels

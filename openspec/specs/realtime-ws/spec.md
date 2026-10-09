@@ -34,14 +34,14 @@ TBD - created by archiving change web-api. Update Purpose after archive.
 - **AND** 连接状态 SHALL 在 实时 / 重连中 / 断开 之间对外更新
 
 ### Requirement: K 线更新实时流优先
-系统 SHALL 在构建 K 线 `snapshot`/`update` 帧时优先从实时流(buffer)读取最新 bar 作为 `last_candle`;当历史 parquet 存储为空时,SHALL 仍返回携带 `last_candle` 的帧,不得返回 `{"error":"no data"}` 而丢失实时能力。parquet 仅用于历史回填与指标/支撑阻力等增强字段。
+系统 SHALL 在构建 K 线 `snapshot`/`update` 帧时优先从实时流(buffer)读取最新 bar 作为 `last_candle`;当历史 candle store 为空时,SHALL 仍返回携带 `last_candle` 的帧,不得返回 `{"error":"no data"}` 而丢失实时能力。candle store 仅用于历史回填与指标/支撑阻力等增强字段。
 
-#### Scenario: parquet 为空仍推送 last_candle
-- **WHEN** 客户端订阅 K 线 channel 且该 series 的 parquet 存储为空
+#### Scenario: candle store 为空仍推送 last_candle
+- **WHEN** 客户端订阅 K 线 channel 且该 series 的历史 candle store 为空
 - **THEN** SHALL 推送 `action:"snapshot"`/`action:"update"` 帧且 `data.last_candle` 为实时流最新 bar,`data` 不含 `"error"` 字段
 
 #### Scenario: 实时流无数据时的行为
-- **WHEN** 订阅的 series 实时流与 parquet 均无数据
+- **WHEN** 订阅的 series 实时流与 candle store 均无数据
 - **THEN** SHALL 返回含明确错误信息的帧(如 `{"error":"no data"}`),前端 SHALL 将其视为"无数据"而非丢弃有效更新
 
 ### Requirement: K 线 symbol 动态订阅
@@ -78,7 +78,7 @@ TBD - created by archiving change web-api. Update Purpose after archive.
 - **THEN** 旧 `5m` 订阅 SHALL 被注销,仅 `1h` 订阅持续接收推送
 
 ### Requirement: 指标/S-R 低频周期独立刷新
-系统 SHALL 将指标与支撑/阻力等重计算字段与实时 bar 推送解耦：实时 `update` 帧不含此类字段；系统 SHALL 独立维护约每 5 秒一次的周期，为仍处于订阅状态的 K 线 series 推送含指标末值与 Top-N S/R 的完整帧。实时路径 SHALL 不触发 parquet 读取或指标/S-R 计算。
+系统 SHALL 将指标与支撑/阻力等重计算字段与实时 bar 推送解耦：实时 `update` 帧不含此类字段；系统 SHALL 独立维护约每 5 秒一次的周期，为仍处于订阅状态的 K 线 series 推送含指标末值与 Top-N S/R 的完整帧。实时路径 SHALL 不触发 candle store 读取或指标/S-R 计算。
 
 #### Scenario: 低频周期推送完整帧
 - **WHEN** 订阅期间的指标/S-R 刷新周期到达（约每 5 秒）
@@ -86,5 +86,5 @@ TBD - created by archiving change web-api. Update Purpose after archive.
 
 #### Scenario: 实时事件不触发重计算
 - **WHEN** 收到实时 bar 更新事件
-- **THEN** 系统 SHALL 仅从实时流 buffer 读取最新 bar 并推送 `update` 帧，不读取 parquet、不计算指标/S-R
+- **THEN** 系统 SHALL 仅从实时流 buffer 读取最新 bar 并推送 `update` 帧，不读取 candle store、不计算指标/S-R
 

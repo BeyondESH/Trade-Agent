@@ -1,6 +1,6 @@
-"""L1 data-integrity gate: full parquet data quality across every series.
+"""L1 data-integrity gate: full candle data quality across every series.
 
-Enumerates all series under the parquet store and asserts:
+Enumerates every series from the PostgreSQL ``candles`` table and asserts:
   - open_time strictly ascending, no duplicates
   - OHLC legal (high >= max(open, close), low <= min(open, close), volume >= 0)
   - adjacent bar spacing == timeframe step (head/tail truncation exempt)
@@ -9,14 +9,14 @@ Enumerates all series under the parquet store and asserts:
   - the whitelist entries themselves are exact: any unknown micro-gap fails
 
 Run:
-    pytest -m integrity        # from backend/
+    pytest -m integrity        # from backend/ (needs the imported candles)
     pytest tests/test_data_integrity.py -v
 """
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -24,6 +24,7 @@ import pytest
 from data_registry import KNOWN_GAPS, STRUCTURAL_EXEMPTIONS
 
 from market_data.config import Settings
+from market_data.db import Database
 from market_data.models import Series, timeframe_step_ms
 from market_data.store import ParquetStore
 
@@ -57,23 +58,21 @@ needs_backend = pytest.mark.skipif(
 )
 
 
-def _discover_series(parquet_dir: Path) -> list[Series]:
-    """Enumerate all (category, symbol, timeframe) from the parquet layout."""
-    series_list: list[Series] = []
-    if not parquet_dir.exists():
-        return series_list
-    for cat_dir in sorted(parquet_dir.iterdir()):
-        if not cat_dir.is_dir():
-            continue
-        for sym_dir in sorted(cat_dir.iterdir()):
-            if not sym_dir.is_dir():
-                continue
-            for tf_dir in sorted(sym_dir.iterdir()):
-                if not tf_dir.is_dir():
-                    continue
-                if list(tf_dir.glob("*.parquet")):
-                    series_list.append(Series(cat_dir.name, sym_dir.name, tf_dir.name))
-    return series_list
+def _integrity_dsn() -> str:
+    return (
+        os.environ.get("MD_TEST_POSTGRES_DSN")
+        or os.environ.get("MD_POSTGRES_DSN")
+        or Settings().postgres_dsn
+    )
+
+
+def _discover_series(database: Database) -> list[Series]:
+    with database.connection() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT category, symbol, timeframe FROM candles "
+            "ORDER BY category, symbol, timeframe"
+        ).fetchall()
+    return [Series(row["category"], row["symbol"], row["timeframe"]) for row in rows]
 
 
 def _series_key(series: Series) -> str:
@@ -83,28 +82,36 @@ def _series_key(series: Series) -> str:
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "series_data" not in metafunc.fixturenames:
         return
-    settings = Settings()
-    found = _discover_series(settings.parquet_dir)
-    if not found:
+    args: list[tuple[str, pd.DataFrame]] = []
+    # No Postgres (or an un-imported table) must SKIP the gate, never fail collection.
+    database: Database | None = None
+    try:
+        database = Database(_integrity_dsn())
+        database.bootstrap()
+        store = ParquetStore(database)
+        for series in _discover_series(database):
+            df = store.read(series)
+            if df is not None and len(df):
+                args.append((_series_key(series), df))
+    except Exception:  # noqa: BLE001 - absence of Postgres skips, not fails
+        args = []
+    finally:
+        if database is not None:
+            database.close()
+    if not args:
         metafunc.parametrize(
             "series_data",
             [
                 pytest.param(
                     ("EMPTY", None),
                     marks=pytest.mark.skip(
-                        reason="no parquet series found under data directory; skipping L1 gate"
+                        reason="no candle series found in PostgreSQL; skipping L1 gate"
                     ),
                 )
             ],
             ids=["empty"],
         )
         return
-    store = ParquetStore(settings.parquet_dir)
-    args: list[tuple[str, pd.DataFrame]] = []
-    for s in found:
-        df = store.read(s)
-        if df is not None and len(df):
-            args.append((_series_key(s), df))
     metafunc.parametrize("series_data", args, ids=[a[0] for a in args])
 
 

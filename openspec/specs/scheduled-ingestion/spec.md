@@ -28,7 +28,7 @@ TBD - created by archiving change market-data-foundation. Update Purpose after a
 #### Scenario: webapi 运行时自动落盘
 
 - **WHEN** webapi 应用进入 lifespan 启动流程
-- **THEN** 系统 SHALL 启动增量落盘 scheduler，按配置周期将实时数据写入 parquet store
+- **THEN** 系统 SHALL 启动增量落盘 scheduler，按配置周期将实时数据写入 candle store（PostgreSQL）
 
 #### Scenario: CLI 独立运行
 

@@ -1,8 +1,5 @@
-# market-data-read-speed Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by syncing change market-data-speedup.
-## Requirements
 ### Requirement: 本地库读取按需裁剪与限量
 
 `ParquetStore.read` SHALL 借助 `candles` 主键索引与 `open_time` 范围条件下推数据库，支持反向限量读取（`ORDER BY open_time DESC LIMIT n` 后反转为升序），使宽区间读取不随历史深度线性变慢。热数据缓存 SHALL 由 PostgreSQL 共享缓冲池与连接池承担，进程内 MUST NOT 维护按文件/按 bar 的应用级缓存（避免跨进程陈旧读）。
@@ -26,23 +23,3 @@ TBD - created by syncing change market-data-speedup.
 
 - **WHEN** `save`/`delete` 修改了某 series
 - **THEN** 后续读取 SHALL 立即反映最新已提交数据，不得命中陈旧的应用级缓存
-
-### Requirement: 回灌翻页并行化
-
-`backfill_before_rest` SHALL 支持按预计算 cursor 链并发拉取各页，合并后按 `open_time` 去重升序落库，显著降低多页回灌的串行往返耗时。
-
-#### Scenario: 并发拉取合并
-
-- **WHEN** 单次回灌需翻多页
-- **THEN** 各页 SHALL 并发拉取（预计算 cursor：`min(90 天, page_limit×step)` 间隔）
-- **AND** 合并结果 SHALL 按 `open_time` 去重、升序，无重复落库
-
-#### Scenario: 空页并发重试
-
-- **WHEN** 某页返回空
-- **THEN** SHALL 并发重试一次（退避），仍空才视为无数据
-
-#### Scenario: 最旧窗口空即到最早
-
-- **WHEN** 最旧窗口的页重试后仍为空
-- **THEN** 返回 `earliest_reached=True`；否则 `False`（可能还有更早数据）

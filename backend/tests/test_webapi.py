@@ -15,6 +15,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
 
 from market_data.config import Settings
@@ -26,14 +27,30 @@ from market_data.webapi import create_app
 BASE = 1_700_000_000_000
 STEP = 300_000
 
+# Bound by the module-autouse `_seed_database` fixture: every helper binds the
+# app and the candle store to this per-test PostgreSQL database.
+_DATABASE = None
+
+
+@pytest.fixture(autouse=True)
+def _seed_database(pg_db):  # noqa: ANN001
+    global _DATABASE
+    _DATABASE = pg_db
+    try:
+        yield pg_db
+    finally:
+        _DATABASE = None
+
 
 def _raise_rest(*_args, **_kwargs):  # noqa: ANN001, ANN002, ANN003
     """Force the v2 REST backfill path to fail so tests exercise the MCP path."""
     raise V2RestError("offline rest")
 
 
-def _seed(tmp) -> Settings:  # noqa: ANN001
+def _seed(tmp, database=None) -> Settings:  # noqa: ANN001
+    db = database or _DATABASE
     settings = Settings(data_dir=Path(tmp))
+    settings.postgres_dsn = db.dsn
     closes = np.array([100 + 5 * np.sin(i / 4) for i in range(150)], dtype="float64")
     closes[-1] = float(closes.min()) + 0.01  # park price near support
     df = pd.DataFrame(
@@ -46,7 +63,7 @@ def _seed(tmp) -> Settings:  # noqa: ANN001
             "volume": [1.0] * len(closes),
         }
     )
-    store = ParquetStore(settings.parquet_dir)
+    store = ParquetStore(db)
     store.save(Series("USDT-FUTURES", "BTCUSDT", "5m"), df)
     hour_df = pd.DataFrame(
         {
@@ -63,8 +80,9 @@ def _seed(tmp) -> Settings:  # noqa: ANN001
 
 
 def _client(tmp, news_broker=None, database=None) -> TestClient:  # noqa: ANN001
+    db = database or _DATABASE
     broker = news_broker if news_broker is not None else _FakeNewsBroker()
-    return TestClient(create_app(_seed(tmp), news_broker=broker, database=database))
+    return TestClient(create_app(_seed(tmp, db), news_broker=broker, database=db))
 
 
 def _tmp():
@@ -388,9 +406,9 @@ def test_ws_candle_dynamic_symbol_subscribe_and_unsubscribe() -> None:
 
 
 def test_ws_candle_snapshot_prioritizes_live_stream_when_parquet_empty() -> None:
-    """Empty parquet + live bar must still produce a last_candle frame."""
+    """Empty store + live bar must still produce a last_candle frame."""
     with _tmp() as tmp:
-        settings = Settings(data_dir=Path(tmp))  # no parquet seeded
+        settings = Settings(data_dir=Path(tmp))  # no candles seeded
         bar = {
             "open_time": 1700000000000,
             "open": 1.0,
@@ -399,7 +417,14 @@ def test_ws_candle_snapshot_prioritizes_live_stream_when_parquet_empty() -> None
             "close": 1.5,
             "volume": 1.0,
         }
-        c = TestClient(create_app(settings, stream=_FakeStream(bar=bar), market=_FakeMarket()))
+        c = TestClient(
+            create_app(
+                settings,
+                stream=_FakeStream(bar=bar),
+                market=_FakeMarket(),
+                database=_DATABASE,
+            )
+        )
         with c.websocket_connect("/ws") as ws:
             ws.send_json(
                 {
@@ -416,10 +441,17 @@ def test_ws_candle_snapshot_prioritizes_live_stream_when_parquet_empty() -> None
 
 
 def test_ws_candle_snapshot_error_when_no_stream_and_no_parquet() -> None:
-    """No live bar and no parquet returns an explicit no-data error frame."""
+    """No live bar and no stored candles returns an explicit no-data error frame."""
     with _tmp() as tmp:
-        settings = Settings(data_dir=Path(tmp))  # no parquet seeded
-        c = TestClient(create_app(settings, stream=_FakeStream(None), market=_FakeMarket()))
+        settings = Settings(data_dir=Path(tmp))  # no candles seeded
+        c = TestClient(
+            create_app(
+                settings,
+                stream=_FakeStream(None),
+                market=_FakeMarket(),
+                database=_DATABASE,
+            )
+        )
         with c.websocket_connect("/ws") as ws:
             ws.send_json(
                 {

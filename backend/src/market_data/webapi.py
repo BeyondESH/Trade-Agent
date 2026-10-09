@@ -199,7 +199,7 @@ def create_app(
     async def _database_unavailable(_request, exc: DatabaseUnavailable) -> JSONResponse:
         return JSONResponse(status_code=503, content={"detail": str(exc)})
 
-    store = ParquetStore(settings.parquet_dir)
+    store = ParquetStore(database)
     chart_store = ChartStore(database)
     alert_store = AlertStore(database)
     # Agent projections are written by the standalone worker; FastAPI only reads.

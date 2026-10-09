@@ -38,7 +38,7 @@ TBD - created by archiving change realtime-candle-event-push. Update Purpose aft
 
 #### Scenario: 实时路径不触发重计算
 - **WHEN** 后端处理实时 bar 更新事件
-- **THEN** 后端 SHALL 只从实时流 buffer 读取最新 bar,不读取 parquet、不计算指标/S/R,避免阻塞事件循环
+- **THEN** 后端 SHALL 只从实时流 buffer 读取最新 bar,不读取 candle store、不计算指标/S/R,避免阻塞事件循环
 
 #### Scenario: 周期快照不下发更旧的 bar
 - **WHEN** 低频周期快照取到的 `last_candle.open_time` 早于该 series 已通过事件推送下发的最新 `open_time`

@@ -26,9 +26,9 @@ NEWS_NAMES = {"get_global_news", "get_blockbeats_newsflash", "get_blockbeats_dat
 
 
 @pytest.fixture
-def toolset(tmp_path: Path) -> ResearchTools:
+def toolset(tmp_path: Path, pg_db) -> ResearchTools:  # noqa: ANN001
     settings = Settings(data_dir=tmp_path)
-    store = seeded_store(tmp_path)
+    store = seeded_store(pg_db)
     return fake_tools(settings, store=store)
 
 
@@ -76,25 +76,25 @@ def test_market_tool_reads_via_rest(toolset: ResearchTools) -> None:
     assert ticker["symbol"] == "BTCUSDT"
 
 
-def test_news_tool_can_reuse_the_in_process_broker(tmp_path: Path) -> None:
+def test_news_tool_can_reuse_the_in_process_broker(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     class _FakeBroker:
         def recent(self, hours=None, categories=None):  # noqa: ANN001, ANN202
             return [{"id": "b1", "title": "from broker"}]
 
     settings = Settings(data_dir=tmp_path)
-    tools = build_research_tools(settings, store=seeded_store(tmp_path), news_broker=_FakeBroker())
+    tools = build_research_tools(settings, store=seeded_store(pg_db), news_broker=_FakeBroker())
     items = _by_name(tools.news, "get_global_news").invoke({"hours": 0, "category": ""})
     assert items[0]["id"] == "b1"
 
 
-def test_insufficient_data_returns_error_not_raise(tmp_path: Path) -> None:
+def test_insufficient_data_returns_error_not_raise(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     settings = Settings(data_dir=tmp_path)
-    tools = fake_tools(settings, store=None, mcp_names=[])
+    tools = fake_tools(settings, store=seeded_store(pg_db), mcp_names=[])
     out = _by_name(tools.technical, "get_indicators").invoke({"symbol": "NOPE", "timeframe": "1h"})
     assert "error" in out
 
 
-def test_mcp_only_read_only_names_are_exposed(tmp_path: Path) -> None:
+def test_mcp_only_read_only_names_are_exposed(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     names = [
         "market_get_candles",
         "analysis_indicators",
@@ -106,7 +106,7 @@ def test_mcp_only_read_only_names_are_exposed(tmp_path: Path) -> None:
     settings = Settings(data_dir=tmp_path)
     tools = build_research_tools(
         settings,
-        store=seeded_store(tmp_path),
+        store=seeded_store(pg_db),
         news_provider=lambda hours, category: [],
         mcp_client=FakeMcpClient(names),
     )

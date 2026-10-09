@@ -8,7 +8,6 @@ Run:
 from __future__ import annotations
 
 import tempfile
-from pathlib import Path
 
 from market_data import ingestion as ingestion_mod
 from market_data.ingestion import KlineIngestor, V2RestError
@@ -23,15 +22,15 @@ def _row(ts: int) -> list:
     return [ts, 1, 2, 0, 1, 1]
 
 
-def _make_ingestor(tmp: str, page_limit: int = 3) -> tuple[ParquetStore, KlineIngestor]:
-    store = ParquetStore(Path(tmp))
+def _make_ingestor(pg_db, page_limit: int = 3) -> tuple[ParquetStore, KlineIngestor]:  # noqa: ANN001
+    store = ParquetStore(pg_db)
     ing = KlineIngestor(None, store, page_limit=page_limit)
     return store, ing
 
 
-def test_rest_backfill_paginates_and_saves_gapless() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp)
+def test_rest_backfill_paginates_and_saves_gapless(pg_db) -> None:  # noqa: ANN001
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
         pages = [
             [_row(BASE - 1 * STEP), _row(BASE - 2 * STEP), _row(BASE - 3 * STEP)],
@@ -61,9 +60,9 @@ def test_rest_backfill_paginates_and_saves_gapless() -> None:
         ]
 
 
-def test_rest_backfill_retries_empty_page_then_saves() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp)
+def test_rest_backfill_retries_empty_page_then_saves(pg_db) -> None:  # noqa: ANN001
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
         state = {"calls": 0}
 
@@ -89,9 +88,9 @@ def test_rest_backfill_retries_empty_page_then_saves() -> None:
         assert sleeps == [0.2]  # empty-page retry pause capped at 0.2s
 
 
-def test_rest_backfill_empty_after_retry_is_earliest() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp)
+def test_rest_backfill_empty_after_retry_is_earliest(pg_db) -> None:  # noqa: ANN001
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
 
         def fake_fetch(category, symbol, granularity, end_ms, limit):  # noqa: ANN001, ARG001
@@ -112,12 +111,12 @@ def test_rest_backfill_empty_after_retry_is_earliest() -> None:
         assert len(sleeps) == 1  # one backoff pause for the empty-page retry
 
 
-def test_rest_backfill_short_page_does_not_stop() -> None:
+def test_rest_backfill_short_page_does_not_stop(pg_db) -> None:  # noqa: ANN001
     """A page shorter than the limit (the v2 endpoint serves a 90-day window)
     is NOT the history end: the cursor keeps walking and only an empty page
     after a retry stops backfill."""
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp, page_limit=5)
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db, page_limit=5)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
         state = {"calls": 0}
 
@@ -145,9 +144,9 @@ def test_rest_backfill_short_page_does_not_stop() -> None:
         assert sleeps  # empty-page backoff fired
 
 
-def test_rest_backfill_rate_limit_retries_then_succeeds() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp)
+def test_rest_backfill_rate_limit_retries_then_succeeds(pg_db) -> None:  # noqa: ANN001
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
         state = {"calls": 0}
 
@@ -173,10 +172,10 @@ def test_rest_backfill_rate_limit_retries_then_succeeds() -> None:
         assert sleeps  # at least one backoff pause recorded
 
 
-def test_rest_backfill_parallel_merges_and_dedupes() -> None:
+def test_rest_backfill_parallel_merges_and_dedupes(pg_db) -> None:  # noqa: ANN001
     """Parallel pages over a pre-computed cursor chain merge into gapless rows."""
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp, page_limit=3)
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db, page_limit=3)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
         # window = min(90d, 3*5m) = 15min = 3*STEP -> cursors BASE, BASE-3STEP, BASE-6STEP
 
@@ -197,9 +196,9 @@ def test_rest_backfill_parallel_merges_and_dedupes() -> None:
         assert times == [BASE - i * STEP for i in range(9, 0, -1)]
 
 
-def test_rest_backfill_parallel_oldest_empty_is_earliest() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp, page_limit=3)
+def test_rest_backfill_parallel_oldest_empty_is_earliest(pg_db) -> None:  # noqa: ANN001
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db, page_limit=3)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
 
         def fake_fetch(category, symbol, granularity, end_ms, limit):  # noqa: ANN001, ARG001
@@ -335,10 +334,10 @@ def test_v3_fetch_page_error_code_raises(monkeypatch) -> None:  # noqa: ANN001
         assert "v3 history-candles error" in str(exc)
 
 
-def test_backfill_rest_default_fetcher_is_v3(monkeypatch) -> None:  # noqa: ANN001
+def test_backfill_rest_default_fetcher_is_v3(monkeypatch, pg_db) -> None:  # noqa: ANN001
     """backfill_before_rest defaults to the v3 history-candles fetcher."""
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp, page_limit=100)
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db, page_limit=100)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
         captured: dict = {}
 
@@ -368,10 +367,10 @@ def test_backfill_rest_default_fetcher_is_v3(monkeypatch) -> None:  # noqa: ANN0
         assert captured["limit"] == 100
 
 
-def test_rest_backfill_parallel_v3_window_and_merges() -> None:
+def test_rest_backfill_parallel_v3_window_and_merges(pg_db) -> None:  # noqa: ANN001
     """Parallel v3 backfill: cursor window follows page_limit=100, merge dedupes."""
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp, page_limit=100)
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db, page_limit=100)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
         # window = min(90d, 100*5m = 500min) -> cursors spaced 100*STEP apart.
         cursor_calls: list[int] = []
@@ -392,10 +391,10 @@ def test_rest_backfill_parallel_v3_window_and_merges() -> None:
         assert cursor_calls == [BASE, BASE - 100 * STEP, BASE - 200 * STEP]
 
 
-def test_rest_backfill_parallel_v3_oldest_empty_is_earliest() -> None:
+def test_rest_backfill_parallel_v3_oldest_empty_is_earliest(pg_db) -> None:  # noqa: ANN001
     """With the v3 fetcher an empty oldest cursor still means 'reached the start'."""
-    with tempfile.TemporaryDirectory() as tmp:
-        store, ing = _make_ingestor(tmp, page_limit=100)
+    with tempfile.TemporaryDirectory():
+        store, ing = _make_ingestor(pg_db, page_limit=100)
         series = Series("USDT-FUTURES", "BTCUSDT", "5m")
 
         def fake_fetch(category, symbol, granularity, end_ms, limit):  # noqa: ANN001, ARG001

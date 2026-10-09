@@ -1,8 +1,5 @@
-# market-data-store Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change market-data-foundation. Update Purpose after archive.
-## Requirements
 ### Requirement: K 线持久化存储层（PostgreSQL）
 
 系统 SHALL 将 K 线持久化到 PostgreSQL `candles` 表（连接串来自 `MD_POSTGRES_DSN`），以 `(category, symbol, timeframe, open_time)` 为主键，`open_time` 为 epoch 毫秒整数，OHLCV 五列为 double precision，`open_time` SHALL 建有 BRIN 索引。写入 MUST 以主键 UPSERT 去重合并，保证同一 bar 不重复。
@@ -18,13 +15,3 @@ TBD - created by archiving change market-data-foundation. Update Purpose after a
 - **WHEN** 新拉取数据与已存数据存在相同 open_time
 - **THEN** 系统 SHALL 合并去重
 - **AND** 不产生重复行
-
-### Requirement: 读取接口
-
-系统 SHALL 提供按品类/币种/级别/时间段读取已存 K 线的接口。
-
-#### Scenario: 按区间读取
-
-- **WHEN** 请求某组合在指定时间段的数据
-- **THEN** 系统 SHALL 返回该区间已存 K 线(按时间升序)
-

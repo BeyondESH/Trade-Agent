@@ -53,9 +53,9 @@ def _settings(tmp_path: Path, **overrides: object) -> Settings:
     return Settings(**base)
 
 
-def _runtime(tmp_path: Path, model, **kwargs) -> AgentRuntime:  # noqa: ANN001
+def _runtime(tmp_path: Path, model, database=None, **kwargs) -> AgentRuntime:  # noqa: ANN001
     settings = kwargs.pop("settings", None) or _settings(tmp_path)
-    tools = kwargs.pop("tools", None) or fake_tools(settings, store=seeded_store(tmp_path))
+    tools = kwargs.pop("tools", None) or fake_tools(settings, store=seeded_store(database))
     market = kwargs.pop(
         "market", lambda symbol, category: Quote(symbol=symbol, price=100.0, ts=NOW_MS)
     )
@@ -77,8 +77,8 @@ def _stop(runtime: AgentRuntime) -> None:
     runtime.stop()
 
 
-def test_happy_path_research_then_execution(tmp_path: Path) -> None:
-    runtime = _runtime(tmp_path, proposal_model(make_proposal(proposal_id="p-1")))
+def test_happy_path_research_then_execution(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
+    runtime = _runtime(tmp_path, proposal_model(make_proposal(proposal_id="p-1")), pg_db)
     try:
         result = runtime.run_once()
         assert result.status == "executed"
@@ -93,9 +93,9 @@ def test_happy_path_research_then_execution(tmp_path: Path) -> None:
         _stop(runtime)
 
 
-def test_kill_switch_blocks_execution_but_not_research(tmp_path: Path) -> None:
+def test_kill_switch_blocks_execution_but_not_research(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     runtime = _runtime(
-        tmp_path, proposal_model(make_proposal(proposal_id="p-kill")), kill_switch=True
+        tmp_path, proposal_model(make_proposal(proposal_id="p-kill")), pg_db, kill_switch=True
     )
     try:
         result = runtime.run_once()
@@ -108,11 +108,11 @@ def test_kill_switch_blocks_execution_but_not_research(tmp_path: Path) -> None:
         _stop(runtime)
 
 
-def test_loop_is_single_instance(tmp_path: Path) -> None:
+def test_loop_is_single_instance(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     GATE.clear()
     ENTERED.clear()
     model = GatedModel(responses=[proposal_message(make_proposal(proposal_id="p-lock"))])
-    runtime = _runtime(tmp_path, model)
+    runtime = _runtime(tmp_path, model, pg_db)
     results: list = []
 
     def _first() -> None:
@@ -136,8 +136,8 @@ def test_loop_is_single_instance(tmp_path: Path) -> None:
         _stop(runtime)
 
 
-def test_research_failure_does_not_produce_execution(tmp_path: Path) -> None:
-    runtime = _runtime(tmp_path, RaisingModel(responses=[]))
+def test_research_failure_does_not_produce_execution(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
+    runtime = _runtime(tmp_path, RaisingModel(responses=[]), pg_db)
     try:
         result = runtime.run_once()
         assert result.status == "no_proposal"
@@ -151,9 +151,9 @@ def test_research_failure_does_not_produce_execution(tmp_path: Path) -> None:
         _stop(runtime)
 
 
-def test_start_is_disabled_when_agent_disabled(tmp_path: Path) -> None:
+def test_start_is_disabled_when_agent_disabled(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     runtime = _runtime(
-        tmp_path, proposal_model(), settings=_settings(tmp_path, agent_enabled=False)
+        tmp_path, proposal_model(), pg_db, settings=_settings(tmp_path, agent_enabled=False)
     )
     try:
         assert runtime.start() is None
@@ -162,12 +162,12 @@ def test_start_is_disabled_when_agent_disabled(tmp_path: Path) -> None:
         _stop(runtime)
 
 
-def test_invalid_structured_output_is_a_research_failure(tmp_path: Path) -> None:
+def test_invalid_structured_output_is_a_research_failure(tmp_path: Path, pg_db) -> None:  # noqa: ANN001
     bad = make_proposal(proposal_id="bad")
     message = proposal_message(bad)
     message.tool_calls[0]["args"]["confidence"] = 1.5  # violates the contract
     model = ScriptedChatModel(responses=[message])
-    runtime = _runtime(tmp_path, model)
+    runtime = _runtime(tmp_path, model, pg_db)
     try:
         result = runtime.run_once()
         assert result.status == "no_proposal"

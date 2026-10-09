@@ -2,8 +2,8 @@
 v3 history-candles endpoint.
 
 Reads the registries from tests/data_registry.py, fetches each gap window and
-merges into the parquet store (dedup by open_time). Prints the before/after
-gap status per series. Run from backend/:
+merges into the PostgreSQL candle store (dedup by open_time). Prints the
+before/after gap status per series. Run from backend/:
 
     .venv/Scripts/python.exe scripts/backfill_micro_gaps.py
 """
@@ -21,11 +21,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tests"))
 
 from data_registry import KNOWN_GAPS  # noqa: E402
 
+from market_data.config import get_settings  # noqa: E402
+from market_data.db import get_database  # noqa: E402
 from market_data.ingestion import KlineIngestor  # noqa: E402
 from market_data.models import Series, timeframe_step_ms, timeframe_to_granularity  # noqa: E402
 from market_data.store import ParquetStore  # noqa: E402
 
-STORE = ParquetStore(Path("data/parquet"))
+# Store is PostgreSQL-backed (Phase 2) and honours MD_POSTGRES_DSN.
+_SETTINGS = get_settings()
+_DATABASE = get_database(_SETTINGS.postgres_dsn)
+_DATABASE.bootstrap()
+STORE = ParquetStore(_DATABASE)
 TYPE_A_MIN_STEPS = 5
 
 

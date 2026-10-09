@@ -70,7 +70,7 @@ class AgentRuntime:
     ) -> None:
         self.settings = settings
         self.store = store or ProjectionStore(settings.agent_dir)
-        self.parquet = ParquetStore(settings.parquet_dir)
+        self.parquet = ParquetStore(dsn=settings.postgres_dsn)
         self.broker = broker or PaperBroker(
             settings.agent_paper_equity, settings.agent_max_drawdown
         )
