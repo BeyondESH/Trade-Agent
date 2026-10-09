@@ -95,6 +95,13 @@ class Settings(BaseSettings):
     # only; the FastAPI process never builds a model. Risk fields are the hard,
     # fail-closed limits enforced by the deterministic execution graph. Defaults
     # are conservative so the app boots without any agent configuration.
+    #
+    # `postgres_dsn` is the LangGraph checkpointer backend (both graphs persist
+    # to PostgreSQL). The default assumes the compose network, where the
+    # `postgres` service is reachable by name; the compose stack overrides it via
+    # `MD_POSTGRES_DSN`. There is deliberately no default password: credentials
+    # live only in the gitignored `.env`, never in a committed file.
+    postgres_dsn: str = "postgresql://trade@postgres:5432/trade"
     agent_model: str = "anthropic:claude-sonnet-4-6"
     agent_loop_seconds: int = 900
     agent_enabled: bool = True
@@ -140,7 +147,11 @@ class Settings(BaseSettings):
 
     @property
     def agent_checkpoint_path(self) -> Path:
-        """SQLite checkpointer file for both LangGraph graphs (worker is sole writer)."""
+        """Legacy SQLite checkpointer file, read only by the one-shot migration.
+
+        The live runtime persists through `postgres_dsn`; this path exists so
+        `scripts/migrate_checkpoints_sqlite_to_pg.py` can locate the old file.
+        """
         return self.agent_dir / "checkpoints.sqlite"
 
 

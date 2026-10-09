@@ -28,9 +28,9 @@ worker SHALL 以可配置周期运行自治闭环（研究 → 提案 → 执行
 - **THEN** worker SHALL 依次运行研究图与（当提案有效时）执行图
 - **AND** 上一轮未结束时 MUST NOT 并发启动新一轮
 
-### Requirement: SQLite checkpointer
+### Requirement: Postgres checkpointer
 
-系统 SHALL 使用 `langgraph-checkpoint-sqlite` 的 `SqliteSaver` 作为两张图的 checkpointer，按 `thread_id` 隔离运行；worker SHALL 是 checkpointer 的唯一写者。
+系统 SHALL 使用 `langgraph-checkpoint-postgres` 的 `PostgresSaver` 作为两张图的 checkpointer，按 `thread_id` 隔离运行；worker SHALL 是 checkpointer 的唯一写者。PostgreSQL SHALL 由独立的 `postgres` 服务提供，worker 经 `MD_POSTGRES_DSN` 连接并调用 `setup()` 建立 schema；同步 worker SHALL 使用同步 `PostgresSaver`。
 
 #### Scenario: 运行隔离
 
@@ -54,7 +54,7 @@ worker SHALL 以可配置周期运行自治闭环（研究 → 提案 → 执行
 
 ### Requirement: 运行配置
 
-系统 SHALL 经 `Settings`（`MD_` 前缀）暴露 agent/risk 配置（模型标识、循环周期、风控上限、纸面初始权益、checkpointer 路径），并 SHALL 同步 `backend/.env.example`。
+系统 SHALL 经 `Settings`（`MD_` 前缀）暴露 agent/risk 配置（模型标识、循环周期、风控上限、纸面初始权益、checkpointer DSN `MD_POSTGRES_DSN`），并 SHALL 同步 `backend/.env.example`。
 
 #### Scenario: 配置一致
 

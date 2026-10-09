@@ -14,6 +14,7 @@ from agent_fakes import (
     proposal_model,
     seeded_store,
 )
+from langgraph.checkpoint.memory import MemorySaver
 
 from market_data.agent.execution import Quote
 from market_data.agent.runtime import AgentRuntime
@@ -59,7 +60,16 @@ def _runtime(tmp_path: Path, model, **kwargs) -> AgentRuntime:  # noqa: ANN001
         "market", lambda symbol, category: Quote(symbol=symbol, price=100.0, ts=NOW_MS)
     )
     return AgentRuntime(
-        settings, model=model, tools=tools, market=market, clock=lambda: T0, **kwargs
+        settings,
+        model=model,
+        tools=tools,
+        market=market,
+        clock=lambda: T0,
+        # Unit tests must not require a live Postgres: inject the same
+        # in-memory saver the execution tests use. Production builds the
+        # Postgres saver from `settings.postgres_dsn`.
+        checkpointer=MemorySaver(),
+        **kwargs,
     )
 
 

@@ -8,20 +8,27 @@
 
 这是一次**刻意的架构变更**，与旧的 bind-mount 设计不同。
 
-## 始终在线（always-on）栈 · 单容器
+## 始终在线（always-on）栈 · 两服务（`dev` + `postgres`）
 
 本环境默认以「**始终在线**」方式运行：`docker compose up -d`（或 `scripts/dev-sync.sh up`）
-拉起**一个**长期容器 `dev`，它同时是**交互式工具箱**和**常驻服务器**——容器入口脚本
-`docker/entrypoint.sh` 在后台启动 FastAPI/uvicorn 与 vite dev server，并把两路输出分别加上
-`[backend]` / `[frontend]` 前缀，浏览器直接打开即可，**无需手动起后端 / 前端**。
+拉起 `dev` 长期容器（交互式工具箱 **兼** 常驻服务器）与独立的 `postgres` 服务（LangGraph
+checkpointer 后端）。`docker/entrypoint.sh` 在 `dev` 内后台启动 FastAPI/uvicorn 与 vite dev
+server，并把两路输出分别加上 `[backend]` / `[frontend]` 前缀，浏览器直接打开即可，**无需手动
+起后端 / 前端**。
 
 | 服务 | 容器 | 作用 | 发布端口 |
 |---|---|---|---|
 | `dev` | `trade-dev-1` | 工具箱（shell / exec / 测试 / sync）**＋** 常驻 backend / frontend | **8181** 与 **5173** |
+| `postgres` | `trade-postgres-1` | LangGraph checkpointer 后端（研究图 + 执行图持久化） | **5433**（→ 容器 5432） |
 
-- **一个容器、一个镜像、一组卷**：镜像 `trade_agent_img`；卷 `trade-workspace` → `/workspace`、
-  `trade-data` → `/workspace/backend/data`。后端 / 前端跑的就是你 `sync` 进去的**同一份**
-  工作副本，容器里的 `git` / 测试与浏览器里看到的代码始终一致。
+- **`dev`：一个容器、一个镜像、一组卷**：镜像 `trade_agent_img`；卷 `trade-workspace` →
+  `/workspace`、`trade-data` → `/workspace/backend/data`。后端 / 前端跑的就是你 `sync` 进去的
+  **同一份**工作副本，容器里的 `git` / 测试与浏览器里看到的代码始终一致。
+- **`postgres`：独立的数据库服务**：镜像 `postgres:16`（经镜像源拉取，见[镜像来源](#镜像来源mirror-provenance)），
+  数据落在命名卷 **`trade-pgdata`** → `/var/lib/postgresql/data`，宿主端口 **5433**。凭据写在
+  仓库根 **`.env`**（gitignored；模板见 [`.env.example`](../.env.example)）。`dev` 声明
+  `depends_on: postgres: {condition: service_healthy}`，其 healthcheck 用 `pg_isready`——**数据库
+  未就绪时应用不会启动**。`dev` 内 worker 通过 `MD_POSTGRES_DSN` 连接（见下）。
 - **两个端口都在同一个容器上**（一个容器可以同时绑定 8181 与 5173）：
   - 后端：**http://127.0.0.1:8181**（`/health`、`/api`、`/ws`）
   - 前端：**http://127.0.0.1:5173**，HMR 正常（工作副本在 ext4，inotify 生效，无轮询）
@@ -135,18 +142,24 @@ docker compose ps                 # 查看状态
 | 项目 | 值 | 说明 |
 |---|---|---|
 | 镜像 | **`trade_agent_img`** | 只含工具链，**不 COPY 仓库** |
-| 容器 | **`trade-dev-1`**（服务名 `dev`） | 唯一容器：工具箱 + 常驻服务器 |
+| 容器 | **`trade-dev-1`**（服务名 `dev`） | 工具箱 + 常驻服务器 |
 | `/mnt/d/work/project/trade` → `/src-ro` | **bind（`read_only: true`）** | 单向同步的**源**，容器永不写入 |
 | `trade-workspace` → `/workspace` | **named volume（ext4）** | **原生工作副本**，git / 测试在此运行 |
 | `trade-data` → `/workspace/backend/data` | **named volume** | 后端数据目录，与宿主 parquet 隔离 |
+| 镜像 | **`postgres:16`** | checkpointer 后端（经镜像源拉取） |
+| 容器 | **`trade-postgres-1`**（服务名 `postgres`） | LangGraph checkpointer 数据库 |
+| `trade-pgdata` → `/var/lib/postgresql/data` | **named volume** | PostgreSQL 数据目录（不随 `down` 删除） |
 
-- 端口：**8181**（后端 API）· **5173**（vite dev）——**两者都发布在唯一的 `dev` 容器上**。
+- 端口：**8181**（后端 API）· **5173**（vite dev）发布在 `dev` 上；**5433**（Postgres）发布在
+  `postgres` 上（容器内为 5432；用 5433 避免与宿主 Postgres 冲突）。
 - 用户：**uid 1000 / gid 1000**（与 WSL 宿主一致；镜像已把两个卷挂载点预置为 `1000:1000`，
   空卷首次挂载会继承该归属）。
 - 环境变量：`DEV_SERVER_HOST=0.0.0.0`、`DEV_BACKEND_PORT=8181`、`LANG=C.UTF-8`、
   `LC_ALL=C.UTF-8`、`UV_LINK_MODE=copy`、`COREPACK_ENABLE_DOWNLOAD_PROMPT=0`、
-  `MD_SCHEDULE_INTERVAL_SECONDS=0`、`SERVICES=1`（默认；`0` = 仅工具箱）。入口脚本还读
-  `SERVICES_WAIT_SECONDS`（默认 300）与 `SERVICES_RESTART_DELAY`（默认 3）。
+  `MD_SCHEDULE_INTERVAL_SECONDS=0`、`SERVICES=1`（默认；`0` = 仅工具箱）、
+  **`MD_POSTGRES_DSN`**（checkpointer 连接串，由 compose 从仓库根 `.env` 注入，指向
+  `postgres:5432`）。入口脚本还读 `SERVICES_WAIT_SECONDS`（默认 300）与
+  `SERVICES_RESTART_DELAY`（默认 3）。
 - **`DEV_BACKEND_PORT` 指向前端 dev/preview 代理的后端**（本容器为常驻后端的 **8181**）。
   它与 **`E2E_BACKEND_PORT`** 是**两个不同关注点**，详见下节。
 
@@ -381,13 +394,16 @@ retag 的：
 ```bash
 docker pull docker.m.daocloud.io/library/python:3.12-slim-bookworm
 docker tag  docker.m.daocloud.io/library/python:3.12-slim-bookworm python:3.12-slim-bookworm
+# checkpointer 后端镜像同法（否则 postgres 服务起不来）：
+docker pull docker.m.daocloud.io/library/postgres:16
+docker tag  docker.m.daocloud.io/library/postgres:16 postgres:16
 docker compose build
 ```
 
-`Dockerfile` 的 `FROM python:3.12-slim-bookworm` 因此命中本地已缓存的镜像。**provenance
-说明：该镜像经 `docker.m.daocloud.io` 转发，对应 Docker Hub 上的同名 tag。** `Dockerfile`
-未使用 `# syntax=docker/dockerfile:1`（该指令会强行从 docker.io 拉 build frontend，本环境会
-失败；本项目也未使用任何 BuildKit-only 语法）。
+`Dockerfile` 的 `FROM python:3.12-slim-bookworm` 与 compose 的 `image: postgres:16` 因此命中
+本地已缓存的镜像。**provenance 说明：两个镜像均经 `docker.m.daocloud.io` 转发，对应 Docker
+Hub 上的同名 tag。** `Dockerfile` 未使用 `# syntax=docker/dockerfile:1`（该指令会强行从
+docker.io 拉 build frontend，本环境会失败；本项目也未使用任何 BuildKit-only 语法）。
 
 > 镜像**不 COPY 仓库的代码**：代码全部由 `scripts/dev-sync.sh` 经 rsync 进入 `trade-workspace`
 > 卷。构建时只 COPY 一个文件——监督脚本 `docker/entrypoint.sh`（装到
@@ -395,12 +411,51 @@ docker compose build
 > 只放行 `Dockerfile` 与 `docker/entrypoint.sh`——它只约束 **build context 的传输**，
 > 与运行时容器内容无关。
 
+## Checkpointer：PostgreSQL（Phase 2 基础）
+
+LangGraph 的 checkpointer 已从 SQLite 文件迁移到独立的 `postgres` 服务。两张图（研究 / 执行）
+共用**一个**同步 `PostgresSaver`（按 `thread_id` 隔离），worker 是唯一写者。
+
+- **连接**：worker 经 `MD_POSTGRES_DSN` 连接（compose 从仓库根 `.env` 注入，指向
+  `postgres:5432`）。`docker compose exec dev` 内的一切进程都继承该变量。
+- **schema**：`PostgresSaver.setup()` 会自动建表（`checkpoints` / `checkpoint_blobs` /
+  `checkpoint_writes` / `checkpoint_migrations`）。查看：
+
+  ```bash
+  docker compose exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\dt'
+  # 或从宿主（已发布 5433）：
+  docker compose exec postgres psql -U trade -d trade -c '\dt'
+  ```
+
+- **从宿主连接**：`psql "postgresql://trade:<密码>@localhost:5433/trade"`（GUI 客户端同理，
+  端口用 **5433**）。
+
+### 迁移旧 SQLite checkpoints
+
+`backend/scripts/migrate_checkpoints_sqlite_to_pg.py` 把旧的
+`backend/data/agent/checkpoints.sqlite` 一次性迁进 Postgres：
+
+```bash
+# 在容器内跑（读到的是 live 卷里的旧文件）
+docker compose exec dev bash -lc \
+  'cd /workspace/backend && .venv/bin/python scripts/migrate_checkpoints_sqlite_to_pg.py'
+# 预演（不写库）：加 --dry-run
+```
+
+特性：**幂等**（重跑不产生重复行）、支持 `--dry-run`、报告读 / 写行数与 thread_ids；
+SQLite 文件不存在时以 0 退出。脚本**只读**旧文件，**不会**删除它。
+
+> `backend/data/agent/checkpoints.sqlite` 现为 **legacy**：运行时不再写入，保留仅供迁移
+> 重跑与审计。另注意 `alertstore.py` / `chartstore.py` / `blockbeats_cache.py` / `store.py` /
+> `agent/store.py` 是 JSON / JSONL / Parquet，**不是** SQLite，未随本次迁移改动。
+
 ## 故障排查
 
 ```bash
-scripts/dev-sync.sh doctor      # 宿主路径 / 端口 / 卷名 / 唯一容器是否 UP
+scripts/dev-sync.sh doctor      # 宿主路径 / 端口 / 卷名 / 容器是否 UP
 docker compose config           # 渲染后的完整 compose 配置
-docker compose logs dev         # 唯一容器日志（两路带前缀）
+docker compose logs dev         # dev 容器日志（两路带前缀）
+docker compose logs postgres    # postgres 服务日志
 docker compose ps               # 容器状态（空 = 未启动）
 ```
 
@@ -409,5 +464,9 @@ docker compose ps               # 容器状态（空 = 未启动）
   在宿主执行 `scripts/dev-sync.sh sync` 填充工作副本（容器会以非 0 退出并（按
   `unless-stopped`）重试）。
 - 只想起工具箱、不起服务器 → `SERVICES=0 docker compose up -d`；恢复 → `docker compose up -d`。
+- `docker compose up` 报 `set POSTGRES_* in .env` / `set MD_POSTGRES_DSN in .env` → 仓库根
+  缺少 `.env`：`cp .env.example .env` 并填入真实密码。
+- `postgres` 起不来且日志提到 image → 按[镜像来源](#镜像来源mirror-provenance)用 daocloud
+  镜像源拉取并 retag `postgres:16`。
 - 若 `docker compose up` 报端口被占用，确认是在 **WSL 内**执行（WSL 为 NAT 网络，与 Windows
   主机端口相互独立）。

@@ -40,7 +40,7 @@ Trade-Agent 是一个全栈的加密货币行情研究与交易终端：
 
 > **关于 AI Agent**：本项目曾内置自研的 AI 交易智能体与 QUANT LAB 量化研究，二者已整体移除。现以 **LangChain / LangGraph / Deep Agents** 重建，遵循一条硬边界：**LLM 只做前置的"深度市场研报与策略生成"，下单执行与硬风控由零 LLM 的确定性 LangGraph 状态图接管**。
 >
-> **当前为 Phase 1（纸面闭环）**：研究与执行均在**独立 worker 进程**内定时自治运行；执行走**纸面 broker**，**不接实盘**；人工审批（HITL）、Postgres checkpointer 与跨进程恢复留待 Phase 2。启用研究层需提供模型凭据（`MD_AGENT_MODEL` + 对应 provider API Key）；缺失时 worker 空转、不下单、不报错。
+> **当前为 Phase 1（纸面闭环）**：研究与执行均在**独立 worker 进程**内定时自治运行；执行走**纸面 broker**，**不接实盘**；checkpointer 已迁移到 **PostgreSQL**（独立的 compose `postgres` 服务），作为跨进程恢复的基础；人工审批（HITL）与跨进程恢复留待 Phase 2。启用研究层需提供模型凭据（`MD_AGENT_MODEL` + 对应 provider API Key）；缺失时 worker 空转、不下单、不报错。
 
 整个项目以 [OpenSpec](https://github.com/Fission-AI/OpenSpec) 规格驱动开发，历史功能均有对应规格与设计文档沉淀在 `openspec/`。
 
@@ -59,7 +59,7 @@ Trade-Agent 是一个全栈的加密货币行情研究与交易终端：
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Python ≥ 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · pydantic-settings · akshare |
+| 后端 | Python ≥ 3.11 · FastAPI · uvicorn · APScheduler · pandas / pyarrow · numpy · pydantic-settings · akshare · PostgreSQL（LangGraph checkpointer） |
 | 数据接入 | Bitget Agent MCP（stdio）· Bitget 公共 WebSocket · REST v2/v3 |
 | 前端 | React 19 · Vite 6 · TypeScript 5 · Tailwind CSS v4 · klinecharts + klinecharts-pro · Radix UI · motion · lucide-react · 自托管 Google Sans Flex / Noto Sans SC |
 | 测试 | pytest（三层测试）· Vitest + Testing Library · Playwright（E2E） |
@@ -161,13 +161,13 @@ wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev
 wsl.exe -d Ubuntu-26.04 -- bash -lc 'cd /mnt/d/work/project/trade && scripts/dev-sync.sh shell'
 ```
 
-**始终在线 · 单容器**：整栈现在只需**一个**容器 `dev`（`trade-dev-1`），使用镜像
-**`trade_agent_img`** 与同一组命名卷。入口脚本 `docker/entrypoint.sh` 在同一容器内常驻拉起
-backend（**8181** → http://127.0.0.1:8181）与 frontend（**5173** → http://127.0.0.1:5173），
-**两个端口都发布在这一个容器上**，两路日志分别带 `[backend]` / `[frontend]` 前缀
-（`docker compose logs -f` 即可读）。容器带 `restart: unless-stopped`。容器内 vite 的 `/api`、`/ws`
-**代理目标**由 `DEV_BACKEND_PORT=8181` 指定——它与 Playwright E2E 自起后端所用的
-`E2E_BACKEND_PORT` 是**两个关注点**（否则 `test:e2e` 会与常驻后端抢 8181）；宿主 / 测试行为不变。
+**始终在线 · 两服务（`dev` + `postgres`）**：整栈现在由 `dev` 容器（`trade-dev-1`）与 `postgres`
+服务（`trade-postgres-1`）组成，使用镜像 **`trade_agent_img`** 与 **`postgres:16`** 及命名卷。
+入口脚本 `docker/entrypoint.sh` 在同一 `dev` 容器内常驻拉起 backend（**8181** →
+http://127.0.0.1:8181）与 frontend（**5173** → http://127.0.0.1:5173），**这两个端口都发布在
+`dev` 容器上**；`postgres` 提供 LangGraph checkpointer 后端，宿主端口 **5433**（数据卷
+`trade-pgdata`），凭据来自仓库根 gitignored `.env`，`dev` 经 `depends_on: service_healthy`
+等待其健康后就绪。
 日常：**宿主编辑 →
 `scripts/dev-sync.sh sync` → 浏览器直接看**（单向：宿主 → 容器）；只想起工具箱（不起服务器）用
 `SERVICES=0 docker compose up -d`。
@@ -182,6 +182,15 @@ test-backend / test-frontend / test-e2e / hub-e2e / doctor` 子命令（`backend
 用空闲端口另起 vite + 后端，不与常驻服务冲突）。完整说明（单容器始终在线栈、入口脚本等待/自愈行为、
 `SERVICES=0` 工具箱模式、自启链、同步语义、`.git` 双工作副本注意事项、`backend/data` 与
 `backend/.env`、命名卷、镜像来源）见 **[docs/docker-dev.md](docs/docker-dev.md)**。
+
+**PostgreSQL checkpointer（Phase 2 基础）**：两张 LangGraph 图共用 `postgres` 服务的同步
+`PostgresSaver`（按 `thread_id` 隔离，worker 唯一写者）。旧 `backend/data/agent/checkpoints.sqlite`
+为 legacy（不再写入、保留可审计），用一次性脚本迁移（幂等、支持 `--dry-run`）：
+
+```bash
+docker compose exec dev bash -lc \
+  'cd /workspace/backend && .venv/bin/python scripts/migrate_checkpoints_sqlite_to_pg.py'
+```
 
 > ⚠️ **`docker compose down -v` 会删除 `trade-workspace` 卷，等于销毁整个工作副本**——请只用
 > `docker compose down`。
@@ -199,6 +208,7 @@ test-backend / test-frontend / test-e2e / hub-e2e / doctor` 子命令（`backend
 | `BB_API_KEY` | 空 | BlockBeats 新闻/数据 API Key（缺失时快讯接口降级） |
 | `BITGET_API_KEY` / `SECRET` / `PASSPHRASE` | 空 | 预留，公开行情无需 |
 | `MD_DATA_DIR` | `./data` | 数据根目录（Parquet / Excel / 缓存） |
+| `MD_POSTGRES_DSN` | `postgresql://trade@postgres:5432/trade` | LangGraph checkpointer 的 PostgreSQL 连接串；compose 从仓库根 `.env` 注入（宿主进程改用 `localhost:5433`） |
 | `MD_SYMBOLS` | `BTCUSDT,ETHUSDT,SOLUSDT` | 默认抓取标的 |
 | `MD_TIMEFRAMES` | `1m,5m,…,1d` | 默认周期 |
 | `MD_CATEGORY` | `USDT-FUTURES` | 默认产品线 |

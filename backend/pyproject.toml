@@ -20,12 +20,19 @@ dependencies = [
     "akshare>=1.14.0",
     # --- Deep Agents research layer + deterministic LangGraph execution layer ---
     # Pinned: the removal/rebuild spike verified this exact set installs and
-    # imports on the project's CPython runtime (StateGraph + SqliteSaver +
+    # imports on the project's CPython runtime (StateGraph + checkpointer +
     # interrupt/Command(resume) + create_deep_agent). CI must use the same set.
     "deepagents==0.7.19",
     "langgraph==1.2.12",
     "langchain==1.4.3",
-    "langgraph-checkpoint-sqlite==3.1.1",
+    # Checkpointer backend (Phase-2 foundation): both graphs persist to PostgreSQL.
+    # The sync APScheduler worker uses the sync `PostgresSaver` (psycopg 3);
+    # `psycopg-pool` is a declared dependency of the Postgres checkpoint package
+    # (used by its async/pool path) and is pinned explicitly so we never rely on
+    # transitive resolution.
+    "langgraph-checkpoint-postgres==3.1.2",
+    "psycopg[binary]==3.3.6",
+    "psycopg-pool==3.3.3",
     # Explicit provider dep (deepagents pulls it transitively; we do not rely on
     # transitive deps). Default model is `anthropic:claude-sonnet-4-6`.
     "langchain-anthropic",

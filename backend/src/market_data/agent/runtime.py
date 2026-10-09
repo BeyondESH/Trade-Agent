@@ -1,7 +1,7 @@
-"""Agent worker runtime: both graphs on one SqliteSaver + the autonomous loop.
+"""Agent worker runtime: both graphs on one PostgresSaver + the autonomous loop.
 
 Tier-1 (research, LLM) and Tier-2 (execution, deterministic) are physically
-separate compiled graphs sharing one ``SqliteSaver`` (different ``thread_id``).
+separate compiled graphs sharing one ``PostgresSaver`` (different ``thread_id``).
 This worker is the ONLY checkpointer writer; FastAPI reads projections only. The
 loop is single-instance and honours the kill-switch (blocks *starting* execution
 runs, never research).
@@ -10,14 +10,15 @@ runs, never research).
 from __future__ import annotations
 
 import logging
-import sqlite3
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from langgraph.checkpoint.sqlite import SqliteSaver
+import psycopg
+from langgraph.checkpoint.postgres import PostgresSaver
+from psycopg.rows import dict_row
 
 from market_data.agent.broker import PaperBroker
 from market_data.agent.execution import Quote, RiskLimits, build_execution_graph
@@ -62,6 +63,7 @@ class AgentRuntime:
         market: Callable[[str, str], Quote | None] | None = None,
         tools: ResearchTools | None = None,
         model: Any | None = None,
+        checkpointer: Any | None = None,
         events: EventLog | None = None,
         clock: Callable[[], datetime] | None = None,
         kill_switch: bool | None = None,
@@ -82,22 +84,19 @@ class AgentRuntime:
         self._timeframe = settings.timeframes[0] if settings.timeframes else "1h"
         self._lock = threading.Lock()
         self._cycle = 0
-        self._conn: sqlite3.Connection | None = None
+        self._checkpointer = checkpointer
+        self._conn: psycopg.Connection | None = None
         self._scheduler: Any | None = None
         self.research_graph: Any | None = None
         self.execution_graph: Any | None = None
 
     # -- assembly ----------------------------------------------------------
     def build(self) -> AgentRuntime:
-        """Assemble both graphs on a single SqliteSaver (idempotent)."""
+        """Assemble both graphs on a single PostgresSaver (idempotent)."""
         if self.research_graph is not None and self.execution_graph is not None:
             return self
         self.settings.agent_dir.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(
-            str(self.settings.agent_checkpoint_path), check_same_thread=False
-        )
-        saver = SqliteSaver(self._conn)
-        saver.setup()
+        saver = self._checkpointer or self._build_postgres_checkpointer()
         toolset = self.tools or build_research_tools(self.settings)
         self.research_graph = build_research_graph(
             self.settings, tools=toolset, checkpointer=saver, model=self.model
@@ -112,6 +111,27 @@ class AgentRuntime:
             clock=self.clock,
         )
         return self
+
+    def _build_postgres_checkpointer(self) -> PostgresSaver:
+        """Open the worker's long-lived sync connection and ensure the schema.
+
+        The APScheduler worker is synchronous, so the sync `PostgresSaver` (not
+        `AsyncPostgresSaver`) is the right choice; the connection is kept on the
+        instance and closed in `stop()`. `autocommit` + `dict_row` mirror the
+        options `PostgresSaver.from_conn_string` applies (its context manager
+        would close the connection on block exit, which a resident worker cannot
+        use). The async FastAPI side will need `AsyncPostgresSaver` when it reads
+        checkpoints directly — today it reads projection files instead.
+        """
+        self._conn = psycopg.connect(
+            self.settings.postgres_dsn,
+            autocommit=True,
+            prepare_threshold=0,
+            row_factory=dict_row,
+        )
+        saver = PostgresSaver(self._conn)
+        saver.setup()
+        return saver
 
     def _default_market(self, symbol: str, category: str) -> Quote | None:
         # Resolve an entry quote from the Parquet store (deterministic, no LLM).

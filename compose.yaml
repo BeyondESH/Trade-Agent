@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------------------
 # Docker Compose dev environment for Trade-Agent — NATIVE WORKING COPY model,
-# ALWAYS-ON stack, ONE container.
+# ALWAYS-ON stack: the `dev` toolbox/servers container plus a `postgres` service
+# that backs the LangGraph checkpointer (Phase-2 foundation).
 #
 # The repository is NOT bind-mounted. The container keeps its own working copy
 # on ext4 inside the `trade-workspace` named volume; the Windows tree is
@@ -12,16 +13,18 @@
 # `git` crash with SIGBUS (git memory-maps its pack file; 9p cannot reliably
 # back the page fault) and slowed pytest to 462-547 s (vs ~104 s on the host).
 #
-# ONE SERVICE (`dev`)
-#   A single container is both the interactive toolbox (shell / exec / tests /
-#   sync) AND the resident stack: `docker/entrypoint.sh` starts FastAPI/uvicorn
-#   on 0.0.0.0:8181 and the vite dev server on 0.0.0.0:5173 as background
-#   children, prefixing their output `[backend]` / `[frontend]` so
-#   `docker compose logs -f` is readable. Both host ports therefore live on this
-#   one container (8181:8181 AND 5173:5173) — one container can bind both.
+# TWO SERVICES
+#   `dev`     — the interactive toolbox (shell / exec / tests / sync) AND the
+#               resident stack. `docker/entrypoint.sh` starts FastAPI/uvicorn
+#               on 0.0.0.0:8181 and the vite dev server on 0.0.0.0:5173 as
+#               background children, prefixing their output `[backend]` /
+#               `[frontend]` so `docker compose logs -f` is readable. Both host
+#               ports therefore live on this one container (8181:8181 AND
+#               5173:5173) — one container can bind both.
+#   `postgres`— PostgreSQL backing the LangGraph checkpointer (see below).
 #
-#   Set `SERVICES=0` to start NEITHER server and keep the container as a pure
-#   toolbox for `exec` / tests:
+#   Set `SERVICES=0` to start NEITHER server and keep the `dev` container as a
+#   pure toolbox for `exec` / tests:
 #       SERVICES=0 docker compose up -d
 #   Default is `SERVICES=1` (servers on). See docker/entrypoint.sh.
 #
@@ -45,6 +48,16 @@
 #     destroys your working copy (you would have to re-sync from scratch).
 #     Always use plain `docker compose down`.
 #
+# POSTGRES (checkpointer backend)
+#   `postgres:16` persists both LangGraph graphs. Credentials come from the
+#   repo-root `.env` (gitignored; see `.env.example`) — never hardcoded here.
+#   Data lives in the `trade-pgdata` named volume; the port is published on
+#   **5433** (not 5432) so a host Postgres never collides. `dev` waits on a
+#   `pg_isready` healthcheck (`depends_on: service_healthy`), so the app never
+#   starts against an unready database. The image was pulled from the
+#   `docker.m.daocloud.io` mirror and retagged (registry-1.docker.io is
+#   unreachable here) — see docs/docker-dev.md.
+#
 # See docs/docker-dev.md for the full operational guide.
 # ---------------------------------------------------------------------------
 
@@ -65,6 +78,11 @@ services:
     # Come back after a dockerd/distro restart, but stay down if stopped by hand
     # (`docker kill` also counts as a deliberate stop — see the header).
     restart: unless-stopped
+    # Never start the app against an unready database: wait for the postgres
+    # healthcheck to report healthy first.
+    depends_on:
+      postgres:
+        condition: service_healthy
     working_dir: /workspace
     # Match the WSL host uid/gid (1000:1000). The named volumes are pre-owned by
     # 1000 in the image, so uid 1000 can write the working copy directly.
@@ -95,6 +113,9 @@ services:
       # 1 = start backend + frontend inside this container (default).
       # 0 = toolbox-only (no servers; container stays alive for exec/tests).
       SERVICES: "${SERVICES:-1}"
+      # LangGraph checkpointer backend. Must point at the in-network host
+      # `postgres:5432`; a host process uses the published localhost:5433.
+      MD_POSTGRES_DSN: "${MD_POSTGRES_DSN:?set MD_POSTGRES_DSN in .env}"
     ports:
       - "8181:8181"     # backend API   -> http://127.0.0.1:8181
       - "5173:5173"     # vite dev server -> http://127.0.0.1:5173
@@ -111,6 +132,34 @@ services:
       # parquet store, and `--delete` syncs never touch it.
       - trade-data:/workspace/backend/data
 
+  # -------------------------------------------------------------------------
+  # postgres — LangGraph checkpointer backend (Phase-2 foundation).
+  # -------------------------------------------------------------------------
+  postgres:
+    # Pulled from docker.m.daocloud.io/library/postgres:16 and retagged to the
+    # canonical `postgres:16` (registry-1.docker.io is unreachable here).
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      # Read from the repo-root `.env` (gitignored). The `:?` form makes
+      # `docker compose up` fail loudly with these messages when it is unset.
+      POSTGRES_USER: "${POSTGRES_USER:?set POSTGRES_USER in .env}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
+      POSTGRES_DB: "${POSTGRES_DB:?set POSTGRES_DB in .env}"
+    ports:
+      # Published on 5433 so a GUI client can connect without colliding with a
+      # host Postgres on the standard 5432.
+      - "5433:5432"
+    volumes:
+      - trade-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # `$$` escapes compose interpolation so the container shell sees the vars.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   # Explicit `name:` pins the real Docker volume names (instead of the
   # project-prefixed `trade_trade-workspace`), matching docs and `doctor`.
@@ -118,3 +167,6 @@ volumes:
     name: trade-workspace
   trade-data:
     name: trade-data
+  # LangGraph checkpoint data (PostgreSQL data directory).
+  trade-pgdata:
+    name: trade-pgdata
